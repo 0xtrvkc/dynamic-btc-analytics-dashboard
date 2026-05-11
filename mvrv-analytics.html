@@ -10,6 +10,16 @@
   .upload-label {
       cursor: pointer;
     }
+    .upload-label {
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.upload-label:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;
@@ -108,6 +118,11 @@ tr:last-child td{border-bottom:none}
 <!-- Upload Screen -->
 <div id="upload-screen">
   <div>
+
+
+
+
+
     <div class="upload-label"
      style="font-size: 24px;"
      onclick="window.open('https://www.blockchain.com/explorer/charts/mvrv?fbclid=IwAR2RaC36yhVvWc61RVNJ6dHVxg0gJtyXAXi6LYV5PjlADq9mHIR2YVGuC1g', '_blank', 'noopener,noreferrer')">
