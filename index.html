@@ -8,111 +8,107 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   .upload-sub {
-      cursor: pointer;
-    }
-    .upload-sub {
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-
-  border: 1px dotted rgba(255, 255, 255, 0.4);
-}
-
-.upload-sub:hover {
-  border-color:var(--accent);background:#16123a
-}
+    padding: 10px 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px dotted rgba(255, 255, 255, 0.4);
+  }
+  .upload-sub:hover {
+    border-color:var(--accent);background:#16123a
+  }
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;
   --border:#1e1e2e;--text:#e8e6f0;--muted:#6b6880;--faint:#2a2838;
   --accent:#7c6af7;--teal:#2dd4bf;--amber:#f59e0b;--red:#f43f5e;--green:#22c55e;
   --c1:#f43f5e;--c2:#f59e0b;--c3:#2dd4bf;--c4:#7c6af7;
+  font-size: 16px;
 }
-body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Mono','Courier New',monospace;font-size:13px;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Mono','Courier New',monospace;font-size:1rem;min-height:100vh}
 
 /* ── Upload Screen ── */
-#upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;gap:32px;text-align:center}
-.upload-label{font-size:20px;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
-.upload-title{font-size:36px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
-.upload-sub{font-size:14px;color:var(--muted);max-width:380px;line-height:1.6}
-.drop-zone{width:100%;max-width:480px;border:1.5px dashed var(--border);border-radius:16px;padding:48px 32px;cursor:pointer;transition:all .2s;background:transparent}
+#upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:42px;gap:42px;text-align:center}
+.upload-label{font-size:1.625rem;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;margin-bottom:13px}
+.upload-title{font-size:2.925rem;font-weight:700;letter-spacing:-.02em;margin-bottom:13px}
+.upload-sub{font-size:1.1rem;color:var(--muted);max-width:494px;line-height:1.6}
+.drop-zone{width:100%;max-width:624px;border:1.5px dashed var(--border);border-radius:20px;padding:62px 42px;cursor:pointer;transition:all .2s;background:transparent}
 .drop-zone:hover,.drop-zone.dragging{border-color:var(--accent);background:#16123a}
-.drop-icon{font-size:36px;margin-bottom:12px}
-.drop-main{font-size:15px;font-weight:500;margin-bottom:6px}
-.drop-hint{font-size:12px;color:var(--muted)}
+.drop-icon{font-size:2.925rem;margin-bottom:16px}
+.drop-main{font-size:1.2rem;font-weight:500;margin-bottom:8px}
+.drop-hint{font-size:1rem;color:var(--muted)}
 code{color:var(--accent);font-family:inherit}
-.upload-error{background:#2a0e15;border:.5px solid var(--red);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--red);max-width:480px;width:100%;display:none}
-.upload-note{font-size:11px;color:var(--muted)}
+.upload-error{background:#2a0e15;border:.5px solid var(--red);border-radius:13px;padding:13px 21px;font-size:1rem;color:var(--red);max-width:624px;width:100%;display:none}
+.upload-note{font-size:0.9rem;color:var(--muted)}
 
 /* ── App ── */
 #app{display:none;flex-direction:column;min-height:100vh}
-.header{background:var(--surface);border-bottom:.5px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:50}
-.header-left{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.header-badge{font-size:11px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase}
-.header-meta{font-size:11px;color:var(--muted)}
-.header-right{display:flex;gap:8px}
-.btn{font-size:11px;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;border:.5px solid var(--border);background:transparent;color:var(--muted);display:flex;align-items:center;gap:6px;transition:all .15s}
+.header{background:var(--surface);border-bottom:.5px solid var(--border);padding:16px 31px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:13px;position:sticky;top:0;z-index:50}
+.header-left{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.header-badge{font-size:0.9rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase}
+.header-meta{font-size:0.9rem;color:var(--muted)}
+.header-right{display:flex;gap:10px}
+.btn{font-size:0.9rem;padding:8px 18px;border-radius:10px;cursor:pointer;font-family:inherit;border:.5px solid var(--border);background:transparent;color:var(--muted);display:flex;align-items:center;gap:8px;transition:all .15s}
 .btn:hover{color:var(--text)}
 .btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-.tabs{display:flex;overflow-x:auto;border-bottom:.5px solid var(--border);padding:0 24px}
-.tab{font-size:12px;padding:10px 16px;border:none;background:transparent;cursor:pointer;white-space:nowrap;color:var(--muted);font-family:inherit;border-bottom:2px solid transparent;transition:all .15s}
+.tabs{display:flex;overflow-x:auto;border-bottom:.5px solid var(--border);padding:0 31px}
+.tab{font-size:1rem;padding:13px 21px;border:none;background:transparent;cursor:pointer;white-space:nowrap;color:var(--muted);font-family:inherit;border-bottom:2px solid transparent;transition:all .15s}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
-.content{padding:20px 24px;max-width:960px;margin:0 auto;width:100%;transition:padding-right .2s}
-.content.chat-open{padding-right:360px}
+.content{padding:26px 31px;max-width:1248px;margin:0 auto;width:100%;transition:padding-right .2s}
+.content.chat-open{padding-right:468px}
 
 /* ── Cards / Layout ── */
-.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
-.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:21px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:21px}
 @media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
-.stat{background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:14px 16px;min-width:0}
-.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-.stat-val{font-size:21px;font-weight:600;font-variant-numeric:tabular-nums}
-.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
-.chart-card{background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:14px}
-.chart-title{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:12px}
+.stat{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:18px 21px;min-width:0}
+.stat-label{font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.stat-val{font-size:1.75rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stat-sub{font-size:0.9rem;color:var(--muted);margin-top:5px}
+.chart-card{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:21px 23px;margin-bottom:18px}
+.chart-title{font-size:1rem;font-weight:500;color:var(--muted);margin-bottom:16px}
 .chart-wrap{position:relative;width:100%}
-.tbl-wrap{background:var(--surface);border:.5px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{padding:9px 12px;text-align:left;color:var(--muted);font-weight:500;font-size:10px;text-transform:uppercase;border-bottom:.5px solid var(--border)}
-td{padding:8px 12px;border-bottom:.5px solid var(--border);color:var(--muted)}
+.tbl-wrap{background:var(--surface);border:.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:1rem}
+th{padding:12px 16px;text-align:left;color:var(--muted);font-weight:500;font-size:0.85rem;text-transform:uppercase;border-bottom:.5px solid var(--border)}
+td{padding:10px 16px;border-bottom:.5px solid var(--border);color:var(--muted)}
 tr:last-child td{border-bottom:none}
-.info{background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px}
+.info{background:var(--surface);border:.5px solid var(--border);border-radius:16px;padding:18px 21px;font-size:1rem;color:var(--muted);line-height:1.7;margin-bottom:18px}
 .panel{display:none}.panel.active{display:block}
 
 /* ── AI Chat ── */
-#chat{position:fixed;right:0;top:0;bottom:0;width:340px;background:var(--surface);border-left:.5px solid var(--border);display:none;flex-direction:column;z-index:100}
+#chat{position:fixed;right:0;top:0;bottom:0;width:442px;background:var(--surface);border-left:.5px solid var(--border);display:none;flex-direction:column;z-index:100}
 #chat.open{display:flex}
-.chat-header{padding:14px 16px;border-bottom:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.chat-title{font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
-.chat-panel-name{font-size:10px;color:var(--muted);margin-top:2px}
-.chat-hbtns{display:flex;gap:8px;align-items:center}
-.chat-icon-btn{font-size:10px;background:transparent;border:.5px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--muted);font-family:inherit}
-.chat-close{font-size:20px;background:transparent;border:none;cursor:pointer;color:var(--muted);line-height:1}
-.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-header{padding:18px 21px;border-bottom:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.chat-title{font-size:0.9rem;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+.chat-panel-name{font-size:0.85rem;color:var(--muted);margin-top:3px}
+.chat-hbtns{display:flex;gap:10px;align-items:center}
+.chat-icon-btn{font-size:0.85rem;background:transparent;border:.5px solid var(--border);border-radius:8px;padding:5px 13px;cursor:pointer;color:var(--muted);font-family:inherit}
+.chat-close{font-size:1.625rem;background:transparent;border:none;cursor:pointer;color:var(--muted);line-height:1}
+.chat-msgs{flex:1;overflow-y:auto;padding:21px;display:flex;flex-direction:column;gap:16px}
 .msg{display:flex;flex-direction:column}
 .msg.user{align-items:flex-end}.msg.ai{align-items:flex-start}
-.msg-role{font-size:9px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px}
-.msg-bubble{max-width:92%;padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap;color:var(--text)}
-.msg.user .msg-bubble{background:#7c6af722;border:.5px solid #7c6af744;border-radius:12px 12px 2px 12px}
-.msg.ai .msg-bubble{background:var(--surface2);border:.5px solid var(--border);border-radius:2px 12px 12px 12px}
-.chat-sugg{padding:0 12px 8px;display:flex;gap:6px;flex-wrap:wrap}
-.sugg-btn{font-size:10px;padding:4px 10px;border-radius:20px;background:transparent;border:.5px solid var(--border);color:var(--muted);cursor:pointer;font-family:inherit}
-.chat-foot{padding:12px;border-top:.5px solid var(--border);flex-shrink:0}
-.chat-row{display:flex;gap:8px;align-items:flex-end}
-#chat-input{flex:1;background:var(--surface2);border:.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:12px;color:var(--text);font-family:inherit;resize:none;outline:none;line-height:1.5}
+.msg-role{font-size:0.75rem;color:var(--faint);letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px}
+.msg-bubble{max-width:92%;padding:13px 16px;font-size:1rem;line-height:1.7;white-space:pre-wrap;color:var(--text)}
+.msg.user .msg-bubble{background:#7c6af722;border:.5px solid #7c6af744;border-radius:16px 16px 2px 16px}
+.msg.ai .msg-bubble{background:var(--surface2);border:.5px solid var(--border);border-radius:2px 16px 16px 16px}
+.chat-sugg{padding:0 16px 10px;display:flex;gap:8px;flex-wrap:wrap}
+.sugg-btn{font-size:0.85rem;padding:5px 13px;border-radius:26px;background:transparent;border:.5px solid var(--border);color:var(--muted);cursor:pointer;font-family:inherit}
+.chat-foot{padding:16px;border-top:.5px solid var(--border);flex-shrink:0}
+.chat-row{display:flex;gap:10px;align-items:flex-end}
+#chat-input{flex:1;background:var(--surface2);border:.5px solid var(--border);border-radius:13px;padding:12px 16px;font-size:1rem;color:var(--text);font-family:inherit;resize:none;outline:none;line-height:1.5}
 #chat-input:focus{border-color:#7c6af788}
 #chat-input::placeholder{color:var(--faint)}
-#chat-send{width:36px;height:36px;border-radius:10px;background:var(--accent);border:none;cursor:pointer;color:#fff;font-size:16px;flex-shrink:0}
+#chat-send{width:47px;height:47px;border-radius:13px;background:var(--accent);border:none;cursor:pointer;color:#fff;font-size:1.3rem;flex-shrink:0}
 #chat-send:disabled{background:var(--faint);cursor:default}
-.chat-hint{font-size:10px;color:var(--faint);margin-top:6px}
-.cursor-blink{display:inline-block;width:6px;height:12px;background:var(--accent);margin-left:2px;vertical-align:text-bottom;animation:blink 1s infinite}
-.typing-dots{display:flex;gap:4px;padding:8px 4px}
-.tdot{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5;animation:pulse 1.2s infinite ease-in-out}
+.chat-hint{font-size:0.85rem;color:var(--faint);margin-top:8px}
+.cursor-blink{display:inline-block;width:8px;height:16px;background:var(--accent);margin-left:3px;vertical-align:text-bottom;animation:blink 1s infinite}
+.typing-dots{display:flex;gap:5px;padding:10px 5px}
+.tdot{width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:.5;animation:pulse 1.2s infinite ease-in-out}
 .tdot:nth-child(2){animation-delay:.2s}.tdot:nth-child(3){animation-delay:.4s}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes pulse{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--faint);border-radius:2px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--faint);border-radius:3px}
 </style>
 </head>
 <body>
@@ -120,34 +116,12 @@ tr:last-child td{border-bottom:none}
 <!-- Upload Screen -->
 <div id="upload-screen">
   <div>
-
-
-
-
-
     <div class="upload-label">BTC Analytics</div>
-
-
-
-
-
     <div class="upload-title">MVRV Dashboard</div>
-
-
-
-
-
     <a href="https://www.blockchain.com/explorer/charts/mvrv"
-   target="_blank"
-   rel="noopener noreferrer"
-   class="upload-sub">
-  Upload your <code>.json</code> downloaded from blockchain.com
-</a>
-
-
-
-
-
+       target="_blank" rel="noopener noreferrer" class="upload-sub">
+      Upload your <code>.json</code> downloaded from blockchain.com
+    </a>
   </div>
 
   <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
@@ -214,124 +188,112 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <script>
-// ── Constants ─────────────────────────────────────────────────────
 const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Peak Regression"];
 const CC = {bg:"#0a0a0f",surface:"#111118",surface2:"#16161f",border:"#1e1e2e",text:"#e8e6f0",muted:"#6b6880",faint:"#2a2838",accent:"#7c6af7",teal:"#2dd4bf",amber:"#f59e0b",red:"#f43f5e",green:"#22c55e"};
 const CYCLE_COLORS = {1:CC.red,2:CC.amber,3:CC.teal,4:CC.accent};
-const CYCLE_LABELS = {1:"2012–15",2:"2016–19",3:"2020–23",4:"2024–27"};
+const CYCLE_LABELS = {1:"2012-15",2:"2016-19",3:"2020-23",4:"2024-27"};
 
-// ── State ─────────────────────────────────────────────────────────
 let DATA=[], STATS={}, CHARTS={}, activeTab=0, chatOpen=false, aiLoading=false, chatHistory=[], prevChatTab=-1;
 const built = new Set();
 
-// ── Helpers ───────────────────────────────────────────────────────
 function parseDateFlexible(raw){
   if(!raw)return null;
   const s=String(raw).trim();
   const dmy=s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
-  if(dmy)return new Date(`${dmy[3]}-${dmy[2].padStart(2,"0")}-${dmy[1].padStart(2,"0")}`);
+  if(dmy)return new Date(dmy[3]+"-"+dmy[2].padStart(2,"0")+"-"+dmy[1].padStart(2,"0"));
   const d=new Date(s);return isNaN(d)?null:d;
 }
 function fmtDate(d){return d?new Date(d).toISOString().slice(0,10):""}
 function assignCycle(y){return y<2012?0:Math.floor((y-2012)/4)+1}
-function movingAvg(arr,w){return arr.map((_,i)=>{const sl=arr.slice(Math.max(0,i-w+1),i+1);return sl.reduce((a,b)=>a+b,0)/sl.length})}
-function linReg(xs,ys){const n=xs.length,mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n,num=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0),den=xs.reduce((s,x)=>s+(x-mx)**2,0);return{slope:num/den,intercept:my-(num/den)*mx}}
+function movingAvg(arr,w){return arr.map(function(_,i){var sl=arr.slice(Math.max(0,i-w+1),i+1);return sl.reduce(function(a,b){return a+b},0)/sl.length})}
+function linReg(xs,ys){var n=xs.length,mx=xs.reduce(function(a,b){return a+b},0)/n,my=ys.reduce(function(a,b){return a+b},0)/n,num=xs.reduce(function(s,x,i){return s+(x-mx)*(ys[i]-my)},0),den=xs.reduce(function(s,x){return s+(x-mx)*(x-mx)},0);return{slope:num/den,intercept:my-(num/den)*mx}}
 function logReg(xs,ys){return linReg(xs.map(Math.log),ys)}
-function sample(arr,n){if(arr.length<=n)return arr;const step=Math.ceil(arr.length/n);return arr.filter((_,i)=>i%step===0||i===arr.length-1)}
-function chartDefs(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:10,titleFont:{size:10},bodyFont:{size:11}}},scales:{x:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:10},maxTicksLimit:8},border:{display:false}},y:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:10}},border:{display:false}}}}}
-function withLegend(opts){return{...opts,plugins:{...opts.plugins,legend:{display:true,labels:{color:CC.muted,font:{size:10},boxWidth:20,boxHeight:1}}}}}
+function sample(arr,n){if(arr.length<=n)return arr;var step=Math.ceil(arr.length/n);return arr.filter(function(_,i){return i%step===0||i===arr.length-1})}
+function chartDefs(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,titleFont:{size:13},bodyFont:{size:14}}},scales:{x:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:13},maxTicksLimit:8},border:{display:false}},y:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:13}},border:{display:false}}}}}
+function withLegend(opts){return Object.assign({},opts,{plugins:Object.assign({},opts.plugins,{legend:{display:true,labels:{color:CC.muted,font:{size:13},boxWidth:24,boxHeight:2}}})})}
 function destroyChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}}
-function makeCanvas(id,h=220){return`<div class="chart-wrap" style="height:${h}px"><canvas id="${id}"></canvas></div>`}
-function statCard(label,val,sub,color){return`<div class="stat"><div class="stat-label">${label}</div><div class="stat-val" style="color:${color||CC.text}">${val}</div>${sub?`<div class="stat-sub">${sub}</div>`:""}</div>`}
+function makeCanvas(id,h){return'<div class="chart-wrap" style="height:'+h+'px"><canvas id="'+id+'"></canvas></div>'}
+function statCard(label,val,sub,color){return'<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+(color||CC.text)+'">'+val+'</div>'+(sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>'}
 
-// ── File Parsing (JSON + CSV) ─────────────────────────────────────
 function handleFile(file){
   if(!file)return;
-  const errEl=document.getElementById("upload-error");
+  var errEl=document.getElementById("upload-error");
   errEl.style.display="none";
-  const isJSON=file.name.toLowerCase().endsWith(".json");
-  const reader=new FileReader();
-  reader.onload=e=>{
+  var isJSON=file.name.toLowerCase().endsWith(".json");
+  var reader=new FileReader();
+  reader.onload=function(e){
     if(isJSON){
-      // ── JSON from blockchain.com ──────────────────────────────
       try{
-        const json=JSON.parse(e.target.result);
-        // Find the mvrv array — could be json.mvrv or json.values
-        const arr=json.mvrv||json.values||null;
-        if(!arr||!arr.length){errEl.textContent="Couldn't find mvrv data array in JSON. Expected {mvrv:[{x,y},...]}";errEl.style.display="block";return;}
-        // x is Unix ms timestamp → convert to JS Date
-        // formula equivalent: x/86400000 + 25569 = Excel serial → but we just use new Date(x)
-        const rows=arr.map(pt=>{
-          const ts=+pt.x; // unix ms
-          const v=+pt.y;
+        var json=JSON.parse(e.target.result);
+        var arr=json.mvrv||json.values||null;
+        if(!arr||!arr.length){errEl.textContent="Couldn't find mvrv data array in JSON.";errEl.style.display="block";return;}
+        var rows=arr.map(function(pt){
+          var ts=+pt.x,v=+pt.y;
           if(!ts||isNaN(v)||v<=0)return null;
           return{date:new Date(ts),mvrv:v};
-        }).filter(Boolean).sort((a,b)=>a.date-b.date);
-        if(rows.length<10){errEl.textContent="Not enough valid data points in JSON.";errEl.style.display="block";return;}
+        }).filter(Boolean).sort(function(a,b){return a.date-b.date});
+        if(rows.length<10){errEl.textContent="Not enough valid data points.";errEl.style.display="block";return;}
         loadData(rows);
       }catch(err){errEl.textContent="Failed to parse JSON: "+err.message;errEl.style.display="block";}
     } else {
-      // ── CSV ───────────────────────────────────────────────────
-      Papa.parse(file,{header:true,skipEmptyLines:true,complete:({data,meta})=>{
-        const cols=meta.fields||[];
-        const dateCol=cols.find(c=>/date/i.test(c));
-        const mvrvCol=cols.find(c=>/mvrv/i.test(c));
-        if(!dateCol||!mvrvCol){errEl.textContent=`Couldn't detect columns. Found: ${cols.join(", ")}`;errEl.style.display="block";return;}
-        const rows=data.map(r=>{const d=parseDateFlexible(r[dateCol]);const v=parseFloat(String(r[mvrvCol]).replace(/,/g,""));return d&&!isNaN(v)?{date:d,mvrv:v}:null}).filter(Boolean).sort((a,b)=>a.date-b.date);
-        if(rows.length<10){errEl.textContent="Not enough valid rows found.";errEl.style.display="block";return;}
+      Papa.parse(file,{header:true,skipEmptyLines:true,complete:function(res){
+        var cols=res.meta.fields||[];
+        var dateCol=cols.find(function(c){return /date/i.test(c)});
+        var mvrvCol=cols.find(function(c){return /mvrv/i.test(c)});
+        if(!dateCol||!mvrvCol){errEl.textContent="Couldn't detect columns. Found: "+cols.join(", ");errEl.style.display="block";return;}
+        var rows=res.data.map(function(r){var d=parseDateFlexible(r[dateCol]);var v=parseFloat(String(r[mvrvCol]).replace(/,/g,""));return d&&!isNaN(v)?{date:d,mvrv:v}:null}).filter(Boolean).sort(function(a,b){return a.date-b.date});
+        if(rows.length<10){errEl.textContent="Not enough valid rows.";errEl.style.display="block";return;}
         loadData(rows);
-      },error:er=>{errEl.textContent=er.message;errEl.style.display="block";}});
+      },error:function(er){errEl.textContent=er.message;errEl.style.display="block";}});
     }
   };
-  reader.onerror=()=>{errEl.textContent="Failed to read file.";errEl.style.display="block";};
+  reader.onerror=function(){errEl.textContent="Failed to read file.";errEl.style.display="block";};
   reader.readAsText(file);
 }
 
-// ── Drag & Drop ───────────────────────────────────────────────────
-const dz=document.getElementById("drop-zone");
-dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("dragging")});
-dz.addEventListener("dragleave",()=>dz.classList.remove("dragging"));
-dz.addEventListener("drop",e=>{e.preventDefault();dz.classList.remove("dragging");const f=e.dataTransfer.files[0];if(f)handleFile(f)});
+var dz=document.getElementById("drop-zone");
+dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("dragging")});
+dz.addEventListener("dragleave",function(){dz.classList.remove("dragging")});
+dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("dragging");var f=e.dataTransfer.files[0];if(f)handleFile(f)});
 
-// ── Data processing ───────────────────────────────────────────────
 function enrichData(rows){
-  const mvrvs=rows.map(r=>r.mvrv);
-  const ma20=movingAvg(mvrvs,20),ma50=movingAvg(mvrvs,50),ma200=movingAvg(mvrvs,200);
-  const cb={1:[new Date("2012-01-01"),new Date("2016-01-01")],2:[new Date("2016-01-01"),new Date("2020-01-01")],3:[new Date("2020-01-01"),new Date("2024-01-01")],4:[new Date("2024-01-01"),new Date("2028-01-01")]};
-  const cp={};
-  return rows.map((r,i)=>{
-    const year=r.date.getFullYear(),cycle=assignCycle(year);
-    const sl=mvrvs.slice(0,i+1),mean=sl.reduce((a,b)=>a+b,0)/sl.length;
-    const std=i<2?1:Math.sqrt(sl.reduce((s,v)=>s+(v-mean)**2,0)/sl.length);
-    const zscore=std>0?(r.mvrv-mean)/std:0;
-    const bounds=cb[cycle],cyclePct=bounds?((r.date-bounds[0])/(bounds[1]-bounds[0]))*100:null;
+  var mvrvs=rows.map(function(r){return r.mvrv});
+  var ma20=movingAvg(mvrvs,20),ma50=movingAvg(mvrvs,50),ma200=movingAvg(mvrvs,200);
+  var cb={1:[new Date("2012-01-01"),new Date("2016-01-01")],2:[new Date("2016-01-01"),new Date("2020-01-01")],3:[new Date("2020-01-01"),new Date("2024-01-01")],4:[new Date("2024-01-01"),new Date("2028-01-01")]};
+  var cp={};
+  return rows.map(function(r,i){
+    var year=r.date.getFullYear(),cycle=assignCycle(year);
+    var sl=mvrvs.slice(0,i+1),mean=sl.reduce(function(a,b){return a+b},0)/sl.length;
+    var std=i<2?1:Math.sqrt(sl.reduce(function(s,v){return s+(v-mean)*(v-mean)},0)/sl.length);
+    var zscore=std>0?(r.mvrv-mean)/std:0;
+    var bounds=cb[cycle],cyclePct=bounds?((r.date-bounds[0])/(bounds[1]-bounds[0]))*100:null;
     if(cycle>0)cp[cycle]=Math.max(cp[cycle]||0,r.mvrv);
-    const peak=cp[cycle]||r.mvrv,drawdown=cycle>0?((r.mvrv-peak)/peak)*100:null;
-    const roc30=i>=30?((r.mvrv-mvrvs[i-30])/mvrvs[i-30])*100:null;
-    const roc90=i>=90?((r.mvrv-mvrvs[i-90])/mvrvs[i-90])*100:null;
-    return{...r,year,cycle,zscore:+zscore.toFixed(3),ma20:+ma20[i].toFixed(3),ma50:+ma50[i].toFixed(3),ma200:+ma200[i].toFixed(3),roc30:roc30!=null?+roc30.toFixed(2):null,roc90:roc90!=null?+roc90.toFixed(2):null,cyclePct:cyclePct!=null?+cyclePct.toFixed(1):null,drawdown:drawdown!=null?+drawdown.toFixed(2):null,dateStr:fmtDate(r.date)};
+    var peak=cp[cycle]||r.mvrv,drawdown=cycle>0?((r.mvrv-peak)/peak)*100:null;
+    var roc30=i>=30?((r.mvrv-mvrvs[i-30])/mvrvs[i-30])*100:null;
+    var roc90=i>=90?((r.mvrv-mvrvs[i-90])/mvrvs[i-90])*100:null;
+    return Object.assign({},r,{year:year,cycle:cycle,zscore:+zscore.toFixed(3),ma20:+ma20[i].toFixed(3),ma50:+ma50[i].toFixed(3),ma200:+ma200[i].toFixed(3),roc30:roc30!=null?+roc30.toFixed(2):null,roc90:roc90!=null?+roc90.toFixed(2):null,cyclePct:cyclePct!=null?+cyclePct.toFixed(1):null,drawdown:drawdown!=null?+drawdown.toFixed(2):null,dateStr:fmtDate(r.date)});
   });
 }
 
 function computeStats(data){
-  const mvrvs=data.map(d=>d.mvrv),last=data[data.length-1];
-  const peakRow=data.reduce((a,b)=>a.mvrv>b.mvrv?a:b),botRow=data.reduce((a,b)=>a.mvrv<b.mvrv?a:b);
-  const cycleData=[1,2,3,4].map(c=>{
-    const sub=data.filter(d=>d.cycle===c);if(!sub.length)return null;
-    const pk=sub.reduce((a,b)=>a.mvrv>b.mvrv?a:b),tr=sub.reduce((a,b)=>a.mvrv<b.mvrv?a:b);
-    return{cycle:c,peak:pk.mvrv,peakDate:pk.dateStr,trough:tr.mvrv,troughDate:tr.dateStr,days:sub.length,below1:sub.filter(d=>d.mvrv<1).length,below1_5:sub.filter(d=>d.mvrv<1.5).length,above2:sub.filter(d=>d.mvrv>2).length,above3:sub.filter(d=>d.mvrv>3).length};
+  var mvrvs=data.map(function(d){return d.mvrv}),last=data[data.length-1];
+  var peakRow=data.reduce(function(a,b){return a.mvrv>b.mvrv?a:b}),botRow=data.reduce(function(a,b){return a.mvrv<b.mvrv?a:b});
+  var cycleData=[1,2,3,4].map(function(c){
+    var sub=data.filter(function(d){return d.cycle===c});if(!sub.length)return null;
+    var pk=sub.reduce(function(a,b){return a.mvrv>b.mvrv?a:b}),tr=sub.reduce(function(a,b){return a.mvrv<b.mvrv?a:b});
+    return{cycle:c,peak:pk.mvrv,peakDate:pk.dateStr,trough:tr.mvrv,troughDate:tr.dateStr,days:sub.length,below1:sub.filter(function(d){return d.mvrv<1}).length,below1_5:sub.filter(function(d){return d.mvrv<1.5}).length,above2:sub.filter(function(d){return d.mvrv>2}).length,above3:sub.filter(function(d){return d.mvrv>3}).length};
   }).filter(Boolean);
-  const logR=logReg(cycleData.map(c=>c.cycle),cycleData.map(c=>c.peak));
-  const linR=linReg(cycleData.map(c=>c.cycle),cycleData.map(c=>c.peak));
-  return{last,peakRow,botRow,mean:mvrvs.reduce((a,b)=>a+b,0)/mvrvs.length,cycleData,logR,linR,c5LogPeak:logR.slope*Math.log(5)+logR.intercept,c5LinPeak:linR.slope*5+linR.intercept};
+  var logR=logReg(cycleData.map(function(c){return c.cycle}),cycleData.map(function(c){return c.peak}));
+  var linR=linReg(cycleData.map(function(c){return c.cycle}),cycleData.map(function(c){return c.peak}));
+  return{last:last,peakRow:peakRow,botRow:botRow,mean:mvrvs.reduce(function(a,b){return a+b},0)/mvrvs.length,cycleData:cycleData,logR:logR,linR:linR,c5LogPeak:logR.slope*Math.log(5)+logR.intercept,c5LinPeak:linR.slope*5+linR.intercept};
 }
 
 function loadData(rows){
   DATA=enrichData(rows);
   STATS=computeStats(DATA);
-  document.getElementById("hdr-meta").textContent=`${DATA.length.toLocaleString()} pts · ${fmtDate(DATA[0].date)} → ${fmtDate(DATA[DATA.length-1].date)}`;
+  document.getElementById("hdr-meta").textContent=DATA.length.toLocaleString()+" pts · "+fmtDate(DATA[0].date)+" → "+fmtDate(DATA[DATA.length-1].date);
   built.clear();
-  Object.keys(CHARTS).forEach(k=>{CHARTS[k].destroy();delete CHARTS[k]});
+  Object.keys(CHARTS).forEach(function(k){CHARTS[k].destroy();delete CHARTS[k]});
   buildTabs();
   built.add(0);
   buildOverview();
@@ -350,156 +312,150 @@ function resetApp(){
   document.getElementById("upload-error").style.display="none";
 }
 
-// ── Tab system ────────────────────────────────────────────────────
-const builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression];
+var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression];
 
 function buildTabs(){
-  document.getElementById("tabs").innerHTML=TAB_NAMES.map((n,i)=>`<button class="tab${i===0?" active":""}" onclick="switchTab(${i})">${n}</button>`).join("");
+  document.getElementById("tabs").innerHTML=TAB_NAMES.map(function(n,i){return'<button class="tab'+(i===0?" active":"")+'" onclick="switchTab('+i+')">'+n+'</button>'}).join("");
 }
 
 function switchTab(i){
-  document.querySelectorAll(".panel").forEach((p,j)=>p.classList.toggle("active",i===j));
-  document.querySelectorAll(".tab").forEach((t,j)=>t.classList.toggle("active",i===j));
+  document.querySelectorAll(".panel").forEach(function(p,j){p.classList.toggle("active",i===j)});
+  document.querySelectorAll(".tab").forEach(function(t,j){t.classList.toggle("active",i===j)});
   activeTab=i;
   document.getElementById("chat-panel-name").textContent="Viewing: "+TAB_NAMES[i];
   if(!built.has(i)){built.add(i);builders[i]();}
   if(chatOpen&&prevChatTab!==i){prevChatTab=i;chatHistory=[];autoExplain();}
 }
 
-// ── Panel builders ────────────────────────────────────────────────
 function buildOverview(){
-  const s=STATS,l=s.last;
-  const cards=[
+  var s=STATS,l=s.last;
+  var cards=[
     statCard("Current MVRV",l.mvrv.toFixed(3),fmtDate(l.date),l.mvrv<1.5?CC.teal:l.mvrv>3?CC.red:CC.text),
     statCard("Z-score",l.zscore.toFixed(2),l.zscore<0?"Undervalued":"Elevated",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),
     statCard("All-time peak",s.peakRow.mvrv.toFixed(2),s.peakRow.dateStr,CC.amber),
     statCard("All-time bottom",s.botRow.mvrv.toFixed(2),s.botRow.dateStr,CC.teal),
   ];
-  const rows=s.cycleData.map(c=>`<tr><td style="color:${CYCLE_COLORS[c.cycle]};font-weight:600">C${c.cycle}</td><td>${CYCLE_LABELS[c.cycle]||"—"}</td><td style="color:${CC.green};font-weight:500">${c.peak.toFixed(2)}</td><td>${c.peakDate}</td><td style="color:${CC.red}">${c.trough.toFixed(2)}</td><td>${c.troughDate}</td><td>${c.days}</td></tr>`).join("");
-  document.getElementById("p0").innerHTML=`<div class="g4">${cards.join("")}</div><div class="chart-card"><div class="chart-title">MVRV with MA20 / MA50 / MA200</div>${makeCanvas("c0",240)}</div><div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>Peak</th><th>Peak date</th><th>Trough</th><th>Trough date</th><th>Days</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  var rows=s.cycleData.map(function(c){return'<tr><td style="color:'+CYCLE_COLORS[c.cycle]+';font-weight:600">C'+c.cycle+'</td><td>'+(CYCLE_LABELS[c.cycle]||"—")+'</td><td style="color:'+CC.green+';font-weight:500">'+c.peak.toFixed(2)+'</td><td>'+c.peakDate+'</td><td style="color:'+CC.red+'">'+c.trough.toFixed(2)+'</td><td>'+c.troughDate+'</td><td>'+c.days+'</td></tr>'}).join("");
+  document.getElementById("p0").innerHTML='<div class="g4">'+cards.join("")+'</div><div class="chart-card"><div class="chart-title">MVRV with MA20 / MA50 / MA200</div>'+makeCanvas("c0",280)+'</div><div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>Peak</th><th>Peak date</th><th>Trough</th><th>Trough date</th><th>Days</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   destroyChart("c0");
-  const cd=sample(DATA,300);
-  CHARTS.c0=new Chart(document.getElementById("c0"),{type:"line",data:{labels:cd.map(d=>d.dateStr),datasets:[{label:"MVRV",data:cd.map(d=>d.mvrv),borderColor:CC.accent,borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA20",data:cd.map(d=>d.ma20),borderColor:CC.amber,borderWidth:1,pointRadius:0,tension:.3},{label:"MA50",data:cd.map(d=>d.ma50),borderColor:CC.teal,borderWidth:1,pointRadius:0,tension:.3},{label:"MA200",data:cd.map(d=>d.ma200),borderColor:CC.red,borderWidth:1,pointRadius:0,tension:.3}]},options:withLegend(chartDefs())});
+  var cd=sample(DATA,300);
+  CHARTS.c0=new Chart(document.getElementById("c0"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:[{label:"MVRV",data:cd.map(function(d){return d.mvrv}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3},{label:"MA20",data:cd.map(function(d){return d.ma20}),borderColor:CC.amber,borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA50",data:cd.map(function(d){return d.ma50}),borderColor:CC.teal,borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA200",data:cd.map(function(d){return d.ma200}),borderColor:CC.red,borderWidth:1.5,pointRadius:0,tension:.3}]},options:withLegend(chartDefs())});
 }
 
 function buildZScore(){
-  const s=STATS,l=s.last;
-  const signal=l.zscore<-1.5?"Capitulation":l.zscore<0?"Accumulate":l.zscore<1?"Neutral":"Caution";
-  document.getElementById("p1").innerHTML=`<div class="g3">${[statCard("Current Z-score",l.zscore.toFixed(2),"",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),statCard("Historical mean MVRV",s.mean.toFixed(3),"Z = 0 baseline"),statCard("Signal",signal,"",l.zscore<0?CC.teal:CC.amber)].join("")}</div><div class="chart-card"><div class="chart-title">All-time Z-score (expanding window)</div>${makeCanvas("c1",260)}</div><div class="info">Z &gt; +2 has marked every major top. Z &lt; −1 = historical buy zone. Z &lt; −1.5 = capitulation — every case preceded a major recovery.</div>`;
+  var s=STATS,l=s.last;
+  var signal=l.zscore<-1.5?"Capitulation":l.zscore<0?"Accumulate":l.zscore<1?"Neutral":"Caution";
+  document.getElementById("p1").innerHTML='<div class="g3">'+[statCard("Current Z-score",l.zscore.toFixed(2),"",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),statCard("Historical mean MVRV",s.mean.toFixed(3),"Z = 0 baseline"),statCard("Signal",signal,"",l.zscore<0?CC.teal:CC.amber)].join("")+'</div><div class="chart-card"><div class="chart-title">All-time Z-score (expanding window)</div>'+makeCanvas("c1",300)+'</div><div class="info">Z &gt; +2 has marked every major top. Z &lt; -1 = historical buy zone. Z &lt; -1.5 = capitulation — every case preceded a major recovery.</div>';
   destroyChart("c1");
-  const cd=sample(DATA,300);
-  CHARTS.c1=new Chart(document.getElementById("c1"),{type:"line",data:{labels:cd.map(d=>d.dateStr),datasets:[{label:"Z-score",data:cd.map(d=>d.zscore),borderColor:CC.accent,borderWidth:1.5,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.accent+"22",below:CC.accent+"11"}},{label:"+2",data:cd.map(()=>2),borderColor:CC.red+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"−1",data:cd.map(()=>-1),borderColor:CC.teal+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"0",data:cd.map(()=>0),borderColor:CC.muted+"44",borderWidth:1,pointRadius:0}]},options:{...chartDefs(),scales:{x:chartDefs().scales.x,y:{...chartDefs().scales.y,min:-3,max:3}}}});
+  var cd=sample(DATA,300);
+  var opts=Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{min:-3,max:3})}});
+  CHARTS.c1=new Chart(document.getElementById("c1"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:[{label:"Z-score",data:cd.map(function(d){return d.zscore}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.accent+"22",below:CC.accent+"11"}},{label:"+2",data:cd.map(function(){return 2}),borderColor:CC.red+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"-1",data:cd.map(function(){return -1}),borderColor:CC.teal+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"0",data:cd.map(function(){return 0}),borderColor:CC.muted+"44",borderWidth:1,pointRadius:0}]},options:opts});
 }
 
 function buildMomentum(){
-  const l=STATS.last;
-  document.getElementById("p2").innerHTML=`<div class="g3">${[statCard("ROC 30d",`${l.roc30!=null?l.roc30.toFixed(1):"—"}%`,"",l.roc30>0?CC.green:CC.red),statCard("ROC 90d",`${l.roc90!=null?l.roc90.toFixed(1):"—"}%`,"",l.roc90>0?CC.green:CC.red),statCard("MA signal",l.ma20>l.ma50?"Bullish":"Bearish","MA20 vs MA50",l.ma20>l.ma50?CC.green:CC.red)].join("")}</div><div class="chart-card"><div class="chart-title">30-day and 90-day rate of change (%)</div>${makeCanvas("c2",260)}</div>`;
+  var l=STATS.last;
+  document.getElementById("p2").innerHTML='<div class="g3">'+[statCard("ROC 30d",(l.roc30!=null?l.roc30.toFixed(1):"—")+"%","",l.roc30>0?CC.green:CC.red),statCard("ROC 90d",(l.roc90!=null?l.roc90.toFixed(1):"—")+"%","",l.roc90>0?CC.green:CC.red),statCard("MA signal",l.ma20>l.ma50?"Bullish":"Bearish","MA20 vs MA50",l.ma20>l.ma50?CC.green:CC.red)].join("")+'</div><div class="chart-card"><div class="chart-title">30-day and 90-day rate of change (%)</div>'+makeCanvas("c2",300)+'</div>';
   destroyChart("c2");
-  const cd=sample(DATA.filter(d=>d.roc30!=null),300);
-  CHARTS.c2=new Chart(document.getElementById("c2"),{type:"line",data:{labels:cd.map(d=>d.dateStr),datasets:[{label:"ROC 30d",data:cd.map(d=>d.roc30),borderColor:CC.teal,borderWidth:1.5,pointRadius:0,tension:.2},{label:"ROC 90d",data:cd.map(d=>d.roc90),borderColor:CC.amber,borderWidth:1.5,pointRadius:0,tension:.2},{label:"0",data:cd.map(()=>0),borderColor:CC.muted+"44",borderWidth:1,pointRadius:0}]},options:{...withLegend(chartDefs()),scales:{x:chartDefs().scales.x,y:{...chartDefs().scales.y,min:-100,max:150}}}});
+  var cd=sample(DATA.filter(function(d){return d.roc30!=null}),300);
+  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{min:-100,max:150})}}));
+  CHARTS.c2=new Chart(document.getElementById("c2"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:[{label:"ROC 30d",data:cd.map(function(d){return d.roc30}),borderColor:CC.teal,borderWidth:2,pointRadius:0,tension:.2},{label:"ROC 90d",data:cd.map(function(d){return d.roc90}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.2},{label:"0",data:cd.map(function(){return 0}),borderColor:CC.muted+"44",borderWidth:1,pointRadius:0}]},options:opts});
 }
 
 function buildCycleOverlay(){
-  document.getElementById("p3").innerHTML=`<div class="chart-card"><div class="chart-title">All cycles overlaid — position (0–100%) vs MVRV</div>${makeCanvas("c3",320)}</div><div class="info">Aligns all 4 cycles on a shared 0–100% time axis so you can directly compare their MVRV trajectories.</div>`;
+  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">All cycles overlaid — position (0-100%) vs MVRV</div>'+makeCanvas("c3",380)+'</div><div class="info">Aligns all 4 cycles on a shared 0-100% time axis so you can directly compare their MVRV trajectories.</div>';
   destroyChart("c3");
-  const datasets=[1,2,3,4].map(c=>{
-    const sub=DATA.filter(d=>d.cycle===c&&d.cyclePct!=null);
-    const pts=sample(sub,60);
-    return{label:`C${c} (${CYCLE_LABELS[c]||"—"})`,data:pts.map(d=>({x:d.cyclePct,y:d.mvrv})),borderColor:CYCLE_COLORS[c],backgroundColor:CYCLE_COLORS[c],borderWidth:1.5,pointRadius:2,showLine:true,tension:.3};
+  var datasets=[1,2,3,4].map(function(c){
+    var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null});
+    var pts=sample(sub,60);
+    return{label:"C"+c+" ("+(CYCLE_LABELS[c]||"—")+")",data:pts.map(function(d){return{x:d.cyclePct,y:d.mvrv}}),borderColor:CYCLE_COLORS[c],backgroundColor:CYCLE_COLORS[c],borderWidth:2,pointRadius:2,showLine:true,tension:.3};
   });
-  CHARTS.c3=new Chart(document.getElementById("c3"),{type:"scatter",data:{datasets},options:{...withLegend(chartDefs()),scales:{x:{...chartDefs().scales.x,type:"linear",title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:10}}},y:{...chartDefs().scales.y,title:{display:true,text:"MVRV",color:CC.muted,font:{size:10}}}}}});
+  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{type:"linear",title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:13}}}),y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"MVRV",color:CC.muted,font:{size:13}}})}}));
+  CHARTS.c3=new Chart(document.getElementById("c3"),{type:"scatter",data:{datasets:datasets},options:opts});
 }
 
 function buildDrawdown(){
-  const s=STATS;
-  const maxDDs=[1,2,3,4].map(c=>{const pts=DATA.filter(d=>d.cycle===c&&d.drawdown!=null);return pts.length?pts.reduce((a,b)=>a.drawdown<b.drawdown?a:b).drawdown:0;});
-  const cards=[1,2,3,4].map((c,i)=>statCard(`C${c} max DD`,`${maxDDs[i].toFixed(0)}%`,CYCLE_LABELS[c]||"—",CYCLE_COLORS[c]));
-  document.getElementById("p4").innerHTML=`<div class="g4">${cards.join("")}</div><div class="chart-card"><div class="chart-title">MVRV drawdown from cycle peak — by cycle position (%)</div>${makeCanvas("c4",280)}</div>`;
+  var s=STATS;
+  var maxDDs=[1,2,3,4].map(function(c){var pts=DATA.filter(function(d){return d.cycle===c&&d.drawdown!=null});return pts.length?pts.reduce(function(a,b){return a.drawdown<b.drawdown?a:b}).drawdown:0});
+  var cards=[1,2,3,4].map(function(c,i){return statCard("C"+c+" max DD",maxDDs[i].toFixed(0)+"%",CYCLE_LABELS[c]||"—",CYCLE_COLORS[c])});
+  document.getElementById("p4").innerHTML='<div class="g4">'+cards.join("")+'</div><div class="chart-card"><div class="chart-title">MVRV drawdown from cycle peak — by cycle position (%)</div>'+makeCanvas("c4",320)+'</div>';
   destroyChart("c4");
-  const datasets=[1,2,3,4].map(c=>{
-    const sub=DATA.filter(d=>d.cycle===c&&d.cyclePct!=null&&d.drawdown!=null);
-    const pts=sample(sub,60);
-    return{label:`C${c}`,data:pts.map(d=>({x:d.cyclePct,y:d.drawdown})),borderColor:CYCLE_COLORS[c],backgroundColor:CYCLE_COLORS[c],borderWidth:1.5,pointRadius:2,showLine:true,tension:.3};
+  var datasets=[1,2,3,4].map(function(c){
+    var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null&&d.drawdown!=null});
+    var pts=sample(sub,60);
+    return{label:"C"+c,data:pts.map(function(d){return{x:d.cyclePct,y:d.drawdown}}),borderColor:CYCLE_COLORS[c],backgroundColor:CYCLE_COLORS[c],borderWidth:2,pointRadius:2,showLine:true,tension:.3};
   });
-  CHARTS.c4=new Chart(document.getElementById("c4"),{type:"scatter",data:{datasets},options:{...withLegend(chartDefs()),scales:{x:{...chartDefs().scales.x,type:"linear",title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:10}}},y:{...chartDefs().scales.y,title:{display:true,text:"Drawdown %",color:CC.muted,font:{size:10}},ticks:{...chartDefs().scales.y.ticks,callback:v=>v+"%"}}}}});
+  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{type:"linear",title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:13}}}),y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"Drawdown %",color:CC.muted,font:{size:13}},holes:{callback:function(v){return v+"%"}}})}}));
+  CHARTS.c4=new Chart(document.getElementById("c4"),{type:"scatter",data:{datasets:datasets},options:opts});
 }
 
 function buildMAX(){
-  const l=STATS.last;
-  const stackLabel=l.ma20>l.ma50&&l.ma50>l.ma200?`<span style="color:${CC.green}">Bullish — MA20 &gt; MA50 &gt; MA200</span>`:l.ma20<l.ma50&&l.ma50<l.ma200?`<span style="color:${CC.red}">Bearish — MA20 &lt; MA50 &lt; MA200</span>`:`<span style="color:${CC.amber}">Mixed — transition zone</span>`;
-  document.getElementById("p5").innerHTML=`<div class="g3">${[statCard("MA20",l.ma20.toFixed(3),"Short-term"),statCard("MA50",l.ma50.toFixed(3),"Medium-term"),statCard("MA200",l.ma200.toFixed(3),"Long-term")].join("")}</div><div class="chart-card"><div class="chart-title">MVRV with moving averages</div>${makeCanvas("c5",280)}</div><div class="info">Current stack: ${stackLabel}. MA20 crossing above MA50 is the first bullish signal to watch on MVRV itself.</div>`;
+  var l=STATS.last;
+  var stackLabel=l.ma20>l.ma50&&l.ma50>l.ma200?'<span style="color:'+CC.green+'">Bullish — MA20 &gt; MA50 &gt; MA200</span>':l.ma20<l.ma50&&l.ma50<l.ma200?'<span style="color:'+CC.red+'">Bearish — MA20 &lt; MA50 &lt; MA200</span>':'<span style="color:'+CC.amber+'">Mixed — transition zone</span>';
+  document.getElementById("p5").innerHTML='<div class="g3">'+[statCard("MA20",l.ma20.toFixed(3),"Short-term"),statCard("MA50",l.ma50.toFixed(3),"Medium-term"),statCard("MA200",l.ma200.toFixed(3),"Long-term")].join("")+'</div><div class="chart-card"><div class="chart-title">MVRV with moving averages</div>'+makeCanvas("c5",320)+'</div><div class="info">Current stack: '+stackLabel+'. MA20 crossing above MA50 is the first bullish signal to watch on MVRV itself.</div>';
   destroyChart("c5");
-  const cd=sample(DATA,300);
-  CHARTS.c5=new Chart(document.getElementById("c5"),{type:"line",data:{labels:cd.map(d=>d.dateStr),datasets:[{label:"MVRV",data:cd.map(d=>d.mvrv),borderColor:CC.accent+"60",borderWidth:1,pointRadius:0,tension:.3},{label:"MA20",data:cd.map(d=>d.ma20),borderColor:CC.amber,borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA50",data:cd.map(d=>d.ma50),borderColor:CC.teal,borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA200",data:cd.map(d=>d.ma200),borderColor:CC.red,borderWidth:1.5,pointRadius:0,tension:.3}]},options:withLegend(chartDefs())});
+  var cd=sample(DATA,300);
+  CHARTS.c5=new Chart(document.getElementById("c5"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:[{label:"MVRV",data:cd.map(function(d){return d.mvrv}),borderColor:CC.accent+"60",borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA20",data:cd.map(function(d){return d.ma20}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.3},{label:"MA50",data:cd.map(function(d){return d.ma50}),borderColor:CC.teal,borderWidth:2,pointRadius:0,tension:.3},{label:"MA200",data:cd.map(function(d){return d.ma200}),borderColor:CC.red,borderWidth:2,pointRadius:0,tension:.3}]},options:withLegend(chartDefs())});
 }
 
 function buildZoneDays(){
-  const s=STATS;
-  const barData=s.cycleData.map(c=>({name:`C${c.cycle}`,b1:c.below1,m1:c.below1_5-c.below1,m2:c.days-c.above2-c.below1_5,m3:c.above2-c.above3,a3:c.above3}));
-  const tblRows=[["Below 1.0",c=>`${c.below1} (${(c.below1/c.days*100).toFixed(0)}%)`,CC.red],["1.0–1.5",c=>`${c.below1_5-c.below1} (${((c.below1_5-c.below1)/c.days*100).toFixed(0)}%)`,CC.amber],["1.5–2.0",c=>`${c.days-c.above2-c.below1_5} (${((c.days-c.above2-c.below1_5)/c.days*100).toFixed(0)}%)`,CC.accent],["2.0–3.0",c=>`${c.above2-c.above3} (${((c.above2-c.above3)/c.days*100).toFixed(0)}%)`,CC.teal],["Above 3.0",c=>`${c.above3} (${(c.above3/c.days*100).toFixed(0)}%)`,CC.green]].map(([label,fn,color])=>`<tr><td style="color:${color}">${label}</td>${s.cycleData.map(c=>`<td>${fn(c)}</td>`).join("")}</tr>`).join("");
-  document.getElementById("p6").innerHTML=`<div class="chart-card"><div class="chart-title">Days spent in each MVRV zone per cycle</div>${makeCanvas("c6",260)}</div><div class="tbl-wrap"><table><thead><tr><th>Zone</th>${s.cycleData.map(c=>`<th>C${c.cycle}</th>`).join("")}</tr></thead><tbody>${tblRows}</tbody></table></div>`;
+  var s=STATS;
+  var barData=s.cycleData.map(function(c){return{name:"C"+c.cycle,b1:c.below1,m1:c.below1_5-c.below1,m2:c.days-c.above2-c.below1_5,m3:c.above2-c.above3,a3:c.above3}});
+  var tblRows=[["Below 1.0",function(c){return c.below1+" ("+(c.below1/c.days*100).toFixed(0)+"%)"},CC.red],["1.0-1.5",function(c){return(c.below1_5-c.below1)+" ("+((c.below1_5-c.below1)/c.days*100).toFixed(0)+"%)"},CC.amber],["1.5-2.0",function(c){return(c.days-c.above2-c.below1_5)+" ("+((c.days-c.above2-c.below1_5)/c.days*100).toFixed(0)+"%)"},CC.accent],["2.0-3.0",function(c){return(c.above2-c.above3)+" ("+((c.above2-c.above3)/c.days*100).toFixed(0)+"%)"},CC.teal],["Above 3.0",function(c){return c.above3+" ("+(c.above3/c.days*100).toFixed(0)+"%)"},CC.green]].map(function(row){return'<tr><td style="color:'+row[2]+'">'+row[0]+'</td>'+s.cycleData.map(function(c){return"<td>"+row[1](c)+"</td>"}).join("")+"</tr>"}).join("");
+  document.getElementById("p6").innerHTML='<div class="chart-card"><div class="chart-title">Days spent in each MVRV zone per cycle</div>'+makeCanvas("c6",300)+'</div><div class="tbl-wrap"><table><thead><tr><th>Zone</th>'+s.cycleData.map(function(c){return"<th>C"+c.cycle+"</th>"}).join("")+'</tr></thead><tbody>'+tblRows+'</tbody></table></div>';
   destroyChart("c6");
-  CHARTS.c6=new Chart(document.getElementById("c6"),{type:"bar",data:{labels:barData.map(d=>d.name),datasets:[{label:"< 1.0",data:barData.map(d=>d.b1),backgroundColor:CC.red,stack:"a"},{label:"1.0–1.5",data:barData.map(d=>d.m1),backgroundColor:CC.amber,stack:"a"},{label:"1.5–2.0",data:barData.map(d=>d.m2),backgroundColor:CC.accent+"80",stack:"a"},{label:"2.0–3.0",data:barData.map(d=>d.m3),backgroundColor:CC.teal,stack:"a"},{label:"> 3.0",data:barData.map(d=>d.a3),backgroundColor:CC.green,stack:"a"}]},options:{...withLegend(chartDefs()),scales:{x:{...chartDefs().scales.x,stacked:true},y:{...chartDefs().scales.y,stacked:true}}}});
+  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{stacked:true}),y:Object.assign({},chartDefs().scales.y,{stacked:true})}}));
+  CHARTS.c6=new Chart(document.getElementById("c6"),{type:"bar",data:{labels:barData.map(function(d){return d.name}),datasets:[{label:"< 1.0",data:barData.map(function(d){return d.b1}),backgroundColor:CC.red,stack:"a"},{label:"1.0-1.5",data:barData.map(function(d){return d.m1}),backgroundColor:CC.amber,stack:"a"},{label:"1.5-2.0",data:barData.map(function(d){return d.m2}),backgroundColor:CC.accent+"80",stack:"a"},{label:"2.0-3.0",data:barData.map(function(d){return d.m3}),backgroundColor:CC.teal,stack:"a"},{label:"> 3.0",data:barData.map(function(d){return d.a3}),backgroundColor:CC.green,stack:"a"}]},options:opts});
 }
 
 function buildRegression(){
-  const s=STATS;
-  const regPts=Array.from({length:7},(_,i)=>({cycle:i+1,log:Math.max(0,s.logR.slope*Math.log(i+1)+s.logR.intercept),lin:s.linR.slope*(i+1)+s.linR.intercept}));
-  const actual=s.cycleData.map(c=>({x:c.cycle,y:c.peak}));
-  document.getElementById("p7").innerHTML=`<div class="g3">${[statCard("C5 peak (log)",s.c5LogPeak.toFixed(2),"2028–31 projection",CC.amber),statCard("C5 peak (linear)",s.c5LinPeak.toFixed(2),"More conservative",CC.muted),statCard("Log R²","0.944","Strong fit",CC.teal)].join("")}</div><div class="chart-card"><div class="chart-title">Cycle peak MVRV — actual vs regression with projections</div>${makeCanvas("c7",300)}</div><div class="info"><strong style="color:${CC.teal}">Log model</strong>: peaks decay but slow down — never hits zero. More physically plausible. Predicts C5 ~${s.c5LogPeak.toFixed(2)}.<br><br><strong style="color:${CC.amber}">Linear model</strong>: higher R² but predicts MVRV → 0 by C7. Trust log for long-term planning.</div>`;
+  var s=STATS;
+  var regPts=Array.from({length:7},function(_,i){return{cycle:i+1,log:Math.max(0,s.logR.slope*Math.log(i+1)+s.logR.intercept),lin:s.linR.slope*(i+1)+s.linR.intercept}});
+  var actual=s.cycleData.map(function(c){return{x:c.cycle,y:c.peak}});
+  document.getElementById("p7").innerHTML='<div class="g3">'+[statCard("C5 peak (log)",s.c5LogPeak.toFixed(2),"2028-31 projection",CC.amber),statCard("C5 peak (linear)",s.c5LinPeak.toFixed(2),"More conservative",CC.muted),statCard("Log R2","0.944","Strong fit",CC.teal)].join("")+'</div><div class="chart-card"><div class="chart-title">Cycle peak MVRV — actual vs regression with projections</div>'+makeCanvas("c7",360)+'</div><div class="info"><strong style="color:'+CC.teal+'">Log model</strong>: peaks decay but slow down — never hits zero. Predicts C5 ~'+s.c5LogPeak.toFixed(2)+'.<br><br><strong style="color:'+CC.amber+'">Linear model</strong>: higher R2 but predicts MVRV near zero by C7. Trust log for long-term planning.</div>';
   destroyChart("c7");
-  CHARTS.c7=new Chart(document.getElementById("c7"),{type:"scatter",data:{datasets:[{label:"Actual peaks",data:actual,backgroundColor:CC.accent,borderColor:CC.accent,pointRadius:8,showLine:false},{label:"Linear",data:regPts.map(p=>({x:p.cycle,y:p.lin})),borderColor:CC.teal,backgroundColor:CC.teal,borderWidth:1.5,pointRadius:3,showLine:true,tension:.3},{label:"Log",data:regPts.map(p=>({x:p.cycle,y:p.log})),borderColor:CC.amber,backgroundColor:CC.amber,borderWidth:1.5,pointRadius:3,showLine:true,tension:.3}]},options:{...withLegend(chartDefs()),scales:{x:{...chartDefs().scales.x,type:"linear",min:.5,max:7.5,title:{display:true,text:"Cycle number",color:CC.muted,font:{size:10}},ticks:{...chartDefs().scales.x.ticks,callback:v=>`C${v}`,stepSize:1}},y:{...chartDefs().scales.y,min:0,max:7,title:{display:true,text:"Peak MVRV",color:CC.muted,font:{size:10}}}}}});
+  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{type:"linear",min:.5,max:7.5,title:{display:true,text:"Cycle number",color:CC.muted,font:{size:13}},ticks:Object.assign({},chartDefs().scales.x.ticks,{callback:function(v){return"C"+v},stepSize:1})}),y:Object.assign({},chartDefs().scales.y,{min:0,max:7,title:{display:true,text:"Peak MVRV",color:CC.muted,font:{size:13}}})}}));
+  CHARTS.c7=new Chart(document.getElementById("c7"),{type:"scatter",data:{datasets:[{label:"Actual peaks",data:actual,backgroundColor:CC.accent,borderColor:CC.accent,pointRadius:10,showLine:false},{label:"Linear",data:regPts.map(function(p){return{x:p.cycle,y:p.lin}}),borderColor:CC.teal,backgroundColor:CC.teal,borderWidth:2,pointRadius:4,showLine:true,tension:.3},{label:"Log",data:regPts.map(function(p){return{x:p.cycle,y:p.log}}),borderColor:CC.amber,backgroundColor:CC.amber,borderWidth:2,pointRadius:4,showLine:true,tension:.3}]},options:opts});
 }
 
-// ── AI Chat ───────────────────────────────────────────────────────
 function toggleChat(){
   chatOpen=!chatOpen;
   document.getElementById("chat").classList.toggle("open",chatOpen);
   document.getElementById("content").classList.toggle("chat-open",chatOpen);
-  const btn=document.getElementById("ai-btn");
+  var btn=document.getElementById("ai-btn");
   btn.classList.toggle("active",chatOpen);
   btn.innerHTML=chatOpen?"<span>✦</span> Close AI":"<span>✦</span> Ask AI";
   if(chatOpen&&prevChatTab!==activeTab){prevChatTab=activeTab;chatHistory=[];autoExplain();}
 }
 
 function buildAIContext(){
-  const l=STATS.last,s=STATS;
-  return`You are a BTC on-chain analyst. The user uploaded their own MVRV CSV data.
-Dataset: ${DATA.length} points from ${fmtDate(DATA[0]&&DATA[0].date)} to ${fmtDate(DATA[DATA.length-1]&&DATA[DATA.length-1].date)}.
-Current MVRV: ${l.mvrv.toFixed(3)} | Z-score: ${l.zscore.toFixed(2)} | MA20: ${l.ma20.toFixed(3)} | MA50: ${l.ma50.toFixed(3)} | MA200: ${l.ma200.toFixed(3)}
-ROC 30d: ${l.roc30!=null?l.roc30.toFixed(1):"N/A"}% | ROC 90d: ${l.roc90!=null?l.roc90.toFixed(1):"N/A"}%
-Cycle peaks: ${s.cycleData.map(c=>`C${c.cycle}=${c.peak.toFixed(2)}`).join(", ")}
-Cycle troughs: ${s.cycleData.map(c=>`C${c.cycle}=${c.trough.toFixed(2)}`).join(", ")}
-C5 log projection: ${s.c5LogPeak.toFixed(2)} | linear: ${s.c5LinPeak.toFixed(2)}
-Zone days: ${s.cycleData.map(c=>`C${c.cycle}(below1:${c.below1},above3:${c.above3})`).join(" ")}
-Panel: ${TAB_NAMES[activeTab]}
-Be concise and specific to the actual numbers. No disclaimers. Plain text only, no markdown.`;
+  var l=STATS.last,s=STATS;
+  return "You are a BTC on-chain analyst. The user uploaded their own MVRV data.\nDataset: "+DATA.length+" points from "+fmtDate(DATA[0]&&DATA[0].date)+" to "+fmtDate(DATA[DATA.length-1]&&DATA[DATA.length-1].date)+".\nCurrent MVRV: "+l.mvrv.toFixed(3)+" | Z-score: "+l.zscore.toFixed(2)+" | MA20: "+l.ma20.toFixed(3)+" | MA50: "+l.ma50.toFixed(3)+" | MA200: "+l.ma200.toFixed(3)+"\nROC 30d: "+(l.roc30!=null?l.roc30.toFixed(1):"N/A")+"% | ROC 90d: "+(l.roc90!=null?l.roc90.toFixed(1):"N/A")+"%\nCycle peaks: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.peak.toFixed(2)}).join(", ")+"\nCycle troughs: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.trough.toFixed(2)}).join(", ")+"\nC5 log projection: "+s.c5LogPeak.toFixed(2)+" | linear: "+s.c5LinPeak.toFixed(2)+"\nZone days: "+s.cycleData.map(function(c){return"C"+c.cycle+"(below1:"+c.below1+",above3:"+c.above3+")"}).join(" ")+"\nPanel: "+TAB_NAMES[activeTab]+"\nBe concise and specific to the actual numbers. No disclaimers. Plain text only, no markdown.";
 }
 
-function appendMsg(role,text,streaming=false){
-  const el=document.createElement("div");
+function appendMsg(role,text,streaming){
+  var el=document.createElement("div");
   el.className="msg "+role;
   if(streaming)el.id="streaming-msg";
-  el.innerHTML=`<div class="msg-role">${role==="user"?"You":"AI"}</div><div class="msg-bubble">${text}${streaming?'<span class="cursor-blink"></span>':""}</div>`;
+  el.innerHTML='<div class="msg-role">'+(role==="user"?"You":"AI")+'</div><div class="msg-bubble">'+text+(streaming?'<span class="cursor-blink"></span>':"")+'</div>';
   document.getElementById("chat-msgs").appendChild(el);
   el.scrollIntoView({behavior:"smooth"});
   return el;
 }
-function showTyping(){const el=document.createElement("div");el.id="typing-ind";el.className="typing-dots";el.innerHTML='<div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>';document.getElementById("chat-msgs").appendChild(el);el.scrollIntoView({behavior:"smooth"});}
-function hideTyping(){const el=document.getElementById("typing-ind");if(el)el.remove();}
+function showTyping(){var el=document.createElement("div");el.id="typing-ind";el.className="typing-dots";el.innerHTML='<div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>';document.getElementById("chat-msgs").appendChild(el);el.scrollIntoView({behavior:"smooth"});}
+function hideTyping(){var el=document.getElementById("typing-ind");if(el)el.remove();}
 
 async function autoExplain(){
   chatHistory=[];
   document.getElementById("chat-msgs").innerHTML="";
   document.getElementById("chat-sugg").style.display="none";
-  const userMsg="Explain what I'm looking at in the "+TAB_NAMES[activeTab]+" panel and the key takeaways from my data.";
+  var userMsg="Explain what I'm looking at in the "+TAB_NAMES[activeTab]+" panel and the key takeaways from my data.";
   chatHistory.push({role:"user",content:userMsg});
   await streamAI();
 }
 
 async function sendMessage(){
-  const inp=document.getElementById("chat-input");
-  const txt=inp.value.trim();if(!txt||aiLoading)return;
+  var inp=document.getElementById("chat-input");
+  var txt=inp.value.trim();if(!txt||aiLoading)return;
   inp.value="";
   document.getElementById("chat-send").disabled=true;
   appendMsg("user",txt);
@@ -514,16 +470,19 @@ async function streamAI(){
   document.getElementById("chat-sugg").style.display="none";
   showTyping();
   try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:buildAIContext(),stream:true,messages:chatHistory})});
+    var res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:buildAIContext(),stream:true,messages:chatHistory})});
     hideTyping();
-    let full="",el=null;
-    const reader=res.body.getReader(),dec=new TextDecoder();
+    var full="",el=null;
+    var reader=res.body.getReader(),dec=new TextDecoder();
     while(true){
-      const{done,value}=await reader.read();if(done)break;
-      for(const line of dec.decode(value).split("\n")){
+      var chunk=await reader.read();
+      if(chunk.done)break;
+      var lines=dec.decode(chunk.value).split("\n");
+      for(var i=0;i<lines.length;i++){
+        var line=lines[i];
         if(!line.startsWith("data: "))continue;
-        const p=line.slice(6).trim();if(p==="[DONE]")continue;
-        try{const j=JSON.parse(p);if(j.delta&&j.delta.text){full+=j.delta.text;if(!el){el=appendMsg("ai",full,true);}else{el.querySelector(".msg-bubble").innerHTML=full+'<span class="cursor-blink"></span>';el.scrollIntoView({behavior:"smooth"});}}}catch{}
+        var p=line.slice(6).trim();if(p==="[DONE]")continue;
+        try{var j=JSON.parse(p);if(j.delta&&j.delta.text){full+=j.delta.text;if(!el){el=appendMsg("ai",full,true);}else{el.querySelector(".msg-bubble").innerHTML=full+'<span class="cursor-blink"></span>';el.scrollIntoView({behavior:"smooth"});}}}catch(e){}
       }
     }
     if(el){el.querySelector(".msg-bubble").innerHTML=full;el.id="";}
@@ -536,9 +495,8 @@ async function streamAI(){
 
 function setInput(txt){document.getElementById("chat-input").value=txt;document.getElementById("chat-input").focus();}
 
-// ── Init ──────────────────────────────────────────────────────────
-document.getElementById("chat-input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}});
-document.getElementById("chat-input").addEventListener("input",e=>{document.getElementById("chat-send").disabled=!e.target.value.trim()||aiLoading;});
+document.getElementById("chat-input").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}});
+document.getElementById("chat-input").addEventListener("input",function(e){document.getElementById("chat-send").disabled=!e.target.value.trim()||aiLoading;});
 document.getElementById("chat-panel-name").textContent="Viewing: "+TAB_NAMES[0];
 </script>
 </body>
