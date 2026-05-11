@@ -7,18 +7,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-  .upload-label {
+  .upload-sub {
       cursor: pointer;
     }
-    .upload-label {
+    .upload-sub {
   padding: 8px 12px;
   border-radius: 6px;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
+
+  border: 1px dotted rgba(255, 255, 255, 0.4);
 }
 
-.upload-label:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+.upload-sub:hover {
+  border-color:var(--accent);background:#16123a
 }
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -31,9 +33,9 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira M
 
 /* ── Upload Screen ── */
 #upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;gap:32px;text-align:center}
-.upload-label{font-size:11px;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
+.upload-label{font-size:20px;color:var(--accent);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
 .upload-title{font-size:36px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
-.upload-sub{font-size:13px;color:var(--muted);max-width:380px;line-height:1.6}
+.upload-sub{font-size:14px;color:var(--muted);max-width:380px;line-height:1.6}
 .drop-zone{width:100%;max-width:480px;border:1.5px dashed var(--border);border-radius:16px;padding:48px 32px;cursor:pointer;transition:all .2s;background:transparent}
 .drop-zone:hover,.drop-zone.dragging{border-color:var(--accent);background:#16123a}
 .drop-icon{font-size:36px;margin-bottom:12px}
@@ -123,18 +125,29 @@ tr:last-child td{border-bottom:none}
 
 
 
-    <div class="upload-label"
-     style="font-size: 24px;"
-     onclick="window.open('https://www.blockchain.com/explorer/charts/mvrv?fbclid=IwAR2RaC36yhVvWc61RVNJ6dHVxg0gJtyXAXi6LYV5PjlADq9mHIR2YVGuC1g', '_blank', 'noopener,noreferrer')">
-  BTC Analytics
-</div>
+    <div class="upload-label">BTC Analytics</div>
 
 
 
 
 
     <div class="upload-title">MVRV Dashboard</div>
-    <div class="upload-sub">Upload your <code>.json</code> downloaded from blockchain.com — or any <code>.csv</code> with date + mvrv columns. No conversion needed.</div>
+
+
+
+
+
+    <a href="https://www.blockchain.com/explorer/charts/mvrv"
+   target="_blank"
+   rel="noopener noreferrer"
+   class="upload-sub">
+  Upload your <code>.json</code> downloaded from blockchain.com
+</a>
+
+
+
+
+
   </div>
 
   <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
@@ -145,7 +158,7 @@ tr:last-child td{border-bottom:none}
   </div>
 
   <div class="upload-error" id="upload-error"></div>
-  <div class="upload-note">JSON: auto-detects mvrv array + converts timestamps · CSV: needs date + mvrv columns</div>
+  <div class="upload-note">JSON: auto-detects mvrv array + converts timestamps</div>
 </div>
 
 <!-- App -->
