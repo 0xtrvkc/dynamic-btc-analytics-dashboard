@@ -251,8 +251,17 @@ tr:last-child td{border-bottom:none}
 const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Peak Regression"];
 const CC = {bg:"#0a0a0f",surface:"#111118",surface2:"#16161f",border:"#1e1e2e",text:"#e8e6f0",muted:"#6b6880",faint:"#2a2838",accent:"#7c6af7",teal:"#2dd4bf",amber:"#f59e0b",red:"#f43f5e",green:"#22c55e"};
 const FIRST_HALVING = new Date("2012-11-28");
-const AVG_CYCLE_DAYS = 1422;
-const CYCLE_COLORS = {1:CC.red,2:CC.amber,3:CC.teal,4:CC.accent};
+const AVG_CYCLE_DAYS = 1422; //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<CHANGE CYCLE DAYS HERE
+const CYCLE_COLORS = {
+  1: CC.red, 
+  2: CC.amber, 
+  3: CC.teal, 
+  4: CC.accent, 
+  5: CC.green,  // Cycle 5 (2028-2032)
+  6: "#f472b6", // Cycle 6 (2032-2036) - Pink
+  7: "#38bdf8", // Cycle 7 (2036-2040) - Sky Blue
+  8: "#fb7185"  // Cycle 8 (2040-2044) - Rose
+};
 const CYCLE_LABELS = {1:"2012-15",2:"2016-19",3:"2020-23",4:"2024-27"};
 
 let DATA=[], STATS={}, CHARTS={}, activeTab=0, chatOpen=false, aiLoading=false, chatHistory=[], prevChatTab=-1;
