@@ -33,15 +33,34 @@
   font-size: 1.2rem;
 }
   .upload-sub {
-    padding: 10px 16px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: 1px dotted rgba(255, 255, 255, 0.4);
+  display: block;              /* 🔥 important */
+  width: 100%;
+  max-width: 480px;            /* prevents it getting too wide */
+  margin: 0 auto;              /* center it */
+
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px dotted rgba(255, 255, 255, 0.4);
+
+  line-height: 1.5;
+  text-align: center;
+
+  word-break: break-word;      /* 🔥 prevents overflow */
+  white-space: normal;         /* ensure wrapping */
+
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+ @media (max-width: 480px) {
+  .upload-sub {
+    font-size: 14px;
+    padding: 12px 14px;
   }
+}
   .upload-sub:hover {
-    border-color:var(--accent);background:#16123a
-  }
+  background: #16123a;
+  border-color: var(--accent);
+}
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;
