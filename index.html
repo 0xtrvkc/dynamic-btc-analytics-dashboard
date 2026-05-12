@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-  .rotate-tip {
+ .rotate-tip {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,7 +15,8 @@
 
   width: 100%;
   max-width: 480px;
-  margin-top: 24px;
+
+  margin: 24px auto 0; /* 🔥 THIS centers it */
 
   padding: 12px 16px;
   border-radius: 10px;
@@ -25,7 +26,6 @@
   font-size: 0.9rem;
   color: var(--muted);
   text-align: center;
-
   line-height: 1.5;
 }
 
@@ -33,24 +33,12 @@
   font-size: 1.2rem;
 }
   .upload-sub {
-  display: block;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-
-  padding: 14px 16px;
-  border-radius: 10px;
-  border: 1px dotted rgba(255, 255, 255, 0.4);
-
-  line-height: 1.5;
-  text-align: center;
-
-  word-break: break-word;
-  white-space: normal;
-
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
+    padding: 10px 16px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px dotted rgba(255, 255, 255, 0.4);
+  }
   .upload-sub:hover {
     border-color:var(--accent);background:#16123a
   }
@@ -159,7 +147,7 @@ tr:last-child td{border-bottom:none}
        target="_blank" rel="noopener noreferrer" class="upload-sub">
       Upload your <code>.json</code> downloaded from blockchain.com
     </a>
-    
+
 
 <div class="rotate-tip">
   <span class="rotate-icon">📱↔️</span>
@@ -173,7 +161,7 @@ tr:last-child td{border-bottom:none}
 
   <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
     <div class="drop-icon">📂</div>
-    <div class="drop-main">Drop your JSON here</div>
+    <div class="drop-main">Drop your JSON or CSV here</div>
     <div class="drop-hint">or click to browse · blockchain.com .json supported</div>
     <input type="file" id="file-input" accept=".json,.csv" style="display:none" onchange="handleFile(this.files[0])"/>
   </div>
@@ -191,7 +179,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <div class="header-right">
       <button class="btn" onclick="resetApp()">↑ Upload new file</button>
-      <!--<button class="btn" id="ai-btn" onclick="toggleChat()"><span>✦</span> Ask AI</button>-->
+      <button class="btn" id="ai-btn" onclick="toggleChat()"><span>✦</span> Ask AI</button>
     </div>
   </div>
   <div class="tabs" id="tabs"></div>
@@ -409,15 +397,98 @@ function buildMomentum(){
 }
 
 function buildCycleOverlay(){
-  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">All cycles overlaid — position (0-100%) vs MVRV</div>'+makeCanvas("c3",380)+'</div><div class="info">Aligns all 4 cycles on a shared 0-100% time axis so you can directly compare their MVRV trajectories.</div>';
+  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">All cycles overlaid — cycle position vs MVRV · vertical lines = every 6 months</div>'+makeCanvas("c3",420)+'</div><div class="info">Aligns all 4 cycles on a 0-100% time axis (4 years = 48 months). Dashed lines mark every 6 months. Labels show month number.</div>';
   destroyChart("c3");
-  var datasets=[1,2,3,4].map(function(c){
-    var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null});
-    var pts=sample(sub,60);
-    return{label:"C"+c+" ("+(CYCLE_LABELS[c]||"—")+")",data:pts.map(function(d){return{x:d.cyclePct,y:d.mvrv}}),borderColor:CYCLE_COLORS[c],backgroundColor:CYCLE_COLORS[c],borderWidth:2,pointRadius:2,showLine:true,tension:.3};
+
+  // 4-year cycle = 48 months. 1 month = 100/48 pct
+  var monthPct = 100/48;
+
+  // Build month-line datasets (every 6 months: M6, M12, M18 ... M42)
+  // shown as vertical scatter lines using dummy y points
+  var monthDatasets = [];
+  var keyMonths = [6,12,18,24,30,36,42];
+  keyMonths.forEach(function(m){
+    var xPos = +(m * monthPct).toFixed(2);
+    monthDatasets.push({
+      label: "M"+m,
+      data: [{x:xPos,y:0},{x:xPos,y:12}],
+      borderColor: CC.muted+"44",
+      borderWidth: 1,
+      borderDash: [4,4],
+      pointRadius: 0,
+      showLine: true,
+      tension: 0,
+      fill: false,
+      order: 10,
+    });
   });
-  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{type:"linear",title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:13}}}),y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"MVRV",color:CC.muted,font:{size:13}}})}}));
-  CHARTS.c3=new Chart(document.getElementById("c3"),{type:"scatter",data:{datasets:datasets},options:opts});
+
+  // Cycle line datasets
+  var cycleDatasets = [1,2,3,4].map(function(c){
+    var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null});
+    var pts=sample(sub,80);
+    return{label:"C"+c+" ("+(CYCLE_LABELS[c]||"—")+")",data:pts.map(function(d){return{x:d.cyclePct,y:d.mvrv}}),borderColor:CYCLE_COLORS[c],backgroundColor:CYCLE_COLORS[c],borderWidth:2,pointRadius:2,showLine:true,tension:.3,order:c};
+  });
+
+  var allDatasets = monthDatasets.concat(cycleDatasets);
+
+  // Custom plugin to draw month labels on the vertical lines
+  var monthLabelPlugin = {
+    id:"monthLabels",
+    afterDraw: function(chart){
+      var ctx = chart.ctx;
+      var xAxis = chart.scales.x;
+      var yAxis = chart.scales.y;
+      ctx.save();
+      ctx.font = "11px 'JetBrains Mono','Fira Mono','Courier New',monospace";
+      ctx.fillStyle = CC.muted;
+      ctx.textAlign = "center";
+      keyMonths.forEach(function(m){
+        var xPos = +(m * monthPct).toFixed(2);
+        var px = xAxis.getPixelForValue(xPos);
+        var py = yAxis.bottom + 14;
+        ctx.fillText("M"+m, px, py);
+      });
+      ctx.restore();
+    }
+  };
+
+  var opts = withLegend(Object.assign({},chartDefs(),{
+    layout:{padding:{bottom:20}},
+    scales:{
+      x:Object.assign({},chartDefs().scales.x,{
+        type:"linear",
+        min:0,max:100,
+        title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:13}},
+        ticks:Object.assign({},chartDefs().scales.x.ticks,{
+          callback:function(v){
+            // show month label for key months, pct otherwise
+            var m = Math.round(v/monthPct);
+            if(keyMonths.indexOf(m)>-1 && Math.abs(v - m*monthPct)<0.5) return "";
+            return v%25===0?v+"%":"";
+          },
+          maxTicksLimit:20
+        })
+      }),
+      y:Object.assign({},chartDefs().scales.y,{
+        min:0,max:6,
+        title:{display:true,text:"MVRV",color:CC.muted,font:{size:13}}
+      })
+    },
+    plugins:Object.assign({},withLegend(chartDefs()).plugins,{
+      legend:{display:true,labels:{
+        color:CC.muted,font:{size:13},boxWidth:24,boxHeight:2,
+        filter:function(item){ return item.text.indexOf("M")===-1||item.text==="MVRV"; }
+      }}
+    })
+  }));
+
+  CHARTS.c3 = new Chart(document.getElementById("c3"),{
+    type:"scatter",
+    data:{datasets:allDatasets},
+    options:opts,
+    plugins:[monthLabelPlugin]
+  });
 }
 
 function buildDrawdown(){
