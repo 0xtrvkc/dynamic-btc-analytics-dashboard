@@ -6,7 +6,6 @@
 <title>MVRV Analytics</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 /* ... (Your existing styles) ... */
  .rotate-tip {
@@ -151,32 +150,33 @@ tr:last-child td{border-bottom:none}
   <div>
     <div class="upload-label">BTC Analytics</div>
     <div class="upload-title">MVRV Dashboard</div>
-    <a href="https://www.blockchain.com/explorer/charts/mvrv"
-       target="_blank" rel="noopener noreferrer" class="upload-sub">
-      Upload your <code>.json</code> downloaded from blockchain.com
-    </a>
+    <div class="upload-sub">Fetching latest data automatically…</div>
     <div class="rotate-tip">
       <span class="rotate-icon">📱↔️</span>
       <span>For best experience, rotate your phone horizontal</span>
     </div>
   </div>
 
-  <!-- Step 1: JSON upload -->
-  <div class="step active" id="step1">
-    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <div class="drop-icon">📂</div>
-      <div class="drop-main">Drop your MVRV JSON here</div>
-      <div class="drop-hint">or click to browse · blockchain.com .json supported</div>
-      <input type="file" id="file-input" accept=".json" style="display:none" onchange="handleFile(this.files[0])"/>
+  <div class="step active" id="step1" style="gap:14px">
+    <!-- MVRV status -->
+    <div style="width:100%;max-width:480px;background:var(--surface2);border:.5px solid var(--border);border-radius:14px;padding:18px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:0.85rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)">MVRV Data</span>
+        <span id="mvrv-fetch-status" style="font-size:0.85rem;color:var(--muted)">⏳ Fetching…</span>
+      </div>
+      <div class="progress-wrap active" id="mvrv-progress-wrap"><div class="progress-bar" id="mvrv-progress-bar"></div></div>
     </div>
-    <div class="upload-error" id="upload-error"></div>
-    <div class="upload-note">Auto-detects mvrv array + converts timestamps</div>
-    <div style="margin-top:18px;display:flex;align-items:center;gap:10px;font-size:0.85rem">
-      <span id="price-fetch-status" style="color:var(--muted)">⏳ Fetching BTC price data…</span>
+
+    <!-- Price status -->
+    <div style="width:100%;max-width:480px;background:var(--surface2);border:.5px solid var(--border);border-radius:14px;padding:18px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:0.85rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)">BTC Price Data</span>
+        <span id="price-fetch-status" style="font-size:0.85rem;color:var(--muted)">⏳ Fetching…</span>
+      </div>
+      <div class="progress-wrap active" id="price-progress-wrap"><div class="progress-bar" id="price-progress-bar"></div></div>
     </div>
-    <div class="progress-wrap" id="progress-wrap" style="margin-top:10px">
-      <div class="progress-bar" id="progress-bar"></div>
-    </div>
+
+    <div id="upload-error" style="color:var(--red);font-size:0.9rem;display:none"></div>
   </div>
 </div>
 
@@ -187,7 +187,7 @@ tr:last-child td{border-bottom:none}
       <span class="header-meta" id="hdr-meta">—</span>
     </div>
     <div class="header-right">
-      <button class="btn" onclick="resetApp()">↑ Upload new file</button>
+      <button class="btn" onclick="resetApp()">↺ Refresh data</button>
     </div>
   </div>
   <div class="tabs" id="tabs"></div>
@@ -258,92 +258,97 @@ function destroyChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}
 function makeCanvas(id,h){return'<div class="chart-wrap" style="height:'+h+'px"><canvas id="'+id+'"></canvas></div>'}
 function statCard(label,val,sub,color){return'<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+(color||CC.text)+'">'+val+'</div>'+(sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>'}
 
-function handleFile(file){
-  if(!file)return;
-  var errEl=document.getElementById("upload-error");
-  errEl.style.display="none";
-  var isJSON=file.name.toLowerCase().endsWith(".json");
-  var reader=new FileReader();
-  reader.onload=function(e){
-    if(isJSON){
-      try{
-        var json=JSON.parse(e.target.result);
-        var arr=json.mvrv||json.values||null;
-        if(!arr||!arr.length){errEl.textContent="Couldn't find mvrv data array in JSON.";errEl.style.display="block";return;}
-        var rows=arr.map(function(pt){
-          var ts=+pt.x,v=+pt.y;
-          if(!ts||isNaN(v)||v<=0)return null;
-          return{date:new Date(ts),mvrv:v};
-        }).filter(Boolean).sort(function(a,b){return a.date-b.date});
-        if(rows.length<10){errEl.textContent="Not enough valid data points.";errEl.style.display="block";return;}
-        if(priceFetchDone){loadData(rows);}else{pendingRows=rows;}
-      }catch(err){errEl.textContent="Failed to parse JSON: "+err.message;errEl.style.display="block";}
-    } else {
-      Papa.parse(file,{header:true,skipEmptyLines:true,complete:function(res){
-        var cols=res.meta.fields||[];
-        var dateCol=cols.find(function(c){return /date/i.test(c)});
-        var mvrvCol=cols.find(function(c){return /mvrv/i.test(c)});
-        if(!dateCol||!mvrvCol){errEl.textContent="Couldn't detect columns. Found: "+cols.join(", ");errEl.style.display="block";return;}
-        var rows=res.data.map(function(r){var d=parseDateFlexible(r[dateCol]);var v=parseFloat(String(r[mvrvCol]).replace(/,/g,""));return d&&!isNaN(v)?{date:d,mvrv:v}:null}).filter(Boolean).sort(function(a,b){return a.date-b.date});
-        if(rows.length<10){errEl.textContent="Not enough valid rows.";errEl.style.display="block";return;}
-        if(priceFetchDone){loadData(rows);}else{pendingRows=rows;}
-      },error:function(er){errEl.textContent=er.message;errEl.style.display="block";}});
-    }
-  };
-  reader.onerror=function(){errEl.textContent="Failed to read file.";errEl.style.display="block";};
-  reader.readAsText(file);
-}
-
-var dz=document.getElementById("drop-zone");
-dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("dragging")});
-dz.addEventListener("dragleave",function(){dz.classList.remove("dragging")});
-dz.addEventListener("drop",function(e){e.preventDefault();dz.classList.remove("dragging");var f=e.dataTransfer.files[0];if(f)handleFile(f)});
-
-// Auto-fetch BTC daily price JSON from GitHub Pages
+var MVRV_JSON_URL="https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/mvrv.json";
 var PRICE_JSON_URL="https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/btc_daily_price.json";
+
 var pendingRows=null;
 var priceFetchDone=false;
+var mvrvFetchDone=false;
 
+function setMvrvStatus(msg,color){
+  var el=document.getElementById("mvrv-fetch-status");
+  if(el){el.textContent=msg;el.style.color=color||"var(--muted)";}
+}
 function setPriceStatus(msg,color){
   var el=document.getElementById("price-fetch-status");
   if(el){el.textContent=msg;el.style.color=color||"var(--muted)";}
 }
+function setMvrvProgress(pct){
+  var bar=document.getElementById("mvrv-progress-bar");
+  if(bar)bar.style.width=pct+"%";
+}
+function setPriceProgress(pct){
+  var bar=document.getElementById("price-progress-bar");
+  if(bar)bar.style.width=pct+"%";
+}
 
-function setProgress(pct){
-  var wrap=document.getElementById("progress-wrap");
-  var bar=document.getElementById("progress-bar");
-  if(!wrap||!bar)return;
-  wrap.classList.add("active");
-  bar.style.width=pct+"%";
-  if(pct>=100)setTimeout(function(){wrap.classList.remove("active")},600);
+function tryProceed(){
+  if(mvrvFetchDone&&priceFetchDone&&pendingRows){
+    loadData(pendingRows);
+    pendingRows=null;
+  }
+}
+
+function fetchMvrvData(){
+  setMvrvStatus("⏳ Fetching…","var(--muted)");
+  setMvrvProgress(20);
+  fetch(MVRV_JSON_URL)
+    .then(function(res){
+      if(!res.ok)throw new Error("HTTP "+res.status);
+      setMvrvProgress(60);
+      return res.json();
+    })
+    .then(function(json){
+      setMvrvProgress(90);
+      // Parse using existing handleFile logic inline
+      var raw=json.values||json.mvrv||json;
+      if(!Array.isArray(raw)||raw.length<10)throw new Error("Invalid MVRV data");
+      var rows=raw.map(function(p){
+        var ts=p.x,mv=p.y;
+        if(!ts||!mv)return null;
+        var d=new Date(ts>1e10?ts:ts*1000);
+        if(isNaN(d))return null;
+        return{date:d,mvrv:+mv};
+      }).filter(Boolean);
+      rows.sort(function(a,b){return a.date-b.date});
+      setMvrvProgress(100);
+      setMvrvStatus("✓ "+rows.length.toLocaleString()+" data points","var(--green)");
+      mvrvFetchDone=true;
+      pendingRows=rows;
+      tryProceed();
+    })
+    .catch(function(err){
+      setMvrvProgress(0);
+      setMvrvStatus("✗ Failed: "+err.message,"var(--red)");
+      var errEl=document.getElementById("upload-error");
+      if(errEl){errEl.textContent="Could not load MVRV data. Make sure the GitHub Action has run at least once.";errEl.style.display="block";}
+      mvrvFetchDone=true;
+    });
 }
 
 function fetchPriceData(){
-  setPriceStatus("⏳ Fetching BTC price data…","var(--muted)");
-  setProgress(10);
+  setPriceStatus("⏳ Fetching…","var(--muted)");
+  setPriceProgress(10);
   fetch(PRICE_JSON_URL)
     .then(function(res){
       if(!res.ok)throw new Error("HTTP "+res.status);
-      setProgress(60);
-      setPriceStatus("⏳ Parsing price data…","var(--muted)");
+      setPriceProgress(60);
       return res.json();
     })
     .then(function(json){
       PRICE_MAP=json;
       hasPriceData=true;
       var count=Object.keys(json).length;
-      setProgress(100);
-      setPriceStatus("✓ "+count.toLocaleString()+" days of price data loaded","var(--green)");
+      setPriceProgress(100);
+      setPriceStatus("✓ "+count.toLocaleString()+" days","var(--green)");
       priceFetchDone=true;
-      // If user already dropped JSON while price was loading, proceed now
-      if(pendingRows){loadData(pendingRows);pendingRows=null;}
+      tryProceed();
     })
     .catch(function(err){
-      setProgress(0);
-      document.getElementById("progress-wrap").classList.remove("active");
-      setPriceStatus("⚠ Price data unavailable — dashboard works without it","var(--amber)");
+      setPriceProgress(0);
+      setPriceStatus("⚠ Unavailable — dashboard works without it","var(--amber)");
       priceFetchDone=true;
-      if(pendingRows){loadData(pendingRows);pendingRows=null;}
+      tryProceed();
     });
 }
 
@@ -353,7 +358,8 @@ function joinPrice(){
   });
 }
 
-// Start fetching immediately on page load
+// Kick off both fetches in parallel on page load
+fetchMvrvData();
 fetchPriceData();
 
 function enrichData(rows) {
@@ -459,10 +465,17 @@ function loadData(rows){
 function resetApp(){
   document.getElementById("upload-screen").style.display="flex";
   document.getElementById("app").style.display="none";
-  document.getElementById("file-input").value="";
-  document.getElementById("upload-error").style.display="none";
   DATA=[];STATS={};CHARTS={};activeTab=0;built.clear();
-  pendingRows=null;
+  PRICE_MAP={};hasPriceData=false;pendingRows=null;
+  mvrvFetchDone=false;priceFetchDone=false;
+  setMvrvStatus("⏳ Fetching…","var(--muted)");
+  setPriceStatus("⏳ Fetching…","var(--muted)");
+  setMvrvProgress(0);setPriceProgress(0);
+  document.getElementById("mvrv-progress-wrap").classList.add("active");
+  document.getElementById("price-progress-wrap").classList.add("active");
+  document.getElementById("upload-error").style.display="none";
+  fetchMvrvData();
+  fetchPriceData();
 }
 
 var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression,buildPricePeaks];
