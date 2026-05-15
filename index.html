@@ -837,88 +837,111 @@ function buildPricePeaks(){
   }
   var s=STATS;
 
-  // Find true BTC price peak per cycle (highest price day, regardless of MVRV)
+  // Find true BTC price peak per cycle
   var pricePeaks=[];
   STATS.availCycles.forEach(function(c){
     var sub=DATA.filter(function(d){return d.cycle===c&&d.price});
     if(!sub.length)return;
     var best=sub.reduce(function(a,b){return b.price>a.price?b:a});
-    // Find MVRV peak date for this cycle
     var mvrvPeak=s.cycleData.find(function(cd){return cd.cycle===c});
     var mvrvPeakDate=mvrvPeak?mvrvPeak.peakDate:null;
     var mvrvPeakMvrv=mvrvPeak?mvrvPeak.peak:null;
-    // Days between MVRV peak and price peak
     var daysDiff=null;
     if(mvrvPeakDate){
       var d1=new Date(mvrvPeakDate),d2=new Date(best.dateStr);
       daysDiff=Math.round((d2-d1)/(1000*60*60*24));
     }
-    // MVRV on price peak day
     var mvrvOnPriceDay=best.mvrv||null;
-    pricePeaks.push({cycle:c,price:best.price,date:best.dateStr,mvrvOnDay:mvrvOnPriceDay,mvrvPeakDate:mvrvPeakDate,mvrvPeakMvrv:mvrvPeakMvrv,daysDiff:daysDiff});
+    // Divergence: how far MVRV had already fallen from its peak when price peaked
+    var divergencePct=null;
+    if(mvrvOnPriceDay&&mvrvPeakMvrv){
+      divergencePct=((mvrvOnPriceDay-mvrvPeakMvrv)/mvrvPeakMvrv)*100;
+    }
+    // Ratio: what fraction of MVRV peak was intact at price peak
+    var ratio=mvrvOnPriceDay&&mvrvPeakMvrv?mvrvOnPriceDay/mvrvPeakMvrv:null;
+    pricePeaks.push({cycle:c,price:best.price,date:best.dateStr,mvrvOnDay:mvrvOnPriceDay,mvrvPeakDate:mvrvPeakDate,mvrvPeakMvrv:mvrvPeakMvrv,daysDiff:daysDiff,divergencePct:divergencePct,ratio:ratio});
   });
 
-  // Stat cards — one per cycle with price ATH
+  // Stat cards
   var cards=pricePeaks.map(function(p){
     return statCard("C"+p.cycle+" ATH","$"+Math.round(p.price).toLocaleString(),p.date,CYCLE_COLORS[p.cycle]||CC.muted);
   }).join("");
 
-  // Lead/lag summary
+  // Divergence stat cards
+  var divCards=pricePeaks.filter(function(p){return p.divergencePct!==null}).map(function(p){
+    var color=p.divergencePct>-5?CC.amber:p.divergencePct>-20?CC.text:CC.teal;
+    var ratio=p.ratio?(p.ratio*100).toFixed(0)+"% of peak intact":"—";
+    return statCard("C"+p.cycle+" divergence",p.divergencePct.toFixed(1)+"%",ratio,color);
+  }).join("");
+
+  // Table rows
   var leadLagRows=pricePeaks.filter(function(p){return p.daysDiff!==null&&p.mvrvPeakDate}).map(function(p){
     var lag=p.daysDiff>0?"Price peaked <strong style='color:"+CC.amber+"'>"+p.daysDiff+"d after</strong> MVRV":p.daysDiff<0?"Price peaked <strong style='color:"+CC.teal+"'>"+Math.abs(p.daysDiff)+"d before</strong> MVRV":"Same day";
-    return'<tr><td style="color:'+(CYCLE_COLORS[p.cycle]||CC.muted)+';font-weight:600">C'+p.cycle+'</td>'+'<td>$'+Math.round(p.price).toLocaleString()+'</td>'+'<td>'+p.date+'</td>'+'<td>'+(p.mvrvOnDay?p.mvrvOnDay.toFixed(3):"—")+'</td>'+'<td>'+p.mvrvPeakDate+'</td>'+'<td>'+(p.mvrvPeakMvrv?p.mvrvPeakMvrv.toFixed(3):"—")+'</td>'+'<td>'+lag+'</td></tr>';
+    var divCell=p.divergencePct!==null?'<td style="color:'+(p.divergencePct>-5?CC.amber:p.divergencePct>-20?CC.text:CC.teal)+'">'+p.divergencePct.toFixed(1)+'%</td>':'<td>—</td>';
+    var ratioCell=p.ratio!==null?'<td>'+(p.ratio*100).toFixed(0)+'%</td>':'<td>—</td>';
+    return'<tr><td style="color:'+(CYCLE_COLORS[p.cycle]||CC.muted)+';font-weight:600">C'+p.cycle+'</td>'+'<td>$'+Math.round(p.price).toLocaleString()+'</td>'+'<td>'+p.date+'</td>'+'<td>'+(p.mvrvOnDay?p.mvrvOnDay.toFixed(3):"—")+'</td>'+'<td>'+p.mvrvPeakDate+'</td>'+'<td>'+(p.mvrvPeakMvrv?p.mvrvPeakMvrv.toFixed(3):"—")+'</td>'+divCell+ratioCell+'<td>'+lag+'</td></tr>';
   }).join("");
 
   document.getElementById("p8").innerHTML=
     '<div class="g4">'+cards+'</div>'+
-    '<div class="chart-card"><div class="chart-title">BTC all-time high per cycle · log scale</div>'+makeCanvas("c8a",260)+'</div>'+
-    '<div class="chart-card"><div class="chart-title">MVRV on the day of BTC price peak vs MVRV\'s own peak</div>'+makeCanvas("c8b",240)+'</div>'+
-    '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>BTC ATH</th><th>ATH date</th><th>MVRV that day</th><th>MVRV peak date</th><th>MVRV peak</th><th>Lead / Lag</th></tr></thead><tbody>'+leadLagRows+'</tbody></table></div>'+
-    '<div class="info">Lead/lag: positive = price peaked after MVRV (MVRV led). Negative = price peaked before MVRV. Historically MVRV has led or coincided with price peaks, making it a useful early warning signal.</div>';
+    '<div class="chart-card"><div class="chart-title">BTC all-time high per cycle · log scale</div>'+makeCanvas("c8a",240)+'</div>'+
+    '<div class="chart-card"><div class="chart-title">MVRV on the day of BTC price peak vs MVRV\'s own peak</div>'+makeCanvas("c8b",220)+'</div>'+
+    '<div class="g4" style="margin-top:0">'+divCards+'</div>'+
+    '<div class="chart-card"><div class="chart-title">MVRV divergence at price peak — how far MVRV had already fallen when price topped (%)</div>'+makeCanvas("c8c",220)+'</div>'+
+    '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>BTC ATH</th><th>ATH date</th><th>MVRV that day</th><th>MVRV peak date</th><th>MVRV peak</th><th>Divergence</th><th>Ratio</th><th>Lead / Lag</th></tr></thead><tbody>'+leadLagRows+'</tbody></table></div>'+
+    '<div class="info">Divergence %: how far MVRV had already dropped from its own peak when BTC price hit its high. A large negative number = MVRV was well off its peak = classic bearish divergence. Ratio = what % of MVRV peak was still intact when price peaked. If divergence grows more negative each cycle, MVRV is leading price by more — the signal is strengthening.</div>';
 
-  destroyChart("c8a"); destroyChart("c8b");
+  destroyChart("c8a");destroyChart("c8b");destroyChart("c8c");
 
   // Bar chart — BTC ATH per cycle, log scale
   CHARTS.c8a=new Chart(document.getElementById("c8a"),{
     type:"bar",
     data:{
       labels:pricePeaks.map(function(p){return"C"+p.cycle}),
-      datasets:[{
-        label:"BTC ATH (USD)",
-        data:pricePeaks.map(function(p){return p.price}),
-        backgroundColor:pricePeaks.map(function(p){return CYCLE_COLORS[p.cycle]||CC.muted}),
-        borderRadius:6
-      }]
+      datasets:[{label:"BTC ATH (USD)",data:pricePeaks.map(function(p){return p.price}),backgroundColor:pricePeaks.map(function(p){return CYCLE_COLORS[p.cycle]||CC.muted}),borderRadius:6}]
     },
-    options:withLegend(Object.assign({},chartDefs(),{
-      scales:{
-        x:chartDefs().scales.x,
-        y:Object.assign({},chartDefs().scales.y,{
-          type:"logarithmic",
-          ticks:Object.assign({},chartDefs().scales.y.ticks,{
-            callback:function(v){return v>=1000?"$"+(v/1000).toFixed(0)+"k":v>=1000000?"$"+(v/1000000).toFixed(0)+"M":"$"+v;}
-          })
-        })
-      }
-    }))
+    options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{type:"logarithmic",ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v>=1000000?"$"+(v/1000000).toFixed(0)+"M":v>=1000?"$"+(v/1000).toFixed(0)+"k":"$"+v;}})})}}))
   });
 
-  // Grouped bar — MVRV on price peak day vs MVRV's own peak
+  // Grouped bar — MVRV at price peak vs MVRV own peak
   var mvrvCompareCycles=pricePeaks.filter(function(p){return p.mvrvOnDay&&p.mvrvPeakMvrv});
   CHARTS.c8b=new Chart(document.getElementById("c8b"),{
     type:"bar",
     data:{
       labels:mvrvCompareCycles.map(function(p){return"C"+p.cycle}),
       datasets:[
-        {label:"MVRV at price ATH",data:mvrvCompareCycles.map(function(p){return p.mvrvOnDay}),backgroundColor:pricePeaks.map(function(p){return(CYCLE_COLORS[p.cycle]||CC.muted)+"cc"}),borderRadius:6},
+        {label:"MVRV at price ATH",data:mvrvCompareCycles.map(function(p){return p.mvrvOnDay}),backgroundColor:mvrvCompareCycles.map(function(p){return(CYCLE_COLORS[p.cycle]||CC.muted)+"cc"}),borderRadius:6},
         {label:"MVRV peak",data:mvrvCompareCycles.map(function(p){return p.mvrvPeakMvrv}),backgroundColor:CC.muted+"55",borderRadius:6}
+      ]
+    },
+    options:withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{stacked:false}),y:Object.assign({},chartDefs().scales.y,{min:0,title:{display:true,text:"MVRV",color:CC.muted,font:{size:13}}})}}))
+  });
+
+  // Divergence bar chart
+  var divCycles=pricePeaks.filter(function(p){return p.divergencePct!==null});
+  CHARTS.c8c=new Chart(document.getElementById("c8c"),{
+    type:"bar",
+    data:{
+      labels:divCycles.map(function(p){return"C"+p.cycle}),
+      datasets:[
+        {label:"Divergence %",data:divCycles.map(function(p){return p.divergencePct}),backgroundColor:divCycles.map(function(p){return p.divergencePct>-5?CC.amber+"cc":p.divergencePct>-20?CC.accent+"cc":CC.teal+"cc"}),borderRadius:6},
+        {label:"Ratio (% of MVRV peak intact)",data:divCycles.map(function(p){return p.ratio?(p.ratio-1)*100:null}),backgroundColor:CC.muted+"33",borderRadius:6,hidden:true}
       ]
     },
     options:withLegend(Object.assign({},chartDefs(),{
       scales:{
-        x:Object.assign({},chartDefs().scales.x,{stacked:false}),
-        y:Object.assign({},chartDefs().scales.y,{min:0,title:{display:true,text:"MVRV",color:CC.muted,font:{size:13}}})
-      }
+        x:chartDefs().scales.x,
+        y:Object.assign({},chartDefs().scales.y,{
+          title:{display:true,text:"Divergence (%)",color:CC.muted,font:{size:13}},
+          ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v+"%"}})
+        })
+      },
+      plugins:Object.assign({},withLegend(chartDefs()).plugins,{
+        tooltip:{callbacks:{label:function(ctx){
+          var p=divCycles[ctx.dataIndex];
+          return["Divergence: "+p.divergencePct.toFixed(1)+"%","Ratio: "+(p.ratio*100).toFixed(0)+"% of MVRV peak intact","Lead/lag: "+(p.daysDiff!==null?(p.daysDiff>0?p.daysDiff+"d after MVRV peak":Math.abs(p.daysDiff)+"d before MVRV peak"):"—")];
+        }}}
+      })
     }))
   });
 }
