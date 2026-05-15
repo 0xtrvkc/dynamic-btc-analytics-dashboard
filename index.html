@@ -190,6 +190,7 @@ tr:last-child td{border-bottom:none}
       <span class="header-meta" id="hdr-meta">—</span>
     </div>
     <div class="header-right">
+      <button class="btn" onclick="exportSummary()">↓ Export Summary</button>
       <button class="btn" onclick="resetApp()">↑ Upload new file</button>
     </div>
   </div>
@@ -944,6 +945,133 @@ function buildPricePeaks(){
       })
     }))
   });
+}
+
+function exportSummary(){
+  var s=STATS, l=s.last;
+  var lines=[];
+  var hr=function(title){lines.push("","=== "+title+" ===");};
+  var row=function(label,val){lines.push(label+": "+val);};
+
+  // --- CURRENT STATUS ---
+  hr("CURRENT STATUS");
+  row("Date",l.dateStr);
+  row("MVRV",l.mvrv.toFixed(3));
+  row("Z-score",l.zscore.toFixed(3));
+  var signal=l.zscore<-1.5?"Capitulation":l.zscore<0?"Accumulate":l.zscore<1?"Neutral":"Caution";
+  row("Signal",signal);
+  row("MA20",l.ma20.toFixed(3));
+  row("MA50",l.ma50.toFixed(3));
+  row("MA200",l.ma200.toFixed(3));
+  row("MA stack",l.ma20>l.ma50&&l.ma50>l.ma200?"Bullish (MA20>MA50>MA200)":l.ma20<l.ma50&&l.ma50<l.ma200?"Bearish (MA20<MA50<MA200)":"Mixed");
+  row("ROC 30d",(l.roc30!=null?l.roc30.toFixed(1):"-")+"%");
+  row("ROC 90d",(l.roc90!=null?l.roc90.toFixed(1):"-")+"%");
+  if(hasPriceData&&l.price)row("BTC Price","$"+Math.round(l.price).toLocaleString());
+  row("All-time MVRV peak",s.peakRow.mvrv.toFixed(3)+" on "+s.peakRow.dateStr);
+  row("All-time MVRV bottom",s.botRow.mvrv.toFixed(3)+" on "+s.botRow.dateStr);
+  row("Historical mean MVRV",s.mean.toFixed(3));
+  row("Data range",DATA[0].dateStr+" to "+DATA[DATA.length-1].dateStr);
+  row("Total data points",DATA.length.toLocaleString());
+
+  // --- CYCLE SUMMARY ---
+  hr("CYCLE SUMMARY");
+  s.cycleData.forEach(function(c){
+    lines.push("");
+    lines.push("Cycle "+c.cycle+(CYCLE_LABELS[c.cycle]?" ("+CYCLE_LABELS[c.cycle]+")":"")+":");
+    row("  Peak MVRV",c.peak.toFixed(3)+" on "+c.peakDate);
+    row("  Trough MVRV",c.trough.toFixed(3)+" on "+c.troughDate);
+    row("  Duration",c.days+" days");
+    if(hasPriceData){
+      var p=PRICE_MAP[c.peakDate];
+      if(p)row("  BTC price at MVRV peak","$"+Math.round(p).toLocaleString());
+    }
+  });
+
+  // --- ZONE ANALYSIS ---
+  hr("ZONE ANALYSIS — Days spent in each MVRV zone per cycle");
+  var zones=[["Below 1.0","below1"],["1.0-1.5","below1_5_extra"],["1.5-2.0","mid"],["2.0-3.0","above2_extra"],["Above 3.0","above3"]];
+  s.cycleData.forEach(function(c){
+    lines.push("");
+    lines.push("Cycle "+c.cycle+":");
+    row("  Below 1.0",c.below1+"d ("+(c.below1/c.days*100).toFixed(0)+"%)");
+    row("  1.0-1.5",(c.below1_5-c.below1)+"d ("+((c.below1_5-c.below1)/c.days*100).toFixed(0)+"%)");
+    row("  1.5-2.0",(c.days-c.above2-c.below1_5)+"d ("+((c.days-c.above2-c.below1_5)/c.days*100).toFixed(0)+"%)");
+    row("  2.0-3.0",(c.above2-c.above3)+"d ("+((c.above2-c.above3)/c.days*100).toFixed(0)+"%)");
+    row("  Above 3.0",c.above3+"d ("+(c.above3/c.days*100).toFixed(0)+"%)");
+    if(hasPriceData){
+      var zoneThresholds=[[0,1,"Below 1.0"],[1,1.5,"1.0-1.5"],[1.5,2,"1.5-2.0"],[2,3,"2.0-3.0"],[3,999,"Above 3.0"]];
+      zoneThresholds.forEach(function(z){
+        var pts=DATA.filter(function(d){return d.cycle===c.cycle&&d.mvrv>=z[0]&&d.mvrv<z[1]&&d.price});
+        if(pts.length){var avg=pts.reduce(function(a,b){return a+b.price},0)/pts.length;row("  Avg BTC price in "+z[2],"$"+Math.round(avg).toLocaleString());}
+      });
+    }
+  });
+
+  // --- PEAK DIVERGENCE ---
+  if(hasPriceData){
+    hr("PRICE PEAK DIVERGENCE — MVRV behavior at BTC price ATH");
+    STATS.availCycles.forEach(function(c){
+      var sub=DATA.filter(function(d){return d.cycle===c&&d.price});
+      if(!sub.length)return;
+      var best=sub.reduce(function(a,b){return b.price>a.price?b:a});
+      var mvrvPeak=s.cycleData.find(function(cd){return cd.cycle===c});
+      if(!mvrvPeak)return;
+      var daysDiff=Math.round((new Date(best.dateStr)-new Date(mvrvPeak.peakDate))/(1000*60*60*24));
+      var divPct=((best.mvrv-mvrvPeak.peak)/mvrvPeak.peak*100);
+      var ratio=(best.mvrv/mvrvPeak.peak*100);
+      lines.push("");
+      lines.push("Cycle "+c+":");
+      row("  BTC ATH","$"+Math.round(best.price).toLocaleString()+" on "+best.dateStr);
+      row("  MVRV at price ATH",best.mvrv.toFixed(3));
+      row("  MVRV own peak",mvrvPeak.peak.toFixed(3)+" on "+mvrvPeak.peakDate);
+      row("  Divergence",divPct.toFixed(1)+"% (MVRV had fallen this far from its peak when price topped)");
+      row("  Ratio",ratio.toFixed(0)+"% of MVRV peak still intact when price peaked");
+      row("  Lead/lag",daysDiff>0?"Price peaked "+daysDiff+"d AFTER MVRV":daysDiff<0?"Price peaked "+Math.abs(daysDiff)+"d BEFORE MVRV":"Same day");
+    });
+  }
+
+  // --- REGRESSION PROJECTIONS ---
+  hr("REGRESSION PROJECTIONS — Cycle peak MVRV");
+  row("Model basis","Completed cycles: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.peak.toFixed(2)}).join(", "));
+  row("Next cycle (C"+s.nextCycle+") log model projection",s.nextLogPeak.toFixed(3));
+  row("Next cycle (C"+s.nextCycle+") linear model projection",s.nextLinPeak.toFixed(3));
+  row("Log model note","Peaks decay but never reach zero — more realistic long-term");
+  row("Linear model note","Suggests peaks trend toward zero by C7-8 — use with caution");
+  for(var i=1;i<=s.nextCycle+1;i++){
+    var logP=Math.max(0,s.logR.slope*Math.log(i)+s.logR.intercept);
+    var linP=s.linR.slope*i+s.linR.intercept;
+    row("  C"+i+" projected peak (log/linear)",logP.toFixed(3)+" / "+linP.toFixed(3));
+  }
+
+  // --- NOTABLE HALVINGS ---
+  hr("HALVING DATES");
+  HALVINGS.forEach(function(h,i){
+    row("Halving "+(i+1),h.toISOString().slice(0,10));
+  });
+
+  // --- CURRENT CYCLE POSITION ---
+  hr("CURRENT CYCLE POSITION");
+  var curCycle=l.cycle;
+  var curCycleData=s.cycleData.find(function(c){return c.cycle===curCycle});
+  row("Current cycle","C"+curCycle+(CYCLE_LABELS[curCycle]?" ("+CYCLE_LABELS[curCycle]+")":""));
+  row("Cycle position",(l.cyclePct!=null?l.cyclePct.toFixed(1)+"%":"unknown"));
+  if(curCycleData){
+    row("Cycle peak so far",curCycleData.peak.toFixed(3)+" on "+curCycleData.peakDate);
+    row("Current MVRV vs cycle peak",((l.mvrv/curCycleData.peak)*100).toFixed(0)+"% of cycle peak");
+    row("Days in current cycle",curCycleData.days);
+  }
+
+  // Footer
+  lines.push("","=== END OF REPORT ===");
+  lines.push("Generated: "+new Date().toISOString().slice(0,10));
+  lines.push("Note: Feed this file to any AI assistant and ask questions about Bitcoin MVRV cycles.");
+
+  var blob=new Blob([lines.join("\n")],{type:"text/plain"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="mvrv_summary_"+l.dateStr+".txt";
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function priceAtDate(dateStr){
