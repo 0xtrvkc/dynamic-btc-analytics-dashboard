@@ -258,8 +258,8 @@ function destroyChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}
 function makeCanvas(id,h){return'<div class="chart-wrap" style="height:'+h+'px"><canvas id="'+id+'"></canvas></div>'}
 function statCard(label,val,sub,color){return'<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+(color||CC.text)+'">'+val+'</div>'+(sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>'}
 
-var MVRV_JSON_URL="https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/mvrv.json";
-var PRICE_JSON_URL="https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/btc_daily_price.json";
+var MVRV_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/mvrv.json";
+var PRICE_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/btc_daily_price.json";
 
 var pendingRows=null;
 var priceFetchDone=false;
