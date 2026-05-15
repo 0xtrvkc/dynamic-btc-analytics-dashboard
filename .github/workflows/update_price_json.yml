@@ -21,11 +21,6 @@ jobs:
       - name: Install dependencies
         run: pip install pandas kaggle
 
-      - name: Fetch MVRV JSON from blockchain.info
-        run: |
-          curl -fsSL "https://blockchain.info/charts/mvrv?format=json" -o mvrv.json
-          echo "MVRV points: $(python3 -c "import json; d=json.load(open('mvrv.json')); print(len(d['values']))")"
-
       - name: Download Kaggle CSV
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
@@ -41,7 +36,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add mvrv.json btc_daily_price.json
+          git add btc_daily_price.json
           git diff --cached --quiet && echo "No changes to commit" || \
-            git commit -m "chore: update data [$(date -u +%Y-%m-%d)]"
+            git commit -m "chore: update btc_daily_price.json [$(date -u +%Y-%m-%d)]"
           git push
