@@ -209,7 +209,7 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <script>
-const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Peak Regression","Price Peaks","Projections"];
+const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Cycle Extremes","Price Peaks","Projections"];
 const CC = {bg:"#0a0a0f",surface:"#111118",surface2:"#16161f",border:"#1e1e2e",text:"#e8e6f0",muted:"#6b6880",faint:"#2a2838",accent:"#7c6af7",teal:"#2dd4bf",amber:"#f59e0b",red:"#f43f5e",green:"#22c55e"};
 const HALVINGS = [
     new Date("2012-11-28"), // 1st
@@ -421,9 +421,20 @@ function computeStats(data){
   }).filter(Boolean);
   var logR=logReg(cycleData.map(function(c){return c.cycle}),cycleData.map(function(c){return c.peak}));
   var linR=linReg(cycleData.map(function(c){return c.cycle}),cycleData.map(function(c){return c.peak}));
-  // Next cycle projection (one beyond last available)
+  var troughLogR=logReg(cycleData.map(function(c){return c.cycle}),cycleData.map(function(c){return c.trough}));
+  var troughLinR=linReg(cycleData.map(function(c){return c.cycle}),cycleData.map(function(c){return c.trough}));
   var nextCycle=availCycles[availCycles.length-1]+1;
-  return{last:last,peakRow:peakRow,botRow:botRow,mean:mvrvs.reduce(function(a,b){return a+b},0)/mvrvs.length,cycleData:cycleData,availCycles:availCycles,logR:logR,linR:linR,nextCycle:nextCycle,nextLogPeak:logR.slope*Math.log(nextCycle)+logR.intercept,nextLinPeak:linR.slope*nextCycle+linR.intercept};
+  return{
+    last:last,peakRow:peakRow,botRow:botRow,
+    mean:mvrvs.reduce(function(a,b){return a+b},0)/mvrvs.length,
+    cycleData:cycleData,availCycles:availCycles,
+    logR:logR,linR:linR,troughLogR:troughLogR,troughLinR:troughLinR,
+    nextCycle:nextCycle,
+    nextLogPeak:Math.max(0,logR.slope*Math.log(nextCycle)+logR.intercept),
+    nextLinPeak:linR.slope*nextCycle+linR.intercept,
+    nextLogTrough:Math.max(0,troughLogR.slope*Math.log(nextCycle)+troughLogR.intercept),
+    nextLinTrough:Math.max(0,troughLinR.slope*nextCycle+troughLinR.intercept)
+  };
 }
 
 function loadData(rows){
@@ -860,53 +871,146 @@ function buildZoneDays(){
 
 function buildRegression(){
   var s=STATS;
-  var regPts=Array.from({length:s.nextCycle+2},function(_,i){return{cycle:i+1,log:Math.max(0,s.logR.slope*Math.log(i+1)+s.logR.intercept),lin:s.linR.slope*(i+1)+s.linR.intercept}});
-  // Store peak price on each actual point so tooltip can read it
-  var actual=s.cycleData.map(function(c){
+  var maxC=s.nextCycle+2;
+  // Project both peaks and troughs for all future cycles
+  var regPts=Array.from({length:maxC},function(_,i){
+    var c=i+1;
+    return{
+      cycle:c,
+      peakLog:Math.max(0,s.logR.slope*Math.log(c)+s.logR.intercept),
+      peakLin:Math.max(0,s.linR.slope*c+s.linR.intercept),
+      troughLog:Math.max(0,s.troughLogR.slope*Math.log(c)+s.troughLogR.intercept),
+      troughLin:Math.max(0,s.troughLinR.slope*c+s.troughLinR.intercept)
+    };
+  });
+
+  var actualPeaks=s.cycleData.map(function(c){
     var pt={x:c.cycle,y:c.peak,peakDate:c.peakDate};
     if(hasPriceData)pt.peakPrice=PRICE_MAP[c.peakDate]||null;
     return pt;
   });
-  // Price at each cycle peak
-  var peakPriceCards="";
+  var actualTroughs=s.cycleData.map(function(c){
+    var pt={x:c.cycle,y:c.trough,troughDate:c.troughDate};
+    if(hasPriceData)pt.troughPrice=PRICE_MAP[c.troughDate]||null;
+    return pt;
+  });
+
+  // Stat cards — peaks
+  var peakCards=[
+    statCard("C"+s.nextCycle+" peak (log)",s.nextLogPeak.toFixed(2),"Next cycle projection",CC.amber),
+    statCard("C"+s.nextCycle+" peak (linear)",s.nextLinPeak.toFixed(2),"More conservative",CC.muted),
+  ].join("");
+
+  // Stat cards — troughs
+  var troughCards=[
+    statCard("C"+s.nextCycle+" bottom (log)",s.nextLogTrough.toFixed(2),"Rising floor projection",CC.teal),
+    statCard("C"+s.nextCycle+" bottom (linear)",s.nextLinTrough.toFixed(2),"More conservative",CC.muted),
+  ].join("");
+
+  // Price at peaks and troughs
+  var peakPriceCards="",troughPriceCards="";
   if(hasPriceData){
-    var pkCards=s.cycleData.map(function(c){
-      var p=priceAtDate(c.peakDate);
-      return statCard("C"+c.cycle+" peak price",p,c.peakDate,CYCLE_COLORS[c.cycle]);
-    }).join("");
-    peakPriceCards='<div class="g4" style="margin-top:0">'+pkCards+'</div>';
+    peakPriceCards='<div class="g4" style="margin-top:0">'+s.cycleData.map(function(c){
+      return statCard("C"+c.cycle+" peak price",priceAtDate(c.peakDate),c.peakDate,CYCLE_COLORS[c.cycle]||CC.muted);
+    }).join("")+'</div>';
+    troughPriceCards='<div class="g4" style="margin-top:0">'+s.cycleData.map(function(c){
+      return statCard("C"+c.cycle+" bottom price",priceAtDate(c.troughDate),c.troughDate,CYCLE_COLORS[c.cycle]||CC.muted);
+    }).join("")+'</div>';
   }
-  document.getElementById("p7").innerHTML='<div class="g3">'+[statCard("C"+s.nextCycle+" peak (log)",s.nextLogPeak.toFixed(2),"Next cycle projection",CC.amber),statCard("C"+s.nextCycle+" peak (linear)",s.nextLinPeak.toFixed(2),"More conservative",CC.muted),statCard("Log R2","0.944","Strong fit",CC.teal)].join("")+'</div>'+peakPriceCards+'<div class="chart-card"><div class="chart-title">Cycle peak MVRV — actual vs regression with projections</div>'+makeCanvas("c7",360)+'</div><div class="info"><strong style="color:'+CC.teal+'">Log model</strong>: peaks decay but slow down — never hits zero. Predicts C'+s.nextCycle+' ~'+s.nextLogPeak.toFixed(2)+'.<br><br><strong style="color:'+CC.amber+'">Linear model</strong>: higher R2 but predicts MVRV near zero eventually. Trust log for long-term planning.</div>';
-  destroyChart("c7");
-  var opts=withLegend(Object.assign({},chartDefs(),{
+
+  // Compression ratio: (peak - trough) / peak per cycle — shows band narrowing
+  var compressionCards=s.cycleData.map(function(c){
+    var ratio=((c.peak-c.trough)/c.peak*100);
+    return statCard("C"+c.cycle+" range",ratio.toFixed(0)+"%","peak "+c.peak.toFixed(2)+" → bottom "+c.trough.toFixed(2),CYCLE_COLORS[c.cycle]||CC.muted);
+  }).join("");
+
+  var xMax=Math.max(7,s.nextCycle+1)+0.5;
+
+  document.getElementById("p7").innerHTML=
+    '<div class="g4">'+peakCards+troughCards+'</div>'+
+    peakPriceCards+
+    '<div class="chart-card"><div class="chart-title">Cycle extremes — peak & trough MVRV with regression · band is narrowing</div>'+makeCanvas("c7",380)+'</div>'+
+    '<div class="g4" style="margin-top:0">'+compressionCards+'</div>'+
+    '<div class="chart-card"><div class="chart-title">Peak-to-trough compression — volatility range per cycle (%)</div>'+makeCanvas("c7b",220)+'</div>'+
+    troughPriceCards+
+    '<div class="info">'
+      +'<strong style="color:'+CC.amber+'">Peaks</strong>: declining each cycle — diminishing euphoria as market matures. '
+      +'<strong style="color:'+CC.teal+'">Troughs</strong>: rising each cycle — strengthening floor as more capital treats BTC as a store of value. '
+      +'The narrowing band between them means lower upside <em>and</em> lower downside — reduced volatility over time. '
+      +'Log model shown in solid lines, linear in dashed. Trust log for long-term planning.'
+    +'</div>';
+
+  destroyChart("c7");destroyChart("c7b");
+
+  var scaleOpts=Object.assign({},chartDefs(),{
     scales:{
-      x:Object.assign({},chartDefs().scales.x,{type:"linear",min:.5,max:7.5,title:{display:true,text:"Cycle number",color:CC.muted,font:{size:13}},ticks:Object.assign({},chartDefs().scales.x.ticks,{callback:function(v){return"C"+v},stepSize:1})}),
-      y:Object.assign({},chartDefs().scales.y,{min:0,max:7,title:{display:true,text:"Peak MVRV",color:CC.muted,font:{size:13}}})
+      x:Object.assign({},chartDefs().scales.x,{
+        type:"linear",min:.5,max:xMax,
+        title:{display:true,text:"Cycle number",color:CC.muted,font:{size:13}},
+        ticks:Object.assign({},chartDefs().scales.x.ticks,{callback:function(v){return Number.isInteger(v)?"C"+v:""},stepSize:1})
+      }),
+      y:Object.assign({},chartDefs().scales.y,{min:0,max:7,title:{display:true,text:"MVRV",color:CC.muted,font:{size:13}}})
     },
     plugins:Object.assign({},withLegend(chartDefs()).plugins,{
-      tooltip:{
-        backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,
-        callbacks:{
-          label:function(ctx){
-            var base=ctx.dataset.label+": MVRV "+ctx.parsed.y.toFixed(3);
-            if(ctx.datasetIndex===0){
-              var pt=actual[ctx.dataIndex];
-              if(pt){
-                base="C"+pt.x+" peak: MVRV "+pt.y.toFixed(3)+" · "+pt.peakDate;
-                if(pt.peakPrice)base+="\nBTC price: $"+Math.round(pt.peakPrice).toLocaleString();
-              }
-            }
-            return base;
+      legend:{display:true,labels:{color:CC.muted,font:{size:13},boxWidth:24,boxHeight:2}},
+      tooltip:{backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,
+        callbacks:{label:function(ctx){
+          var y=ctx.parsed.y;
+          var label=ctx.dataset.label+": "+y.toFixed(3);
+          // Peak dots
+          if(ctx.datasetIndex===0){
+            var pt=actualPeaks[ctx.dataIndex];
+            if(pt){label="C"+pt.x+" peak: "+pt.y.toFixed(3)+" · "+pt.peakDate;if(pt.peakPrice)label+="\n$"+Math.round(pt.peakPrice).toLocaleString();}
           }
-        }
+          // Trough dots
+          if(ctx.datasetIndex===1){
+            var pt=actualTroughs[ctx.dataIndex];
+            if(pt){label="C"+pt.x+" trough: "+pt.y.toFixed(3)+" · "+pt.troughDate;if(pt.troughPrice)label+="\n$"+Math.round(pt.troughPrice).toLocaleString();}
+          }
+          return label;
+        }}
       }
     })
-  }));
+  });
+
   CHARTS.c7=new Chart(document.getElementById("c7"),{type:"scatter",data:{datasets:[
-    {label:"Actual peaks",data:actual,backgroundColor:s.cycleData.map(function(c){return CYCLE_COLORS[c.cycle]||CC.accent}),borderColor:s.cycleData.map(function(c){return CYCLE_COLORS[c.cycle]||CC.accent}),pointRadius:12,showLine:false},
-    {label:"Linear",data:regPts.map(function(p){return{x:p.cycle,y:p.lin}}),borderColor:CC.teal,backgroundColor:CC.teal,borderWidth:2,pointRadius:4,showLine:true,tension:.3},
-    {label:"Log",data:regPts.map(function(p){return{x:p.cycle,y:p.log}}),borderColor:CC.amber,backgroundColor:CC.amber,borderWidth:2,pointRadius:4,showLine:true,tension:.3}
-  ]},options:opts});
+    // Actual peaks
+    {label:"Actual peaks",data:actualPeaks,backgroundColor:s.cycleData.map(function(c){return CYCLE_COLORS[c.cycle]||CC.accent}),borderColor:s.cycleData.map(function(c){return CYCLE_COLORS[c.cycle]||CC.accent}),pointRadius:12,showLine:false},
+    // Actual troughs
+    {label:"Actual troughs",data:actualTroughs,backgroundColor:s.cycleData.map(function(c){return CYCLE_COLORS[c.cycle]||CC.muted}),borderColor:s.cycleData.map(function(c){return CYCLE_COLORS[c.cycle]||CC.muted}),pointRadius:10,pointStyle:"triangle",showLine:false},
+    // Peak log regression
+    {label:"Peak (log)",data:regPts.map(function(p){return{x:p.cycle,y:p.peakLog}}),borderColor:CC.amber,backgroundColor:"transparent",borderWidth:2,pointRadius:3,showLine:true,tension:.3},
+    // Peak linear regression
+    {label:"Peak (linear)",data:regPts.map(function(p){return{x:p.cycle,y:Math.max(0,p.peakLin)}}),borderColor:CC.amber+"66",backgroundColor:"transparent",borderWidth:1.5,borderDash:[5,4],pointRadius:0,showLine:true,tension:.3},
+    // Trough log regression
+    {label:"Bottom (log)",data:regPts.map(function(p){return{x:p.cycle,y:p.troughLog}}),borderColor:CC.teal,backgroundColor:"transparent",borderWidth:2,pointRadius:3,showLine:true,tension:.3},
+    // Trough linear regression
+    {label:"Bottom (linear)",data:regPts.map(function(p){return{x:p.cycle,y:Math.max(0,p.troughLin)}}),borderColor:CC.teal+"66",backgroundColor:"transparent",borderWidth:1.5,borderDash:[5,4],pointRadius:0,showLine:true,tension:.3},
+  ]},options:scaleOpts});
+
+  // Compression chart
+  var compData=s.cycleData.map(function(c){return{cycle:c.cycle,range:((c.peak-c.trough)/c.peak*100),peak:c.peak,trough:c.trough}});
+  CHARTS.c7b=new Chart(document.getElementById("c7b"),{
+    type:"bar",
+    data:{
+      labels:compData.map(function(d){return"C"+d.cycle}),
+      datasets:[{
+        label:"MVRV range (peak−trough)/peak %",
+        data:compData.map(function(d){return d.range}),
+        backgroundColor:compData.map(function(d){return CYCLE_COLORS[d.cycle]||CC.muted}),
+        borderRadius:6
+      }]
+    },
+    options:withLegend(Object.assign({},chartDefs(),{
+      scales:{
+        x:chartDefs().scales.x,
+        y:Object.assign({},chartDefs().scales.y,{
+          title:{display:true,text:"Volatility range %",color:CC.muted,font:{size:13}},
+          ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v+"%"}})
+        })
+      }
+    }))
+  });
 }
 
 function buildPricePeaks(){
