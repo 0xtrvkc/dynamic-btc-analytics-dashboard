@@ -1015,10 +1015,10 @@ function buildPricePeaks(){
       athMultipliers.push({cycle:pricePeaks[i].cycle,mult:pricePeaks[i].price/pricePeaks[i-1].price});
     }
   }
-  var cleanAth=athMults.filter(function(p){return!iqrOutlier(p.mult,athMultVals)});
+  var cleanAth=athMultipliers.filter(function(p){return!isOutlier(p.mult,athMultipliers.map(function(x){return x.mult}))});
   var athLogLogR=cleanAth.length>=2?linReg(cleanAth.map(function(p){return Math.log(p.cycle)}),cleanAth.map(function(p){return Math.log(p.mult)})):null;
-  var prevATH=cyclePeakPrices[cycleList[cycleList.length-2]]||null;
-  var projAthMult=athLogLogR?Math.exp(athLogLogR.slope*Math.log(curCycle)+athLogLogR.intercept):med(cleanAth.map(function(p){return p.mult}));
+  var prevATH=pricePeaks.length?pricePeaks[pricePeaks.length-1].price:null;
+  var projAthMult=athLogLogR?Math.exp(athLogLogR.slope*Math.log(curCycle)+athLogLogR.intercept):median(cleanAth.map(function(p){return p.mult}));
   var nextCycleNum=curCycle+1;
   var projAthMultNext=athLogLogR?Math.exp(athLogLogR.slope*Math.log(nextCycleNum)+athLogLogR.intercept):null;
   var ceilingMethod2=prevATH&&projAthMultNext?prevATH*projAthMultNext:null;
