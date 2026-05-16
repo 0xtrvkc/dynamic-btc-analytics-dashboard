@@ -204,11 +204,12 @@ tr:last-child td{border-bottom:none}
     <div class="panel" id="p6"></div>
     <div class="panel" id="p7"></div>
     <div class="panel" id="p8"></div>
+    <div class="panel" id="p9"></div>
   </div>
 </div>
 
 <script>
-const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Peak Regression","Price Peaks"];
+const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Peak Regression","Price Peaks","Projections"];
 const CC = {bg:"#0a0a0f",surface:"#111118",surface2:"#16161f",border:"#1e1e2e",text:"#e8e6f0",muted:"#6b6880",faint:"#2a2838",accent:"#7c6af7",teal:"#2dd4bf",amber:"#f59e0b",red:"#f43f5e",green:"#22c55e"};
 const HALVINGS = [
     new Date("2012-11-28"), // 1st
@@ -448,7 +449,7 @@ function resetApp(){
   pendingRows=null;
 }
 
-var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression,buildPricePeaks];
+var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression,buildPricePeaks,buildProjections];
 
 function buildTabs(){
   document.getElementById("tabs").innerHTML=TAB_NAMES.map(function(n,i){return'<button class="tab'+(i===0?" active":"")+'" onclick="switchTab('+i+')">'+n+'</button>'}).join("");
@@ -1246,6 +1247,204 @@ function exportSummary(){
   a.download="mvrv_summary_"+l.dateStr+".txt";
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+function buildProjections(){
+  var s=STATS, l=s.last;
+  var curCycle=l.cycle;
+  var models=[];
+
+  // --- Shared helpers ---
+  function med(arr){
+    if(!arr.length)return null;
+    var sorted=arr.slice().sort(function(a,b){return a-b});
+    var mid=Math.floor(sorted.length/2);
+    return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+  }
+  function iqrOutlier(val,arr){
+    if(arr.length<4)return false;
+    var sorted=arr.slice().sort(function(a,b){return a-b});
+    var q1=sorted[Math.floor(sorted.length*0.25)];
+    var q3=sorted[Math.floor(sorted.length*0.75)];
+    var iqr=q3-q1;
+    return val<q1-1.5*iqr||val>q3+1.5*iqr;
+  }
+
+  // Collect completed cycle price peaks
+  var cyclePeakPrices={};
+  var cyclePeakMVRV={};
+  s.availCycles.forEach(function(c){
+    var sub=DATA.filter(function(d){return d.cycle===c&&d.price});
+    if(sub.length){
+      var best=sub.reduce(function(a,b){return b.price>a.price?b:a});
+      cyclePeakPrices[c]=best.price;
+    }
+    var cd=s.cycleData.find(function(x){return x.cycle===c});
+    if(cd)cyclePeakMVRV[c]=cd.peak;
+  });
+
+  // --- Model 1: MVRV upside ---
+  // Price at MVRV peak × median remaining upside %
+  var curMvrvPeak=s.cycleData.find(function(c){return c.cycle===curCycle});
+  var curMvrvPeakPrice=curMvrvPeak?PRICE_MAP[curMvrvPeak.peakDate]:null;
+  var remainingUpsides=s.availCycles.map(function(c){
+    var cd=s.cycleData.find(function(x){return x.cycle===c});
+    if(!cd)return null;
+    var peakP=PRICE_MAP[cd.peakDate];
+    var ath=cyclePeakPrices[c];
+    if(!peakP||!ath)return null;
+    return(ath-peakP)/peakP*100;
+  }).filter(function(x){return x!==null});
+  var cleanUp=remainingUpsides.filter(function(v){return!iqrOutlier(v,remainingUpsides)});
+  var medUp=med(cleanUp);
+  var m1=curMvrvPeakPrice&&medUp!==null?curMvrvPeakPrice*(1+medUp/100):null;
+  models.push({
+    name:"MVRV Upside",
+    price:m1,
+    basis:"Price at MVRV peak × median remaining upside ("+( medUp?medUp.toFixed(0):"-")+"%) across cycles",
+    confidence:m1?"Medium — depends on MVRV peak being confirmed":"Low — MVRV peak not yet in",
+    color:CC.green,
+    available:!!m1
+  });
+
+  // --- Model 2: Halving multiplier decay ---
+  var halvData=s.availCycles.map(function(c){
+    var halvingDate=HALVINGS[c-1];
+    if(!halvingDate)return null;
+    var hPrice=PRICE_MAP[halvingDate.toISOString().slice(0,10)];
+    var ath=cyclePeakPrices[c];
+    if(!hPrice||!ath)return null;
+    return{cycle:c,mult:ath/hPrice,halvingPrice:hPrice};
+  }).filter(Boolean);
+  var halvMults=halvData.map(function(p){return p.mult});
+  var cleanHalvData=halvData.filter(function(p){return!iqrOutlier(p.mult,halvMults)});
+  var halvLogR=cleanHalvData.length>=2?logReg(cleanHalvData.map(function(p){return p.cycle}),cleanHalvData.map(function(p){return p.mult})):null;
+  var curHalvPrice=HALVINGS[curCycle-1]?PRICE_MAP[HALVINGS[curCycle-1].toISOString().slice(0,10)]:null;
+  var projMult=halvLogR?Math.exp(halvLogR.slope*Math.log(curCycle)+halvLogR.intercept):med(cleanHalvData.map(function(p){return p.mult}));
+  var m2=curHalvPrice&&projMult?curHalvPrice*projMult:null;
+  models.push({
+    name:"Halving Multiplier",
+    price:m2,
+    basis:"Price on halving date ("+( curHalvPrice?"$"+Math.round(curHalvPrice).toLocaleString():"-")+") × log-decay projected multiplier (×"+(projMult?projMult.toFixed(1):"-")+")",
+    confidence:"Medium — multiplier shrinks each cycle, log regression captures this",
+    color:CC.teal,
+    available:!!m2
+  });
+
+  // --- Model 3: ATH multiplier decay ---
+  var athMults=[];
+  var cycleList=s.availCycles;
+  for(var i=1;i<cycleList.length;i++){
+    var c=cycleList[i], prev=cycleList[i-1];
+    if(cyclePeakPrices[c]&&cyclePeakPrices[prev]){
+      athMults.push({cycle:c,mult:cyclePeakPrices[c]/cyclePeakPrices[prev]});
+    }
+  }
+  var athMultVals=athMults.map(function(p){return p.mult});
+  var cleanAth=athMults.filter(function(p){return!iqrOutlier(p.mult,athMultVals)});
+  var athLogR=cleanAth.length>=2?logReg(cleanAth.map(function(p){return p.cycle}),cleanAth.map(function(p){return p.mult})):null;
+  var prevATH=cyclePeakPrices[cycleList[cycleList.length-2]]||null;
+  var projAthMult=athLogR?Math.exp(athLogR.slope*Math.log(curCycle)+athLogR.intercept):med(cleanAth.map(function(p){return p.mult}));
+  var m3=prevATH&&projAthMult?prevATH*projAthMult:null;
+  models.push({
+    name:"ATH Multiplier",
+    price:m3,
+    basis:"Previous cycle ATH ($"+(prevATH?Math.round(prevATH).toLocaleString():"-")+") × log-decay projected multiplier (×"+(projAthMult?projAthMult.toFixed(2):"-")+")",
+    confidence:"Medium — fewest data points, sensitive to outliers",
+    color:CC.amber,
+    available:!!m3
+  });
+
+  // --- Model 4: MVRV peak regression × realized cap ---
+  // Projected MVRV peak → implied market cap → implied price
+  // market cap = MVRV × realized cap, realized cap ≈ market cap / MVRV
+  // Estimate realized cap from current data: realizedCap = marketCap / MVRV
+  // BTC supply ~19.8M coins at ~$60k avg realized price ≈ realized cap
+  // We can approximate: if MVRV = mktCap/realizedCap, then price = MVRV_proj × (currentPrice / currentMVRV) × (realizedCap_growth)
+  // Simpler: price_proj = currentPrice × (mvrvProj / currentMVRV)
+  var mvrvProj=s.nextLogPeak; // log regression projected peak for next cycle above current
+  // But for current cycle, use current cycle log projection
+  var curCycleLogPeakMVRV=Math.max(0,s.logR.slope*Math.log(curCycle)+s.logR.intercept);
+  var m4=l.price&&l.mvrv&&curCycleLogPeakMVRV?(l.price/l.mvrv)*curCycleLogPeakMVRV:null;
+  models.push({
+    name:"MVRV × Realized Cap",
+    price:m4,
+    basis:"Current price ÷ current MVRV × projected cycle peak MVRV ("+curCycleLogPeakMVRV.toFixed(2)+"). Assumes realized cap stays constant — conservative.",
+    confidence:"Low-Medium — realized cap grows over time, so this tends to underestimate",
+    color:CC.accent,
+    available:!!m4
+  });
+
+  // --- Consensus ---
+  var validPrices=models.filter(function(m){return m.available}).map(function(m){return m.price});
+  var cleanPrices=validPrices.filter(function(v){return!iqrOutlier(v,validPrices)});
+  var consensusMin=cleanPrices.length?Math.min.apply(null,cleanPrices):null;
+  var consensusMax=cleanPrices.length?Math.max.apply(null,cleanPrices):null;
+  var consensusMid=med(cleanPrices);
+  var excluded=validPrices.length-cleanPrices.length;
+
+  // --- Build HTML ---
+  var consensusHtml='<div style="background:var(--surface2);border:.5px solid var(--border);border-radius:16px;padding:24px 28px;margin-bottom:0">'
+    +'<div style="font-size:0.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Consensus Range · C'+curCycle+(excluded?' · '+excluded+' outlier model'+(excluded>1?'s':'')+" excluded":"")+'</div>'
+    +(consensusMid?
+      '<div style="font-size:2.4rem;font-weight:700;color:'+CC.accent+';letter-spacing:-.02em">$'+Math.round(consensusMid).toLocaleString()+'</div>'
+      +'<div style="font-size:1rem;color:'+CC.muted+';margin-top:4px">midpoint · range $'+Math.round(consensusMin).toLocaleString()+' – $'+Math.round(consensusMax).toLocaleString()+'</div>'
+      :'<div style="font-size:1.5rem;color:var(--muted)">Insufficient data</div>')
+    +'<div style="font-size:0.85rem;color:var(--faint);margin-top:10px">Based on '+cleanPrices.length+' model'+(cleanPrices.length!==1?'s':'')+' · not financial advice</div>'
+    +'</div>';
+
+  var modelCards=models.map(function(m){
+    if(!m.available)return statCard(m.name,"—","No data yet",CC.muted);
+    var isOutl=iqrOutlier(m.price,validPrices);
+    return statCard(m.name+(isOutl?" ⚠":""),"$"+Math.round(m.price).toLocaleString(),isOutl?"outlier — excluded from consensus":m.confidence.split("—")[0].trim(),isOutl?CC.muted:m.color);
+  }).join("");
+
+  var methodRows=models.map(function(m){
+    return'<tr>'
+      +'<td style="color:'+m.color+';font-weight:600">'+m.name+'</td>'
+      +'<td>'+(m.available?"$"+Math.round(m.price).toLocaleString():"—")+'</td>'
+      +'<td style="font-size:0.85rem">'+m.basis+'</td>'
+      +'<td style="font-size:0.85rem;color:'+(m.confidence.startsWith("High")?CC.green:m.confidence.startsWith("Medium")?CC.amber:CC.red)+'">'+m.confidence+'</td>'
+      +'</tr>';
+  }).join("");
+
+  document.getElementById("p9").innerHTML=
+    consensusHtml+
+    '<div class="g4" style="margin-top:0">'+modelCards+'</div>'+
+    '<div class="chart-card"><div class="chart-title">Model comparison · C'+curCycle+' price ceiling estimates</div>'+makeCanvas("c9a",260)+'</div>'+
+    '<div class="tbl-wrap"><table><thead><tr><th>Model</th><th>Projection</th><th>Basis</th><th>Confidence</th></tr></thead><tbody>'+methodRows+'</tbody></table></div>'+
+    '<div class="info">Each model uses a different lens: MVRV Upside uses on-chain signal lead-lag, Halving Multiplier uses scarcity-driven price multiples from halving dates, ATH Multiplier tracks diminishing cycle-over-cycle returns, MVRV × Realized Cap back-calculates implied price from projected MVRV peak. Outliers excluded from consensus via IQR. All projections update automatically as new cycle data is added.</div>';
+
+  destroyChart("c9a");
+
+  var barData=models.filter(function(m){return m.available});
+  var consensusMidVal=consensusMid;
+  CHARTS.c9a=new Chart(document.getElementById("c9a"),{
+    type:"bar",
+    data:{
+      labels:barData.map(function(m){return m.name}),
+      datasets:[
+        {label:"Price projection",data:barData.map(function(m){return m.price}),backgroundColor:barData.map(function(m){return iqrOutlier(m.price,validPrices)?CC.muted+"55":m.color+"cc"}),borderRadius:8},
+        {label:"Consensus midpoint",data:barData.map(function(){return consensusMidVal}),borderColor:CC.text+"88",borderWidth:2,borderDash:[6,3],pointRadius:0,type:"line",fill:false}
+      ]
+    },
+    options:withLegend(Object.assign({},chartDefs(),{
+      scales:{
+        x:chartDefs().scales.x,
+        y:Object.assign({},chartDefs().scales.y,{
+          ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return"$"+v.toLocaleString()}}),
+          title:{display:true,text:"Price (USD)",color:CC.muted,font:{size:13}}
+        })
+      },
+      plugins:Object.assign({},withLegend(chartDefs()).plugins,{
+        tooltip:{callbacks:{label:function(ctx){
+          if(ctx.dataset.type==="line")return"Consensus: $"+Math.round(ctx.parsed.y).toLocaleString();
+          var m=barData[ctx.dataIndex];
+          return[m.name+": $"+Math.round(m.price).toLocaleString(),iqrOutlier(m.price,validPrices)?"⚠ outlier — excluded":m.confidence];
+        }}}
+      })
+    }))
+  });
 }
 
 function priceAtDate(dateStr){
