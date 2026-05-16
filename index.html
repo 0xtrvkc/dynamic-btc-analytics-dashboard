@@ -1002,10 +1002,9 @@ function buildPricePeaks(){
     return true;
   });
   var allMultipliers=halvingMultipliers.filter(function(p){return!isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))}).map(function(p){return p.halvingMultiplier});
-  // Fit log decay to multipliers across cycles
-  var multLogR=allMultipliers.length>=2?logReg(halvingMultipliers.filter(function(p){return!isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))}).map(function(p){return p.cycle}),allMultipliers):null;
+  var multLogLogR=allMultipliers.length>=2?linReg(halvingMultipliers.filter(function(p){return!isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))}).map(function(p){return Math.log(p.cycle)}),allMultipliers.map(function(v){return Math.log(v)})):null;
   var curHalvingPrice=HALVINGS[curCycle-1]?PRICE_MAP[HALVINGS[curCycle-1].toISOString().slice(0,10)]:null;
-  var projMultiplier=multLogR?Math.exp(multLogR.slope*Math.log(curCycle)+multLogR.intercept):median(allMultipliers);
+  var projMultiplier=multLogLogR?Math.exp(multLogLogR.slope*Math.log(curCycle)+multLogLogR.intercept):median(allMultipliers);
   var ceilingMethod1=curHalvingPrice&&projMultiplier?curHalvingPrice*projMultiplier:null;
 
   // --- Method 2: Previous ATH multiplier ---
@@ -1016,15 +1015,13 @@ function buildPricePeaks(){
       athMultipliers.push({cycle:pricePeaks[i].cycle,mult:pricePeaks[i].price/pricePeaks[i-1].price});
     }
   }
-  var cleanAthMults=athMultipliers.filter(function(p){return!isOutlier(p.mult,athMultipliers.map(function(x){return x.mult}))});
-  var athLogR=cleanAthMults.length>=2?logReg(cleanAthMults.map(function(p){return p.cycle}),cleanAthMults.map(function(p){return p.mult})):null;
-  var prevATH=pricePeaks.length?pricePeaks[pricePeaks.length-1].price:null;
-  var projAthMult=athLogR?Math.exp(athLogR.slope*Math.log(curCycle)+athLogR.intercept):median(cleanAthMults.map(function(p){return p.mult}));
-  // Only project next cycle ATH (if current cycle is still in progress, use last known ATH)
+  var cleanAth=athMults.filter(function(p){return!iqrOutlier(p.mult,athMultVals)});
+  var athLogLogR=cleanAth.length>=2?linReg(cleanAth.map(function(p){return Math.log(p.cycle)}),cleanAth.map(function(p){return Math.log(p.mult)})):null;
+  var prevATH=cyclePeakPrices[cycleList[cycleList.length-2]]||null;
+  var projAthMult=athLogLogR?Math.exp(athLogLogR.slope*Math.log(curCycle)+athLogLogR.intercept):med(cleanAth.map(function(p){return p.mult}));
   var nextCycleNum=curCycle+1;
-  var projAthMultNext=athLogR?Math.exp(athLogR.slope*Math.log(nextCycleNum)+athLogR.intercept):null;
+  var projAthMultNext=athLogLogR?Math.exp(athLogLogR.slope*Math.log(nextCycleNum)+athLogLogR.intercept):null;
   var ceilingMethod2=prevATH&&projAthMultNext?prevATH*projAthMultNext:null;
-  // Also estimate current cycle ceiling if previous cycle ATH exists
   var prevCycleATH=pricePeaks.length>=2?pricePeaks[pricePeaks.length-2].price:null;
   var ceilingMethod2cur=prevCycleATH&&projAthMult?prevCycleATH*projAthMult:null;
 
@@ -1318,9 +1315,10 @@ function buildProjections(){
   }).filter(Boolean);
   var halvMults=halvData.map(function(p){return p.mult});
   var cleanHalvData=halvData.filter(function(p){return!iqrOutlier(p.mult,halvMults)});
-  var halvLogR=cleanHalvData.length>=2?logReg(cleanHalvData.map(function(p){return p.cycle}),cleanHalvData.map(function(p){return p.mult})):null;
+  // Use log-log regression: log(mult) ~ log(cycle) — multipliers decay as a power law
+  var halvLogLogR=cleanHalvData.length>=2?linReg(cleanHalvData.map(function(p){return Math.log(p.cycle)}),cleanHalvData.map(function(p){return Math.log(p.mult)})):null;
   var curHalvPrice=HALVINGS[curCycle-1]?PRICE_MAP[HALVINGS[curCycle-1].toISOString().slice(0,10)]:null;
-  var projMult=halvLogR?Math.exp(halvLogR.slope*Math.log(curCycle)+halvLogR.intercept):med(cleanHalvData.map(function(p){return p.mult}));
+  var projMult=halvLogLogR?Math.exp(halvLogLogR.slope*Math.log(curCycle)+halvLogLogR.intercept):med(cleanHalvData.map(function(p){return p.mult}));
   var m2=curHalvPrice&&projMult?curHalvPrice*projMult:null;
   models.push({
     name:"Halving Multiplier",
@@ -1342,9 +1340,9 @@ function buildProjections(){
   }
   var athMultVals=athMults.map(function(p){return p.mult});
   var cleanAth=athMults.filter(function(p){return!iqrOutlier(p.mult,athMultVals)});
-  var athLogR=cleanAth.length>=2?logReg(cleanAth.map(function(p){return p.cycle}),cleanAth.map(function(p){return p.mult})):null;
+  var athLogLogR2=cleanAth.length>=2?linReg(cleanAth.map(function(p){return Math.log(p.cycle)}),cleanAth.map(function(p){return Math.log(p.mult)})):null;
   var prevATH=cyclePeakPrices[cycleList[cycleList.length-2]]||null;
-  var projAthMult=athLogR?Math.exp(athLogR.slope*Math.log(curCycle)+athLogR.intercept):med(cleanAth.map(function(p){return p.mult}));
+  var projAthMult=athLogLogR2?Math.exp(athLogLogR2.slope*Math.log(curCycle)+athLogLogR2.intercept):med(cleanAth.map(function(p){return p.mult}));
   var m3=prevATH&&projAthMult?prevATH*projAthMult:null;
   models.push({
     name:"ATH Multiplier",
