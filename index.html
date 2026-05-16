@@ -724,17 +724,21 @@ function buildCycleOverlay(){
 
   // Price cycle overlay
   if(hasPriceData){
+    // Normalize each cycle: price at halving date = 100, all subsequent prices as % of that
     var priceCycleDatasets=availableCycles.map(function(c){
       var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null&&d.price});
+      if(!sub.length)return null;
+      // Base price = first available price in the cycle (closest to halving)
+      var basePrice=sub[0].price;
+      if(!basePrice)return null;
       var pts=sample(sub,120);
       var label=(CYCLE_LABELS[c])||"Cycle "+c;
-      return{label:label,data:pts.map(function(d){return{x:d.cyclePct,y:d.price}}),borderColor:CYCLE_COLORS[c]||CC.muted,backgroundColor:"transparent",borderWidth:2,pointRadius:0,showLine:true,tension:.3,order:c};
-    }).filter(function(ds){return ds.data.length>0;});
+      return{label:label,data:pts.map(function(d){return{x:d.cyclePct,y:+(d.price/basePrice*100).toFixed(1)}}),borderColor:CYCLE_COLORS[c]||CC.muted,backgroundColor:"transparent",borderWidth:2,pointRadius:0,showLine:true,tension:.3,order:c,_basePrice:basePrice,_cycle:c};
+    }).filter(Boolean);
 
-    // month line datasets reuse same x positions but need tall y range — use annotations instead via high y values
     var priceMonthDatasets=keyMonths.map(function(m){
       var xPos=+(m*monthPct).toFixed(2);
-      return{label:"M"+m,data:[{x:xPos,y:1},{x:xPos,y:1e9}],borderColor:CC.muted+"44",borderWidth:1,borderDash:[4,4],pointRadius:0,showLine:true,tension:0,fill:false,order:10};
+      return{label:"M"+m,data:[{x:xPos,y:0},{x:xPos,y:100000}],borderColor:CC.muted+"44",borderWidth:1,borderDash:[4,4],pointRadius:0,showLine:true,tension:0,fill:false,order:10};
     });
 
     var priceMonthLabelPlugin={
@@ -755,11 +759,25 @@ function buildCycleOverlay(){
       layout:{padding:{bottom:20}},
       scales:{
         x:Object.assign({},chartDefs().scales.x,{type:"linear",min:0,max:100,title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:13}},ticks:Object.assign({},chartDefs().scales.x.ticks,{callback:function(v){return v%25===0?v+"%":""},maxTicksLimit:20})}),
-        y:Object.assign({},chartDefs().scales.y,{type:"logarithmic",title:{display:true,text:"BTC Price (USD, log)",color:CC.muted,font:{size:13}},ticks:{color:CC.muted,font:{size:12},callback:function(v){return v>=1000?"$"+(v/1000).toFixed(0)+"k":v>=1?"$"+v:""}}})
+        y:Object.assign({},chartDefs().scales.y,{
+          type:"logarithmic",
+          title:{display:true,text:"Indexed price (halving = 100, log scale)",color:CC.muted,font:{size:13}},
+          ticks:{color:CC.muted,font:{size:12},callback:function(v){
+            if(v===100)return"100 (base)";
+            if(v>=1000)return(v/100).toFixed(0)+"x";
+            return v+"";
+          }}
+        })
       },
       plugins:Object.assign({},withLegend(chartDefs()).plugins,{
         legend:{display:true,labels:{color:CC.muted,font:{size:13},boxWidth:24,boxHeight:2,filter:function(item){return item.text.indexOf("M")===-1;}}},
-        tooltip:{backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,callbacks:{label:function(ctx){return ctx.dataset.label+": $"+Math.round(ctx.parsed.y).toLocaleString();}}}
+        tooltip:{backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,callbacks:{
+          label:function(ctx){
+            if(ctx.dataset.label&&ctx.dataset.label.indexOf("M")===0)return null;
+            var idx=ctx.parsed.y;
+            return ctx.dataset.label+": "+idx.toFixed(0)+" ("+((idx/100)).toFixed(2)+"x from halving)";
+          }
+        }}
       })
     }));
 
