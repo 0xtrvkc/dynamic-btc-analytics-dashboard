@@ -988,9 +988,49 @@ function buildPricePeaks(){
   var projectedPriceCeiling=curMvrvPeakPrice&&projectedUpside!==null?curMvrvPeakPrice*(1+projectedUpside/100):null;
   var projectedLeadLag=leadLagTrend?Math.round(leadLagTrend.slope*curCycle+leadLagTrend.intercept):medDays;
 
+  // --- Method 1: Cycle multiplier from halving price ---
+  // For each completed cycle: ATH / price at halving start
+  var halvingMultipliers=pricePeaks.filter(function(p){
+    var halvingDate=HALVINGS[p.cycle-1];
+    if(!halvingDate)return false;
+    var halvingDateStr=halvingDate.toISOString().slice(0,10);
+    var halvingPrice=PRICE_MAP[halvingDateStr];
+    if(!halvingPrice||!p.price)return false;
+    p.halvingPrice=halvingPrice;
+    p.halvingMultiplier=p.price/halvingPrice;
+    return true;
+  });
+  var allMultipliers=halvingMultipliers.filter(function(p){return!isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))}).map(function(p){return p.halvingMultiplier});
+  // Fit log decay to multipliers across cycles
+  var multLogR=allMultipliers.length>=2?logReg(halvingMultipliers.filter(function(p){return!isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))}).map(function(p){return p.cycle}),allMultipliers):null;
+  var curHalvingPrice=HALVINGS[curCycle-1]?PRICE_MAP[HALVINGS[curCycle-1].toISOString().slice(0,10)]:null;
+  var projMultiplier=multLogR?Math.exp(multLogR.slope*Math.log(curCycle)+multLogR.intercept):median(allMultipliers);
+  var ceilingMethod1=curHalvingPrice&&projMultiplier?curHalvingPrice*projMultiplier:null;
+
+  // --- Method 2: Previous ATH multiplier ---
+  // Each cycle ATH / previous cycle ATH
+  var athMultipliers=[];
+  for(var i=1;i<pricePeaks.length;i++){
+    if(pricePeaks[i].price&&pricePeaks[i-1].price){
+      athMultipliers.push({cycle:pricePeaks[i].cycle,mult:pricePeaks[i].price/pricePeaks[i-1].price});
+    }
+  }
+  var cleanAthMults=athMultipliers.filter(function(p){return!isOutlier(p.mult,athMultipliers.map(function(x){return x.mult}))});
+  var athLogR=cleanAthMults.length>=2?logReg(cleanAthMults.map(function(p){return p.cycle}),cleanAthMults.map(function(p){return p.mult})):null;
+  var prevATH=pricePeaks.length?pricePeaks[pricePeaks.length-1].price:null;
+  var projAthMult=athLogR?Math.exp(athLogR.slope*Math.log(curCycle)+athLogR.intercept):median(cleanAthMults.map(function(p){return p.mult}));
+  // Only project next cycle ATH (if current cycle is still in progress, use last known ATH)
+  var nextCycleNum=curCycle+1;
+  var projAthMultNext=athLogR?Math.exp(athLogR.slope*Math.log(nextCycleNum)+athLogR.intercept):null;
+  var ceilingMethod2=prevATH&&projAthMultNext?prevATH*projAthMultNext:null;
+  // Also estimate current cycle ceiling if previous cycle ATH exists
+  var prevCycleATH=pricePeaks.length>=2?pricePeaks[pricePeaks.length-2].price:null;
+  var ceilingMethod2cur=prevCycleATH&&projAthMult?prevCycleATH*projAthMult:null;
+
   // --- Stat cards ---
   var cards=pricePeaks.map(function(p){
-    return statCard("C"+p.cycle+" ATH","$"+Math.round(p.price).toLocaleString(),p.date,CYCLE_COLORS[p.cycle]||CC.muted);
+    var multNote=p.halvingMultiplier?"×"+p.halvingMultiplier.toFixed(1)+" from halving":"";
+    return statCard("C"+p.cycle+" ATH","$"+Math.round(p.price).toLocaleString(),p.date+" "+multNote,CYCLE_COLORS[p.cycle]||CC.muted);
   }).join("");
 
   // --- Pattern stat cards ---
@@ -998,7 +1038,9 @@ function buildPricePeaks(){
     statCard("Median lead-lag",medDays!==null?medDays+"d":"—","MVRV peaks before price"+(outlierCount?" · "+outlierCount+" outlier"+(outlierCount>1?"s":"")+" excluded":""),CC.amber),
     statCard("Median remaining upside",medUpside!==null?medUpside.toFixed(0)+"%":"—","After MVRV peaks, price still gains this",CC.teal),
     statCard("Median divergence",medDiv!==null?medDiv.toFixed(1)+"%":"—","MVRV drop from peak at price ATH",CC.accent),
-    projectedPriceCeiling?statCard("C"+curCycle+" price ceiling est.","$"+Math.round(projectedPriceCeiling).toLocaleString(),"Based on median upside from MVRV peak · not financial advice",CC.green):statCard("Price ceiling","—","MVRV peak not yet confirmed for this cycle",CC.muted)
+    projectedPriceCeiling?statCard("Ceiling · MVRV upside","$"+Math.round(projectedPriceCeiling).toLocaleString(),"Price @ MVRV peak × median remaining upside",CC.green):statCard("Ceiling · MVRV upside","—","MVRV peak not yet confirmed",CC.muted),
+    ceilingMethod1?statCard("Ceiling · halving mult.","$"+Math.round(ceilingMethod1).toLocaleString(),"Halving price × log-decay projected multiplier (×"+projMultiplier.toFixed(1)+")",CC.teal):statCard("Ceiling · halving mult.","—","Need halving price data",CC.muted),
+    ceilingMethod2cur?statCard("Ceiling · ATH mult.","$"+Math.round(ceilingMethod2cur).toLocaleString(),"Prev cycle ATH × log-decay projected mult. (×"+projAthMult.toFixed(2)+")",CC.amber):statCard("Ceiling · ATH mult.","—","Need 2+ cycles",CC.muted),
   ].join("");
 
   // --- Divergence stat cards ---
@@ -1026,6 +1068,18 @@ function buildPricePeaks(){
       +'<td>'+lag+'</td></tr>';
   }).join("");
 
+  // Multiplier history rows for table
+  var multRows=halvingMultipliers.map(function(p){
+    var athMult=athMultipliers.find(function(a){return a.cycle===p.cycle});
+    var outlierFlag=isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))?" ⚠":"";
+    return'<tr><td style="color:'+(CYCLE_COLORS[p.cycle]||CC.muted)+';font-weight:600">C'+p.cycle+'</td>'
+      +'<td>$'+Math.round(p.halvingPrice).toLocaleString()+'</td>'
+      +'<td>$'+Math.round(p.price).toLocaleString()+'</td>'
+      +'<td style="color:'+CC.teal+'">×'+p.halvingMultiplier.toFixed(1)+outlierFlag+'</td>'
+      +'<td style="color:'+CC.amber+'">'+(athMult?"×"+athMult.mult.toFixed(2)+(isOutlier(athMult.mult,athMultipliers.map(function(x){return x.mult}))?" ⚠":""):"—")+'</td>'
+      +'</tr>';
+  }).join("");
+
   document.getElementById("p8").innerHTML=
     '<div class="g4">'+cards+'</div>'+
     '<div class="chart-card"><div class="chart-title">BTC all-time high per cycle · log scale</div>'+makeCanvas("c8a",220)+'</div>'+
@@ -1033,8 +1087,9 @@ function buildPricePeaks(){
     '<div class="chart-card"><div class="chart-title">MVRV on the day of BTC price peak vs MVRV\'s own peak</div>'+makeCanvas("c8b",200)+'</div>'+
     '<div class="g4" style="margin-top:0">'+patternCards+'</div>'+
     '<div class="chart-card"><div class="chart-title">MVRV divergence at price peak (%)</div>'+makeCanvas("c8c",200)+'</div>'+
+    '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Price @ halving</th><th>ATH</th><th>Halving mult.</th><th>ATH mult. (vs prev)</th></tr></thead><tbody>'+multRows+'</tbody></table></div>'+
     '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>BTC ATH</th><th>ATH date</th><th>MVRV that day</th><th>Price @ MVRV peak</th><th>Remaining upside</th><th>Lead/lag days</th><th>Divergence</th><th>Ratio</th><th>Direction</th></tr></thead><tbody>'+leadLagRows+'</tbody></table></div>'+
-    '<div class="info">⚠ = statistical outlier (IQR method). Outliers are excluded from median pattern stats and projections. Price ceiling = price at MVRV peak × (1 + median remaining upside). Not financial advice.</div>';
+    '<div class="info">⚠ = statistical outlier (IQR method), excluded from projections. Three ceiling methods: (1) MVRV upside = price at MVRV peak × median remaining upside. (2) Halving mult. = price at halving × log-decay projected multiplier. (3) ATH mult. = previous cycle ATH × log-decay projected multiplier. Not financial advice.</div>';
 
   destroyChart("c8a");destroyChart("c8b");destroyChart("c8c");destroyChart("c8d");
 
