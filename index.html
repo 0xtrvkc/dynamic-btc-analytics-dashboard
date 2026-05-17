@@ -239,7 +239,19 @@ const CYCLE_LABELS = {
   6: "2032-35"  // Add this
 };
 
+// --- Named constants (edit here, not scattered through the code) ---
+const CONFIG = {
+  AVG_CYCLE_DAYS: 1422,   // used for open-ended last cycle % progress
+  SAMPLE_SIZE: 300,        // chart data points (downsampled)
+  ZSCORE_CAPITULATION: -1.5,
+  ZSCORE_CAUTION: 1.0,
+  ROC_SHORT: 30,
+  ROC_LONG: 90,
+  HALVING_DATE_TOLERANCE_DAYS: 3, // ± days to search for price when exact date missing
+};
+
 let DATA=[], STATS={}, CHARTS={}, activeTab=0;
+let BY_CYCLE={};  // pre-built lookup: BY_CYCLE[cycleNum] = filtered DATA rows
 let PRICE_MAP={}, hasPriceData=false;
 const built = new Set();
 
@@ -252,10 +264,58 @@ function parseDateFlexible(raw){
 }
 function fmtDate(d){return d?new Date(d).toISOString().slice(0,10):""}
 function assignCycle(y){return y<2012?0:Math.floor((y-2012)/4)+1}
-function movingAvg(arr,w){return arr.map(function(_,i){var sl=arr.slice(Math.max(0,i-w+1),i+1);return sl.reduce(function(a,b){return a+b},0)/sl.length})}
+
+// O(n) running-sum moving average — replaces the O(n*w) slice version
+function movingAvg(arr,w){
+  var out=new Array(arr.length);
+  var sum=0;
+  for(var i=0;i<arr.length;i++){
+    sum+=arr[i];
+    if(i>=w)sum-=arr[i-w];
+    out[i]=sum/Math.min(i+1,w);
+  }
+  return out;
+}
+
+// Price lookup with +-HALVING_DATE_TOLERANCE_DAYS fallback
+function priceAtHalving(halvingDate){
+  if(!halvingDate||!hasPriceData)return null;
+  var exact=PRICE_MAP[halvingDate.toISOString().slice(0,10)];
+  if(exact)return exact;
+  var tol=CONFIG.HALVING_DATE_TOLERANCE_DAYS*86400000;
+  var best=null,bestDist=Infinity;
+  var t=halvingDate.getTime();
+  for(var dateStr in PRICE_MAP){
+    var dt=new Date(dateStr).getTime();
+    var dist=Math.abs(dt-t);
+    if(dist<=tol&&dist<bestDist){bestDist=dist;best=PRICE_MAP[dateStr];}
+  }
+  return best;
+}
+
+// Shared halving annotation builder — pass the sampled data array for any chart
+function buildHalvingAnnotations(sampledData){
+  var annotations={};
+  if(!sampledData||!sampledData.length)return annotations;
+  var first=new Date(sampledData[0].dateStr),last=new Date(sampledData[sampledData.length-1].dateStr);
+  HALVINGS.forEach(function(h,i){
+    if(h<first||h>last)return;
+    var nearest=sampledData.reduce(function(a,b){
+      return Math.abs(new Date(b.dateStr)-h)<Math.abs(new Date(a.dateStr)-h)?b:a;
+    });
+    annotations["halving"+i]={
+      type:"line",xMin:nearest.dateStr,xMax:nearest.dateStr,
+      borderColor:(CYCLE_COLORS[i+1]||CC.muted)+"88",borderWidth:1.5,borderDash:[4,3],
+      label:{display:true,content:"C"+(i+1),position:"start",
+        backgroundColor:"transparent",color:CYCLE_COLORS[i+1]||CC.muted,
+        font:{size:11,family:"JetBrains Mono"}}
+    };
+  });
+  return annotations;
+}
 function linReg(xs,ys){var n=xs.length,mx=xs.reduce(function(a,b){return a+b},0)/n,my=ys.reduce(function(a,b){return a+b},0)/n,num=xs.reduce(function(s,x,i){return s+(x-mx)*(ys[i]-my)},0),den=xs.reduce(function(s,x){return s+(x-mx)*(x-mx)},0);return{slope:num/den,intercept:my-(num/den)*mx}}
 function logReg(xs,ys){return linReg(xs.map(Math.log),ys)}
-function sample(arr,n){if(arr.length<=n)return arr;var step=Math.ceil(arr.length/n);return arr.filter(function(_,i){return i%step===0||i===arr.length-1})}
+function sample(arr,n){if(!n)n=CONFIG.SAMPLE_SIZE;if(arr.length<=n)return arr;var step=Math.ceil(arr.length/n);return arr.filter(function(_,i){return i%step===0||i===arr.length-1})}
 function chartDefs(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,titleFont:{size:13},bodyFont:{size:14}}},scales:{x:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:13},maxTicksLimit:8},border:{display:false}},y:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:13}},border:{display:false}}}}}
 function withLegend(opts){return Object.assign({},opts,{plugins:Object.assign({},opts.plugins,{legend:{display:true,labels:{color:CC.muted,font:{size:13},boxWidth:24,boxHeight:2}}})})}
 function destroyChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}}
@@ -342,20 +402,20 @@ fetchPriceData();
 
 function enrichData(rows) {
   var mvrvs = rows.map(function(r) { return r.mvrv });
-  var ma20 = movingAvg(mvrvs, 20), 
-      ma50 = movingAvg(mvrvs, 50), 
-      ma200 = movingAvg(mvrvs, 200);
+  var ma20  = movingAvg(mvrvs, 20);
+  var ma50  = movingAvg(mvrvs, 50);
+  var ma200 = movingAvg(mvrvs, 200);
 
-  // Single source of truth — use the top-level HALVINGS array
-  // Adding a new halving there automatically extends cycle assignment here
   var cyclePeaks = {};
-  var AVG_CYCLE_DAYS = 1422; // used for cyclePct on the in-progress last cycle
+
+  // Welford online algorithm — O(n) single-pass z-score, numerically stable
+  var wn=0, wmean=0, wM2=0;
 
   return rows.map(function(r, i) {
     var cycle = 0;
     var cyclePct = null;
 
-    // Assign cycle from HALVINGS — works for any number of halvings
+    // Assign cycle from HALVINGS array — auto-extends with new halvings
     for (var j = 0; j < HALVINGS.length - 1; j++) {
       if (r.date >= HALVINGS[j] && r.date < HALVINGS[j + 1]) {
         cycle = j + 1;
@@ -365,29 +425,25 @@ function enrichData(rows) {
         break;
       }
     }
-
-    // Dates after the last known halving → next cycle number, open-ended
     var lastHalving = HALVINGS[HALVINGS.length - 1];
     if (r.date >= lastHalving) {
-      cycle = HALVINGS.length; // e.g. 7 halvings → cycle 7
+      cycle = HALVINGS.length;
       var daysIn = (r.date - lastHalving) / 86400000;
-      cyclePct = (daysIn / AVG_CYCLE_DAYS) * 100;
+      cyclePct = (daysIn / CONFIG.AVG_CYCLE_DAYS) * 100;
     }
-
-    // Dates before first halving
     if (r.date < HALVINGS[0]) cycle = 0;
 
-    // 2. Z-Score Calculation
-    var sl = mvrvs.slice(0, i + 1);
-    var mean = sl.reduce(function(a,b){return a+b},0) / sl.length;
-    var std = i < 2 ? 1 : Math.sqrt(sl.reduce(function(s,v){return s+Math.pow(v-mean,2)},0) / sl.length);
-    var zscore = std > 0 ? (r.mvrv - mean) / std : 0;
+    // Z-score via Welford — O(n) total, no re-scanning previous values
+    wn++; var delta = r.mvrv - wmean;
+    wmean += delta/wn; wM2 += delta*(r.mvrv - wmean);
+    var wstd = wn < 3 ? 1 : Math.sqrt(wM2/wn);
+    var zscore = wstd > 0 ? (r.mvrv - wmean) / wstd : 0;
 
-    // 3. Momentum (ROC)
-    var roc30 = i >= 30 ? ((r.mvrv - mvrvs[i-30]) / mvrvs[i-30]) * 100 : 0;
-    var roc90 = i >= 90 ? ((r.mvrv - mvrvs[i-90]) / mvrvs[i-90]) * 100 : 0;
+    // ROC — null for warm-up period (not 0, which is a false flat reading)
+    var roc30 = i >= CONFIG.ROC_SHORT ? ((r.mvrv - mvrvs[i-CONFIG.ROC_SHORT]) / mvrvs[i-CONFIG.ROC_SHORT]) * 100 : null;
+    var roc90 = i >= CONFIG.ROC_LONG  ? ((r.mvrv - mvrvs[i-CONFIG.ROC_LONG])  / mvrvs[i-CONFIG.ROC_LONG])  * 100 : null;
 
-    // 4. Drawdown
+    // Drawdown from cycle peak
     if (cycle > 0) cyclePeaks[cycle] = Math.max(cyclePeaks[cycle] || 0, r.mvrv);
     var peak = cyclePeaks[cycle] || r.mvrv;
     var drawdown = cycle > 0 ? ((r.mvrv - peak) / peak) * 100 : null;
@@ -398,9 +454,9 @@ function enrichData(rows) {
       ma20: +ma20[i].toFixed(3),
       ma50: +ma50[i].toFixed(3),
       ma200: +ma200[i].toFixed(3),
-      roc30: +roc30.toFixed(2),
-      roc90: +roc90.toFixed(2),
-      momentum: +roc30.toFixed(2),
+      roc30: roc30 !== null ? +roc30.toFixed(2) : null,
+      roc90: roc90 !== null ? +roc90.toFixed(2) : null,
+      momentum: roc30 !== null ? +roc30.toFixed(2) : null,
       cyclePct: cyclePct != null ? +cyclePct.toFixed(1) : null,
       drawdown: drawdown != null ? +drawdown.toFixed(2) : null,
       dateStr: fmtDate(r.date)
@@ -441,6 +497,14 @@ function loadData(rows){
   DATA=enrichData(rows);
   if(hasPriceData)joinPrice();
   STATS=computeStats(DATA);
+
+  // Pre-build cycle lookup — avoids repeated DATA.filter() in every tab builder
+  BY_CYCLE={};
+  DATA.forEach(function(d){
+    if(!BY_CYCLE[d.cycle])BY_CYCLE[d.cycle]=[];
+    BY_CYCLE[d.cycle].push(d);
+  });
+
   document.getElementById("hdr-meta").textContent=DATA.length.toLocaleString()+" pts · "+fmtDate(DATA[0].date)+" → "+fmtDate(DATA[DATA.length-1].date);
   built.clear();
   Object.keys(CHARTS).forEach(function(k){CHARTS[k].destroy();delete CHARTS[k]});
@@ -562,59 +626,19 @@ function buildOverview(){
 
   destroyChart("c0");destroyChart("c0b");
 
-  // Build halving annotation lines — snap to nearest label in sampled data
-  var cd=sample(DATA,300);
-  var halvingAnnotations={};
-  HALVINGS.forEach(function(h,i){
-    var hStr=h.toISOString().slice(0,10);
-    // Find nearest date in sampled array
-    var nearest=cd.reduce(function(a,b){
-      return Math.abs(new Date(b.dateStr)-h)<Math.abs(new Date(a.dateStr)-h)?b:a;
-    });
-    // Only draw if halving is within data range
-    if(h<new Date(cd[0].dateStr)||h>new Date(cd[cd.length-1].dateStr))return;
-    halvingAnnotations["halving"+i]={
-      type:"line",
-      xMin:nearest.dateStr,xMax:nearest.dateStr,
-      borderColor:(CYCLE_COLORS[i+1]||CC.muted)+"88",
-      borderWidth:1.5,
-      borderDash:[4,3],
-      label:{display:true,content:"C"+(i+1),position:"start",
-        backgroundColor:"transparent",color:CYCLE_COLORS[i+1]||CC.muted,
-        font:{size:11,family:"JetBrains Mono"}}
-    };
-  });
-  var mvrvOpts=withLegend(Object.assign({},chartDefs(),{
-    plugins:Object.assign({},withLegend(chartDefs()).plugins,{
-      annotation:{annotations:halvingAnnotations}
-    })
-  }));
+  var cd=sample(DATA,CONFIG.SAMPLE_SIZE);
   CHARTS.c0=new Chart(document.getElementById("c0"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:[
     {label:"MVRV",data:cd.map(function(d){return d.mvrv}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3},
     {label:"MA20",data:cd.map(function(d){return d.ma20}),borderColor:CC.amber,borderWidth:1.5,pointRadius:0,tension:.3},
     {label:"MA50",data:cd.map(function(d){return d.ma50}),borderColor:CC.teal,borderWidth:1.5,pointRadius:0,tension:.3},
     {label:"MA200",data:cd.map(function(d){return d.ma200}),borderColor:CC.red,borderWidth:1.5,pointRadius:0,tension:.3}
-  ]},options:mvrvOpts});
+  ]},options:withLegend(Object.assign({},chartDefs(),{plugins:Object.assign({},withLegend(chartDefs()).plugins,{annotation:{annotations:buildHalvingAnnotations(cd)}})}))});
 
   if(hasPriceData){
-    var cdp=sample(DATA.filter(function(d){return d.price}),300);
-    // Build same halving annotations for price chart
-    var priceHalvingAnnotations={};
-    HALVINGS.forEach(function(h,i){
-      if(h<new Date(cdp[0].dateStr)||h>new Date(cdp[cdp.length-1].dateStr))return;
-      var nearest=cdp.reduce(function(a,b){
-        return Math.abs(new Date(b.dateStr)-h)<Math.abs(new Date(a.dateStr)-h)?b:a;
-      });
-      priceHalvingAnnotations["halving"+i]={
-        type:"line",xMin:nearest.dateStr,xMax:nearest.dateStr,
-        borderColor:(CYCLE_COLORS[i+1]||CC.muted)+"88",borderWidth:1.5,borderDash:[4,3],
-        label:{display:true,content:"C"+(i+1),position:"start",backgroundColor:"transparent",
-          color:CYCLE_COLORS[i+1]||CC.muted,font:{size:11,family:"JetBrains Mono"}}
-      };
-    });
+    var cdp=sample(DATA.filter(function(d){return d.price}),CONFIG.SAMPLE_SIZE);
     var priceOpts=withLegend(Object.assign({},chartDefs(),{
       scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return"$"+v.toLocaleString()}})})},
-      plugins:Object.assign({},withLegend(chartDefs()).plugins,{annotation:{annotations:priceHalvingAnnotations}})
+      plugins:Object.assign({},withLegend(chartDefs()).plugins,{annotation:{annotations:buildHalvingAnnotations(cdp)}})
     }));
     CHARTS.c0b=new Chart(document.getElementById("c0b"),{type:"line",data:{labels:cdp.map(function(d){return d.dateStr}),datasets:[
       {label:"BTC Price (USD)",data:cdp.map(function(d){return d.price}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.amber+"11"}}
@@ -624,10 +648,10 @@ function buildOverview(){
 
 function buildZScore(){
   var s=STATS,l=s.last;
-  var signal=l.zscore<-1.5?"Capitulation":l.zscore<0?"Accumulate":l.zscore<1?"Neutral":"Caution";
-  document.getElementById("p1").innerHTML='<div class="g3">'+[statCard("Current Z-score",l.zscore.toFixed(2),"",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),statCard("Historical mean MVRV",s.mean.toFixed(3),"Z = 0 baseline"),statCard("Signal",signal,"",l.zscore<0?CC.teal:CC.amber)].join("")+'</div><div class="chart-card"><div class="chart-title">All-time Z-score (expanding window)</div>'+makeCanvas("c1",300)+'</div><div class="info">Z &gt; +2 has marked every major top. Z &lt; -1 = historical buy zone. Z &lt; -1.5 = capitulation — every case preceded a major recovery.</div>';
+  var signal=l.zscore<CONFIG.ZSCORE_CAPITULATION?"Capitulation":l.zscore<0?"Accumulate":l.zscore<CONFIG.ZSCORE_CAUTION?"Neutral":"Caution";
+  document.getElementById("p1").innerHTML='<div class="g3">'+[statCard("Current Z-score",l.zscore.toFixed(2),"",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),statCard("Historical mean MVRV",s.mean.toFixed(3),"Z = 0 baseline"),statCard("Signal",signal,"",l.zscore<0?CC.teal:CC.amber)].join("")+'</div><div class="chart-card"><div class="chart-title">All-time Z-score (expanding window)</div>'+makeCanvas("c1",300)+'</div><div class="info">Z &gt; +2 has marked every major top. Z &lt; -1 = historical buy zone. Z &lt; '+CONFIG.ZSCORE_CAPITULATION+' = capitulation — every case preceded a major recovery.</div>';
   destroyChart("c1");
-  var cd=sample(DATA,300);
+  var cd=sample(DATA,CONFIG.SAMPLE_SIZE);
   var datasets=[{label:"Z-score",data:cd.map(function(d){return d.zscore}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.accent+"22",below:CC.accent+"11"}},{label:"+2",data:cd.map(function(){return 2}),borderColor:CC.red+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"-1",data:cd.map(function(){return -1}),borderColor:CC.teal+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"0",data:cd.map(function(){return 0}),borderColor:CC.muted+"44",borderWidth:1,pointRadius:0}];
   var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{min:-3,max:3})}}));
   CHARTS.c1=new Chart(document.getElementById("c1"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:datasets},options:opts});
@@ -637,12 +661,11 @@ function buildMomentum(){
   var l=STATS.last;
   document.getElementById("p2").innerHTML='<div class="g3">'+[statCard("ROC 30d",(l.roc30!=null?l.roc30.toFixed(1):"—")+"%","",l.roc30>0?CC.green:CC.red),statCard("ROC 90d",(l.roc90!=null?l.roc90.toFixed(1):"—")+"%","",l.roc90>0?CC.green:CC.red),statCard("MA signal",l.ma20>l.ma50?"Bullish":"Bearish","MA20 vs MA50",l.ma20>l.ma50?CC.green:CC.red)].join("")+'</div><div class="chart-card"><div class="chart-title">30-day and 90-day rate of change (%)'+(hasPriceData?" · BTC price on right axis":"")+'</div>'+makeCanvas("c2",300)+'</div>';
   destroyChart("c2");
-  var cd=sample(DATA.filter(function(d){return d.roc30!=null}),300);
+  var cd=sample(DATA.filter(function(d){return d.roc30!==null&&d.roc90!==null}),CONFIG.SAMPLE_SIZE);
   var datasets=[{label:"ROC 30d",data:cd.map(function(d){return d.roc30}),borderColor:CC.teal,borderWidth:2,pointRadius:0,tension:.2,yAxisID:"y"},{label:"ROC 90d",data:cd.map(function(d){return d.roc90}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.2,yAxisID:"y"},{label:"0",data:cd.map(function(){return 0}),borderColor:CC.muted+"44",borderWidth:1,pointRadius:0,yAxisID:"y"}];
   var scales={x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{min:-100,max:150,position:"left"})};
   if(hasPriceData){
-    var priceByDate={};DATA.forEach(function(d){if(d.price)priceByDate[d.dateStr]=d.price;});
-    datasets.push({label:"BTC Price",data:cd.map(function(d){return priceByDate[d.dateStr]||null}),borderColor:CC.green+"99",borderWidth:1.5,pointRadius:0,tension:.3,yAxisID:"yPrice"});
+    datasets.push({label:"BTC Price",data:cd.map(function(d){return d.price||null}),borderColor:CC.green+"99",borderWidth:1.5,pointRadius:0,tension:.3,yAxisID:"yPrice"});
     scales.yPrice={position:"right",grid:{drawOnChartArea:false},ticks:{color:CC.green,font:{size:12},callback:function(v){return"$"+v.toLocaleString()}},border:{display:false}};
   }
   var opts=withLegend(Object.assign({},chartDefs(),{scales:scales}));
@@ -675,17 +698,16 @@ function buildCycleOverlay(){
   });
  var availableCycles = [...new Set(DATA.map(d => d.cycle))].filter(c => c > 0).sort((a,b) => a-b);
   var cycleDatasets = availableCycles.map(function(c) {
-    var sub = DATA.filter(function(d) { return d.cycle === c && d.cyclePct != null });
-    var pts = sample(sub, 120); // Using 120 points for smoother lines
+    var sub = BY_CYCLE[c] ? BY_CYCLE[c].filter(function(d){return d.cyclePct!=null}) : [];
+    var pts = sample(sub, 120);
     var label = (typeof CYCLE_LABELS !== 'undefined' && CYCLE_LABELS[c]) ? CYCLE_LABELS[c] : "Cycle " + c;
-    
     return {
       label: label,
       data: pts.map(function(d) { return { x: d.cyclePct, y: d.mvrv } }),
       borderColor: (typeof CYCLE_COLORS !== 'undefined' && CYCLE_COLORS[c]) ? CYCLE_COLORS[c] : "#6b6880",
       backgroundColor: 'transparent',
       borderWidth: 2,
-      pointRadius: 0, // Keeps it clean, arrow points to the current dot anyway
+      pointRadius: 0,
       showLine: true,
       tension: .3,
       order: c
@@ -753,7 +775,7 @@ function buildCycleOverlay(){
               var cycleIdx=ctx.datasetIndex-monthDatasets.length;
               var cyc=availableCycles[cycleIdx];
               if(cyc!=null){
-                var sub=DATA.filter(function(d){return d.cycle===cyc&&d.price&&d.cyclePct!=null});
+              var sub=BY_CYCLE[cyc]?BY_CYCLE[cyc].filter(function(d){return d.price&&d.cyclePct!=null}):[];
                 if(sub.length){
                   var closest=sub.reduce(function(a,b){return Math.abs((b.cyclePct||0)-ctx.parsed.x)<Math.abs((a.cyclePct||0)-ctx.parsed.x)?b:a},sub[0]);
                   if(closest&&closest.price)base+=" · $"+Math.round(closest.price).toLocaleString();
@@ -801,7 +823,7 @@ function buildCycleOverlay(){
   if(hasPriceData){
     // Normalize each cycle: price at halving date = 100, all subsequent prices as % of that
     var priceCycleDatasets=availableCycles.map(function(c){
-      var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null&&d.price});
+      var sub=BY_CYCLE[c]?BY_CYCLE[c].filter(function(d){return d.cyclePct!=null&&d.price}):[];
       if(!sub.length)return null;
       // Base price = first available price in the cycle (closest to halving)
       var basePrice=sub[0].price;
@@ -863,11 +885,11 @@ function buildCycleOverlay(){
 function buildDrawdown(){
   var s=STATS;
   var cycles=s.availCycles;
-  var maxDDs=cycles.map(function(c){var pts=DATA.filter(function(d){return d.cycle===c&&d.drawdown!=null});return pts.length?pts.reduce(function(a,b){return a.drawdown<b.drawdown?a:b}).drawdown:0});
+  var maxDDs=cycles.map(function(c){var pts=(BY_CYCLE[c]||[]).filter(function(d){return d.drawdown!=null});return pts.length?pts.reduce(function(a,b){return a.drawdown<b.drawdown?a:b}).drawdown:0});
   var cards=cycles.map(function(c,i){
     var sub="";
     if(hasPriceData){
-      var worst=DATA.filter(function(d){return d.cycle===c&&d.drawdown!=null&&d.price});
+      var worst=(BY_CYCLE[c]||[]).filter(function(d){return d.drawdown!=null&&d.price});
       if(worst.length){var w=worst.reduce(function(a,b){return a.drawdown<b.drawdown?a:b});sub="$"+Math.round(w.price).toLocaleString()+" @ worst";}
     }
     return statCard("C"+c+" max DD",maxDDs[i].toFixed(0)+"%",sub||(CYCLE_LABELS[c]||"—"),CYCLE_COLORS[c]||CC.muted);
@@ -876,19 +898,18 @@ function buildDrawdown(){
   document.getElementById("p4").innerHTML='<div class="g4">'+cards.join("")+'</div><div class="chart-card"><div class="chart-title">MVRV drawdown from cycle peak — by cycle position (%)</div>'+makeCanvas("c4",320)+'</div>'+(hasPriceData?'<div class="chart-card"><div class="chart-title">Price % drawdown from cycle ATH at worst MVRV point</div>'+makeCanvas("c4b",220)+'</div>':"")+'<div class="info">Drawdown = how far MVRV has fallen from that cycle\'s peak.'+priceNote+'</div>';
   destroyChart("c4");destroyChart("c4b");
   var datasets=cycles.map(function(c){
-    var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null&&d.drawdown!=null});
+    var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.cyclePct!=null&&d.drawdown!=null});
     var pts=sample(sub,60);
     return{label:"C"+c,data:pts.map(function(d){return{x:d.cyclePct,y:d.drawdown}}),borderColor:CYCLE_COLORS[c]||CC.muted,backgroundColor:CYCLE_COLORS[c]||CC.muted,borderWidth:2,pointRadius:2,showLine:true,tension:.3};
   });
   var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{type:"linear",title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:13}}}),y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"Drawdown %",color:CC.muted,font:{size:13}},ticks:{callback:function(v){return v+"%"}}})}}));
   CHARTS.c4=new Chart(document.getElementById("c4"),{type:"scatter",data:{datasets:datasets},options:opts});
   if(hasPriceData){
-    // % drawdown from cycle ATH at the worst MVRV drawdown point
     var pctFromATH=cycles.map(function(c){
-      var sub=DATA.filter(function(d){return d.cycle===c&&d.drawdown!=null&&d.price});
+      var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.drawdown!=null&&d.price});
       if(!sub.length)return null;
       var worst=sub.reduce(function(a,b){return a.drawdown<b.drawdown?a:b});
-      var ath=DATA.filter(function(d){return d.cycle===c&&d.price}).reduce(function(a,b){return b.price>a.price?b:a},sub[0]);
+      var ath=sub.reduce(function(a,b){return b.price>a.price?b:a},sub[0]);
       if(!ath||!ath.price||!worst.price)return null;
       return((worst.price-ath.price)/ath.price*100);
     });
@@ -912,7 +933,7 @@ function buildMAX(){
   var stackLabel=l.ma20>l.ma50&&l.ma50>l.ma200?'<span style="color:'+CC.green+'">Bullish — MA20 &gt; MA50 &gt; MA200</span>':l.ma20<l.ma50&&l.ma50<l.ma200?'<span style="color:'+CC.red+'">Bearish — MA20 &lt; MA50 &lt; MA200</span>':'<span style="color:'+CC.amber+'">Mixed — transition zone</span>';
   document.getElementById("p5").innerHTML='<div class="g3">'+[statCard("MA20",l.ma20.toFixed(3),"Short-term"),statCard("MA50",l.ma50.toFixed(3),"Medium-term"),statCard("MA200",l.ma200.toFixed(3),"Long-term")].join("")+'</div><div class="chart-card"><div class="chart-title">MVRV with moving averages'+(hasPriceData?" · BTC price on right axis":"")+'</div>'+makeCanvas("c5",320)+'</div><div class="info">Current stack: '+stackLabel+'. MA20 crossing above MA50 is the first bullish signal to watch on MVRV itself.</div>';
   destroyChart("c5");
-  var cd=sample(DATA,300);
+  var cd=sample(DATA,CONFIG.SAMPLE_SIZE);
   var datasets=[{label:"MVRV",data:cd.map(function(d){return d.mvrv}),borderColor:CC.accent+"60",borderWidth:1.5,pointRadius:0,tension:.3,yAxisID:"y"},{label:"MA20",data:cd.map(function(d){return d.ma20}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.3,yAxisID:"y"},{label:"MA50",data:cd.map(function(d){return d.ma50}),borderColor:CC.teal,borderWidth:2,pointRadius:0,tension:.3,yAxisID:"y"},{label:"MA200",data:cd.map(function(d){return d.ma200}),borderColor:CC.red,borderWidth:2,pointRadius:0,tension:.3,yAxisID:"y"}];
   var scales={x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{position:"left"})};
   if(hasPriceData){
@@ -932,7 +953,7 @@ function buildZoneDays(){
     var zoneThresholds=[[0,1,CC.red,"< 1.0"],[1,1.5,CC.amber,"1.0-1.5"],[1.5,2,CC.accent,"1.5-2.0"],[2,3,CC.teal,"2.0-3.0"],[3,999,CC.green,"> 3.0"]];
     var priceRows=zoneThresholds.map(function(z){
       var cells=s.cycleData.map(function(c){
-        var pts=DATA.filter(function(d){return d.cycle===c.cycle&&d.mvrv>=z[0]&&d.mvrv<z[1]&&d.price});
+        var pts=(BY_CYCLE[c.cycle]||[]).filter(function(d){return d.mvrv>=z[0]&&d.mvrv<z[1]&&d.price});
         if(!pts.length)return"<td>—</td>";
         var avg=pts.reduce(function(a,b){return a+b.price},0)/pts.length;
         return"<td>$"+Math.round(avg).toLocaleString()+"</td>";
@@ -1122,7 +1143,7 @@ function buildPricePeaks(){
   // --- Compute price peaks per cycle ---
   var pricePeaks=[];
   STATS.availCycles.forEach(function(c){
-    var sub=DATA.filter(function(d){return d.cycle===c&&d.price});
+    var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price});
     if(!sub.length)return;
     var best=sub.reduce(function(a,b){return b.price>a.price?b:a});
     var mvrvPeak=s.cycleData.find(function(cd){return cd.cycle===c});
@@ -1136,7 +1157,6 @@ function buildPricePeaks(){
     var mvrvOnPriceDay=best.mvrv||null;
     var divergencePct=mvrvOnPriceDay&&mvrvPeakMvrv?((mvrvOnPriceDay-mvrvPeakMvrv)/mvrvPeakMvrv)*100:null;
     var ratio=mvrvOnPriceDay&&mvrvPeakMvrv?mvrvOnPriceDay/mvrvPeakMvrv:null;
-    // Remaining upside: % price gained after MVRV peaked
     var priceAtMvrvPeak=mvrvPeakDate?PRICE_MAP[mvrvPeakDate]:null;
     var remainingUpside=priceAtMvrvPeak&&best.price?((best.price-priceAtMvrvPeak)/priceAtMvrvPeak)*100:null;
     pricePeaks.push({cycle:c,price:best.price,date:best.dateStr,mvrvOnDay:mvrvOnPriceDay,mvrvPeakDate:mvrvPeakDate,mvrvPeakMvrv:mvrvPeakMvrv,daysDiff:daysDiff,divergencePct:divergencePct,ratio:ratio,priceAtMvrvPeak:priceAtMvrvPeak,remainingUpside:remainingUpside});
@@ -1179,8 +1199,7 @@ function buildPricePeaks(){
   var halvingMultipliers=pricePeaks.filter(function(p){
     var halvingDate=HALVINGS[p.cycle-1];
     if(!halvingDate)return false;
-    var halvingDateStr=halvingDate.toISOString().slice(0,10);
-    var halvingPrice=PRICE_MAP[halvingDateStr];
+    var halvingPrice=priceAtHalving(halvingDate);
     if(!halvingPrice||!p.price)return false;
     p.halvingPrice=halvingPrice;
     p.halvingMultiplier=p.price/halvingPrice;
@@ -1188,7 +1207,7 @@ function buildPricePeaks(){
   });
   var allMultipliers=halvingMultipliers.filter(function(p){return!isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))}).map(function(p){return p.halvingMultiplier});
   var multLogLogR=allMultipliers.length>=2?linReg(halvingMultipliers.filter(function(p){return!isOutlier(p.halvingMultiplier,halvingMultipliers.map(function(x){return x.halvingMultiplier}))}).map(function(p){return Math.log(p.cycle)}),allMultipliers.map(function(v){return Math.log(v)})):null;
-  var curHalvingPrice=HALVINGS[curCycle-1]?PRICE_MAP[HALVINGS[curCycle-1].toISOString().slice(0,10)]:null;
+  var curHalvingPrice=HALVINGS[curCycle-1]?priceAtHalving(HALVINGS[curCycle-1]):null;
   var projMultiplier=multLogLogR?Math.exp(multLogLogR.slope*Math.log(curCycle)+multLogLogR.intercept):median(allMultipliers);
   var ceilingMethod1=curHalvingPrice&&projMultiplier?curHalvingPrice*projMultiplier:null;
 
@@ -1313,12 +1332,11 @@ function exportSummary(){
   var hr=function(title){lines.push("","=== "+title+" ===");};
   var row=function(label,val){lines.push(label+": "+val);};
 
-  // --- CURRENT STATUS ---
   hr("CURRENT STATUS");
   row("Date",l.dateStr);
   row("MVRV",l.mvrv.toFixed(3));
   row("Z-score",l.zscore.toFixed(3));
-  var signal=l.zscore<-1.5?"Capitulation":l.zscore<0?"Accumulate":l.zscore<1?"Neutral":"Caution";
+  var signal=l.zscore<CONFIG.ZSCORE_CAPITULATION?"Capitulation":l.zscore<0?"Accumulate":l.zscore<CONFIG.ZSCORE_CAUTION?"Neutral":"Caution";
   row("Signal",signal);
   row("MA20",l.ma20.toFixed(3));
   row("MA50",l.ma50.toFixed(3));
@@ -1333,7 +1351,6 @@ function exportSummary(){
   row("Data range",DATA[0].dateStr+" to "+DATA[DATA.length-1].dateStr);
   row("Total data points",DATA.length.toLocaleString());
 
-  // --- CURRENT CYCLE POSITION ---
   hr("CURRENT CYCLE POSITION");
   var curCycle=l.cycle;
   var curCycleData=s.cycleData.find(function(c){return c.cycle===curCycle});
@@ -1343,12 +1360,9 @@ function exportSummary(){
     row("Cycle peak so far",curCycleData.peak.toFixed(3)+" on "+curCycleData.peakDate);
     row("Current MVRV vs cycle peak",((l.mvrv/curCycleData.peak)*100).toFixed(0)+"% of cycle peak");
     row("Days in current cycle",curCycleData.days);
-    // Current drawdown from cycle peak
-    var curDD=((l.mvrv-curCycleData.peak)/curCycleData.peak*100);
-    row("Current drawdown from cycle peak",curDD.toFixed(1)+"%");
+    row("Current drawdown from cycle peak",((l.mvrv-curCycleData.peak)/curCycleData.peak*100).toFixed(1)+"%");
   }
 
-  // --- CYCLE SUMMARY ---
   hr("CYCLE SUMMARY");
   s.cycleData.forEach(function(c){
     lines.push("");
@@ -1358,43 +1372,31 @@ function exportSummary(){
     row("  Peak-to-trough range",((c.peak-c.trough)/c.peak*100).toFixed(0)+"% compression");
     row("  Duration",c.days+" days");
     if(hasPriceData){
-      var p=PRICE_MAP[c.peakDate];
-      if(p)row("  BTC price at MVRV peak","$"+Math.round(p).toLocaleString());
-      var t=PRICE_MAP[c.troughDate];
-      if(t)row("  BTC price at MVRV trough","$"+Math.round(t).toLocaleString());
+      var p=PRICE_MAP[c.peakDate];if(p)row("  BTC price at MVRV peak","$"+Math.round(p).toLocaleString());
+      var t=PRICE_MAP[c.troughDate];if(t)row("  BTC price at MVRV trough","$"+Math.round(t).toLocaleString());
     }
   });
 
-  // --- DRAWDOWN ANALYSIS ---
   hr("DRAWDOWN — Max MVRV drawdown from cycle peak");
   s.cycleData.forEach(function(c){
-    var pts=DATA.filter(function(d){return d.cycle===c.cycle&&d.drawdown!=null});
+    var pts=(BY_CYCLE[c.cycle]||[]).filter(function(d){return d.drawdown!=null});
     if(!pts.length)return;
     var worst=pts.reduce(function(a,b){return a.drawdown<b.drawdown?a:b});
-    lines.push("");
-    lines.push("Cycle "+c.cycle+":");
+    lines.push("");lines.push("Cycle "+c.cycle+":");
     row("  Max drawdown",worst.drawdown.toFixed(1)+"% on "+worst.dateStr);
     if(hasPriceData&&worst.price){
-      var ath=DATA.filter(function(d){return d.cycle===c.cycle&&d.price});
-      if(ath.length){
-        var athPt=ath.reduce(function(a,b){return b.price>a.price?b:a});
-        var priceDd=((worst.price-athPt.price)/athPt.price*100);
-        row("  BTC price at worst MVRV drawdown","$"+Math.round(worst.price).toLocaleString());
-        row("  Price drawdown from cycle ATH at that point",priceDd.toFixed(1)+"%");
-      }
+      var athPt=pts.filter(function(d){return d.price}).reduce(function(a,b){return b.price>a.price?b:a},worst);
+      row("  BTC price at worst drawdown","$"+Math.round(worst.price).toLocaleString());
+      if(athPt.price&&athPt.price!==worst.price)row("  Price drawdown from cycle ATH at that point",((worst.price-athPt.price)/athPt.price*100).toFixed(1)+"%");
     }
   });
 
-  // --- MA CROSSOVERS ---
   hr("MA CROSSOVERS — Golden & death cross events (MA20 vs MA50)");
   var crossovers=[];
   for(var i=1;i<DATA.length;i++){
     var prev=DATA[i-1],curr=DATA[i];
-    if(prev.ma20<prev.ma50&&curr.ma20>=curr.ma50){
-      crossovers.push({date:curr.dateStr,type:"Golden cross",cycle:curr.cycle,mvrv:curr.mvrv,price:curr.price||null});
-    } else if(prev.ma20>prev.ma50&&curr.ma20<=curr.ma50){
-      crossovers.push({date:curr.dateStr,type:"Death cross",cycle:curr.cycle,mvrv:curr.mvrv,price:curr.price||null});
-    }
+    if(prev.ma20<prev.ma50&&curr.ma20>=curr.ma50)crossovers.push({date:curr.dateStr,type:"Golden cross",cycle:curr.cycle,mvrv:curr.mvrv,price:curr.price||null});
+    else if(prev.ma20>prev.ma50&&curr.ma20<=curr.ma50)crossovers.push({date:curr.dateStr,type:"Death cross",cycle:curr.cycle,mvrv:curr.mvrv,price:curr.price||null});
   }
   if(crossovers.length){
     crossovers.forEach(function(x){
@@ -1402,156 +1404,112 @@ function exportSummary(){
       if(hasPriceData&&x.price)info+=" · $"+Math.round(x.price).toLocaleString();
       row("  "+x.date+" "+x.type,info);
     });
-    // Current MA state context
     var lastCross=crossovers[crossovers.length-1];
     var daysSince=Math.round((new Date(l.dateStr)-new Date(lastCross.date))/(1000*60*60*24));
     row("Last crossover",lastCross.type+" on "+lastCross.date+" ("+daysSince+"d ago)");
-  } else {
-    lines.push("  No MA20/MA50 crossovers detected in dataset.");
-  }
+  } else {lines.push("  No MA20/MA50 crossovers detected.");}
   row("Current MA20 vs MA50",l.ma20>l.ma50?"MA20 above MA50 (bullish bias)":"MA20 below MA50 (bearish bias)");
 
-  // --- ZONE ANALYSIS ---
-  hr("ZONE ANALYSIS — Days spent in each MVRV zone per cycle");
+  hr("ZONE ANALYSIS — Days in each MVRV zone per cycle");
   s.cycleData.forEach(function(c){
-    lines.push("");
-    lines.push("Cycle "+c.cycle+":");
+    lines.push("");lines.push("Cycle "+c.cycle+":");
     row("  Below 1.0",c.below1+"d ("+(c.below1/c.days*100).toFixed(0)+"%)");
     row("  1.0-1.5",(c.below1_5-c.below1)+"d ("+((c.below1_5-c.below1)/c.days*100).toFixed(0)+"%)");
     row("  1.5-2.0",(c.days-c.above2-c.below1_5)+"d ("+((c.days-c.above2-c.below1_5)/c.days*100).toFixed(0)+"%)");
     row("  2.0-3.0",(c.above2-c.above3)+"d ("+((c.above2-c.above3)/c.days*100).toFixed(0)+"%)");
     row("  Above 3.0",c.above3+"d ("+(c.above3/c.days*100).toFixed(0)+"%)");
     if(hasPriceData){
-      var zoneThresholds=[[0,1,"Below 1.0"],[1,1.5,"1.0-1.5"],[1.5,2,"1.5-2.0"],[2,3,"2.0-3.0"],[3,999,"Above 3.0"]];
-      zoneThresholds.forEach(function(z){
-        var pts=DATA.filter(function(d){return d.cycle===c.cycle&&d.mvrv>=z[0]&&d.mvrv<z[1]&&d.price});
+      [[0,1,"Below 1.0"],[1,1.5,"1.0-1.5"],[1.5,2,"1.5-2.0"],[2,3,"2.0-3.0"],[3,999,"Above 3.0"]].forEach(function(z){
+        var pts=(BY_CYCLE[c.cycle]||[]).filter(function(d){return d.mvrv>=z[0]&&d.mvrv<z[1]&&d.price});
         if(pts.length){var avg=pts.reduce(function(a,b){return a+b.price},0)/pts.length;row("  Avg BTC price in "+z[2],"$"+Math.round(avg).toLocaleString());}
       });
     }
   });
-  // Current zone
   var curZone=l.mvrv<1?"Below 1.0":l.mvrv<1.5?"1.0-1.5":l.mvrv<2?"1.5-2.0":l.mvrv<3?"2.0-3.0":"Above 3.0";
-  lines.push("");
-  row("Current MVRV zone",curZone+" (MVRV "+l.mvrv.toFixed(3)+")");
+  lines.push("");row("Current MVRV zone",curZone+" (MVRV "+l.mvrv.toFixed(3)+")");
 
-  // --- PEAK DIVERGENCE ---
   if(hasPriceData){
     hr("PRICE PEAK DIVERGENCE — MVRV lead/lag vs BTC price ATH");
-    STATS.availCycles.forEach(function(c){
-      var sub=DATA.filter(function(d){return d.cycle===c&&d.price});
+    s.availCycles.forEach(function(c){
+      var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price});
       if(!sub.length)return;
       var best=sub.reduce(function(a,b){return b.price>a.price?b:a});
       var mvrvPeak=s.cycleData.find(function(cd){return cd.cycle===c});
       if(!mvrvPeak)return;
       var daysDiff=Math.round((new Date(best.dateStr)-new Date(mvrvPeak.peakDate))/(1000*60*60*24));
       var divPct=((best.mvrv-mvrvPeak.peak)/mvrvPeak.peak*100);
-      var ratio=(best.mvrv/mvrvPeak.peak*100);
-      lines.push("");
-      lines.push("Cycle "+c+":");
+      lines.push("");lines.push("Cycle "+c+":");
       row("  BTC ATH","$"+Math.round(best.price).toLocaleString()+" on "+best.dateStr);
       row("  MVRV at price ATH",best.mvrv.toFixed(3));
       row("  MVRV own peak",mvrvPeak.peak.toFixed(3)+" on "+mvrvPeak.peakDate);
       row("  MVRV drawdown at price ATH",divPct.toFixed(1)+"%");
-      row("  MVRV integrity at price ATH",ratio.toFixed(0)+"% of MVRV peak still intact");
       row("  Lead/lag",daysDiff>0?"Price peaked "+daysDiff+"d AFTER MVRV":daysDiff<0?"Price peaked "+Math.abs(daysDiff)+"d BEFORE MVRV":"Same day");
     });
   }
 
-  // --- REGRESSION PROJECTIONS ---
   hr("REGRESSION PROJECTIONS — Cycle peak & trough MVRV");
-  row("Peak model basis","Completed cycles: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.peak.toFixed(2)}).join(", "));
-  row("Trough model basis","Completed cycles: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.trough.toFixed(2)}).join(", "));
-  for(var i=1;i<=s.nextCycle+1;i++){
-    var logP=Math.max(0,s.logR.slope*Math.log(i)+s.logR.intercept);
-    var linP=Math.max(0,s.linR.slope*i+s.linR.intercept);
-    var logT=Math.max(0,s.troughLogR.slope*Math.log(i)+s.troughLogR.intercept);
-    var linT=Math.max(0,s.troughLinR.slope*i+s.troughLinR.intercept);
-    row("  C"+i+" peak (log/linear)",logP.toFixed(3)+" / "+linP.toFixed(3));
-    row("  C"+i+" bottom (log/linear)",logT.toFixed(3)+" / "+linT.toFixed(3));
+  for(var ri=1;ri<=s.nextCycle+1;ri++){
+    var logP=Math.max(0,s.logR.slope*Math.log(ri)+s.logR.intercept);
+    var linP=Math.max(0,s.linR.slope*ri+s.linR.intercept);
+    var logT=Math.max(0,s.troughLogR.slope*Math.log(ri)+s.troughLogR.intercept);
+    var linT=Math.max(0,s.troughLinR.slope*ri+s.troughLinR.intercept);
+    row("  C"+ri+" peak (log/linear)",logP.toFixed(3)+" / "+linP.toFixed(3));
+    row("  C"+ri+" bottom (log/linear)",logT.toFixed(3)+" / "+linT.toFixed(3));
   }
 
-  // --- PRICE PROJECTIONS ---
   if(hasPriceData){
     hr("PRICE PROJECTIONS — 4-Model consensus (current cycle)");
-    var expC=s.last.cycle;
-    var expCycleData=s.cycleData.find(function(c){return c.cycle===expC});
+    function xmed(arr){if(!arr.length)return null;var s=arr.slice().sort(function(a,b){return a-b});var m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;}
+    function xoutlier(val,arr){if(arr.length<4)return false;var so=arr.slice().sort(function(a,b){return a-b});var q1=so[Math.floor(so.length*0.25)];var q3=so[Math.floor(so.length*0.75)];var iqr=q3-q1;return val<q1-1.5*iqr||val>q3+1.5*iqr;}
 
-    // Re-derive the 4 models (mirrors buildProjections logic)
-    function med(arr){if(!arr.length)return null;var sorted=arr.slice().sort(function(a,b){return a-b});var mid=Math.floor(sorted.length/2);return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;}
-    function iqrOutlier(val,arr){if(arr.length<4)return false;var sorted=arr.slice().sort(function(a,b){return a-b});var q1=sorted[Math.floor(sorted.length*0.25)];var q3=sorted[Math.floor(sorted.length*0.75)];var iqr=q3-q1;return val<q1-1.5*iqr||val>q3+1.5*iqr;}
-
-    // Cycle peak prices
-    var cyclePeakPrices={};
-    s.cycleData.forEach(function(c){var p=PRICE_MAP[c.peakDate];if(p)cyclePeakPrices[c.cycle]=p;});
-
-    // Model 1: MVRV upside
-    var curMvrvPkRow=expCycleData;
-    var curLogPeakMVRV=Math.max(0,s.logR.slope*Math.log(expC)+s.logR.intercept);
-    var m1=l.price&&l.mvrv&&curLogPeakMVRV?(l.price/l.mvrv)*curLogPeakMVRV:null;
-
-    // Model 2: Halving multiplier
-    var halvData=[];var halvMults=[];
-    s.cycleData.forEach(function(c){
-      var hDate=HALVINGS[c.cycle-1]?HALVINGS[c.cycle-1].toISOString().slice(0,10):null;
-      var hPrice=hDate?PRICE_MAP[hDate]:null;
-      if(hPrice&&cyclePeakPrices[c.cycle]){var mult=cyclePeakPrices[c.cycle]/hPrice;halvData.push({cycle:c.cycle,halvingPrice:hPrice,price:cyclePeakPrices[c.cycle],mult:mult});halvMults.push(mult);}
+    var cyclePeakPricesE={};
+    s.availCycles.forEach(function(c){
+      var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price});
+      if(sub.length)cyclePeakPricesE[c]=sub.reduce(function(a,b){return b.price>a.price?b:a}).price;
     });
-    var cleanHalv=halvData.filter(function(p){return!iqrOutlier(p.mult,halvMults)});
-    var halvLogR=cleanHalv.length>=2?linReg(cleanHalv.map(function(p){return Math.log(p.cycle)}),cleanHalv.map(function(p){return Math.log(p.mult)})):null;
-    var curHalvDate=HALVINGS[expC-1]?HALVINGS[expC-1].toISOString().slice(0,10):null;
-    var curHalvPrice=curHalvDate?PRICE_MAP[curHalvDate]:null;
-    var projHalvMult=halvLogR?Math.exp(halvLogR.slope*Math.log(expC)+halvLogR.intercept):med(cleanHalv.map(function(p){return p.mult}));
-    var m2=curHalvPrice&&projHalvMult?curHalvPrice*projHalvMult:null;
+    var curCycleLogPeakMVRV=Math.max(0,s.logR.slope*Math.log(curCycle)+s.logR.intercept);
+    var curMvrvPk=s.cycleData.find(function(c){return c.cycle===curCycle});
+    var curMvrvPkPrice=curMvrvPk?PRICE_MAP[curMvrvPk.peakDate]:null;
+    var remainUp=s.availCycles.map(function(c){var cd=s.cycleData.find(function(x){return x.cycle===c});if(!cd)return null;var pp=PRICE_MAP[cd.peakDate];var ath=cyclePeakPricesE[c];if(!pp||!ath)return null;return(ath-pp)/pp*100;}).filter(function(x){return x!==null});
+    var cleanUp2=remainUp.filter(function(v){return!xoutlier(v,remainUp)});
+    var m1=curMvrvPkPrice&&cleanUp2.length?curMvrvPkPrice*(1+xmed(cleanUp2)/100):null;
 
-    // Model 3: ATH multiplier
-    var athMults=[];var cycleList=s.availCycles;
-    for(var ai=1;ai<cycleList.length;ai++){var ac=cycleList[ai],ap=cycleList[ai-1];if(cyclePeakPrices[ac]&&cyclePeakPrices[ap])athMults.push({cycle:ac,mult:cyclePeakPrices[ac]/cyclePeakPrices[ap]});}
-    var athMultVals=athMults.map(function(p){return p.mult});
-    var cleanAth=athMults.filter(function(p){return!iqrOutlier(p.mult,athMultVals)});
-    var athLogR=cleanAth.length>=2?linReg(cleanAth.map(function(p){return Math.log(p.cycle)}),cleanAth.map(function(p){return Math.log(p.mult)})):null;
-    var prevATH=cyclePeakPrices[cycleList[cycleList.length-2]]||null;
-    var projAthMult=athLogR?Math.exp(athLogR.slope*Math.log(expC)+athLogR.intercept):med(cleanAth.map(function(p){return p.mult}));
-    var m3=prevATH&&projAthMult?prevATH*projAthMult:null;
+    var halvDataE=s.availCycles.map(function(c){var hd=HALVINGS[c-1];if(!hd)return null;var hp=priceAtHalving(hd);var ath=cyclePeakPricesE[c];if(!hp||!ath)return null;return{cycle:c,mult:ath/hp,halvingPrice:hp,price:ath};}).filter(Boolean);
+    var halvMulE=halvDataE.map(function(p){return p.mult});
+    var cleanHE=halvDataE.filter(function(p){return!xoutlier(p.mult,halvMulE)});
+    var halvLR=cleanHE.length>=2?linReg(cleanHE.map(function(p){return Math.log(p.cycle)}),cleanHE.map(function(p){return Math.log(p.mult)})):null;
+    var curHP=HALVINGS[curCycle-1]?priceAtHalving(HALVINGS[curCycle-1]):null;
+    var projHM=halvLR?Math.exp(halvLR.slope*Math.log(curCycle)+halvLR.intercept):xmed(cleanHE.map(function(p){return p.mult}));
+    var m2=curHP&&projHM?curHP*projHM:null;
 
-    // Model 4: MVRV × Realized Cap
-    var m4=l.price&&l.mvrv&&curLogPeakMVRV?(l.price/l.mvrv)*curLogPeakMVRV:null;
+    var athME=[];var cl=s.availCycles;
+    for(var ai=1;ai<cl.length;ai++){var ac=cl[ai],ap=cl[ai-1];if(cyclePeakPricesE[ac]&&cyclePeakPricesE[ap])athME.push({cycle:ac,mult:cyclePeakPricesE[ac]/cyclePeakPricesE[ap]});}
+    var athMV=athME.map(function(p){return p.mult});
+    var cleanAE=athME.filter(function(p){return!xoutlier(p.mult,athMV)});
+    var athLR=cleanAE.length>=2?linReg(cleanAE.map(function(p){return Math.log(p.cycle)}),cleanAE.map(function(p){return Math.log(p.mult)})):null;
+    var prevATHE=cyclePeakPricesE[cl[cl.length-2]]||null;
+    var projAM=athLR?Math.exp(athLR.slope*Math.log(curCycle)+athLR.intercept):xmed(cleanAE.map(function(p){return p.mult}));
+    var m3=prevATHE&&projAM?prevATHE*projAM:null;
+    var m4=l.price&&l.mvrv&&curCycleLogPeakMVRV?(l.price/l.mvrv)*curCycleLogPeakMVRV:null;
 
-    var modelResults=[
-      {name:"MVRV Upside",price:m1},
-      {name:"Halving Multiplier",price:m2,mult:projHalvMult},
-      {name:"ATH Multiplier",price:m3,mult:projAthMult},
-      {name:"MVRV × Realized Cap",price:m4}
-    ].filter(function(m){return m.price!=null});
-
-    var validPrices=modelResults.map(function(m){return m.price});
-    var cleanPrices=validPrices.filter(function(v){return!iqrOutlier(v,validPrices)});
-    var consensusMin=cleanPrices.length?Math.min.apply(null,cleanPrices):null;
-    var consensusMax=cleanPrices.length?Math.max.apply(null,cleanPrices):null;
-    var consensusMid=med(cleanPrices);
-    var excluded=validPrices.length-cleanPrices.length;
-
+    var modelResults=[{name:"MVRV Upside",price:m1},{name:"Halving Multiplier (×"+( projHM?projHM.toFixed(2):"?")+")",price:m2},{name:"ATH Multiplier (×"+(projAM?projAM.toFixed(2):"?")+")",price:m3},{name:"MVRV × Realized Cap",price:m4}].filter(function(m){return m.price!=null});
+    var validPricesE=modelResults.map(function(m){return m.price});
+    var cleanPricesE=validPricesE.filter(function(v){return!xoutlier(v,validPricesE)});
     modelResults.forEach(function(m){
-      var isOutl=iqrOutlier(m.price,validPrices);
-      var note=isOutl?"⚠ outlier — excluded from consensus":"included";
-      var detail=m.mult?" (projected multiplier ×"+m.mult.toFixed(2)+")":"";
-      row("  "+m.name,"$"+Math.round(m.price).toLocaleString()+detail+" ["+note+"]");
+      row("  "+m.name,"$"+Math.round(m.price).toLocaleString()+(xoutlier(m.price,validPricesE)?" [outlier — excluded]":" [included]"));
     });
     lines.push("");
-    if(consensusMid){
-      row("  Consensus midpoint","$"+Math.round(consensusMid).toLocaleString());
-      row("  Consensus range","$"+Math.round(consensusMin).toLocaleString()+" – $"+Math.round(consensusMax).toLocaleString());
-      if(excluded)row("  Outlier models excluded",excluded);
+    if(cleanPricesE.length){
+      row("  Consensus midpoint","$"+Math.round(xmed(cleanPricesE)).toLocaleString());
+      row("  Consensus range","$"+Math.round(Math.min.apply(null,cleanPricesE)).toLocaleString()+" – $"+Math.round(Math.max.apply(null,cleanPricesE)).toLocaleString());
     }
-    if(curHalvPrice)row("  BTC price at current cycle halving","$"+Math.round(curHalvPrice).toLocaleString());
-    if(expCycleData&&PRICE_MAP[expCycleData.peakDate])row("  BTC price at current MVRV peak so far","$"+Math.round(PRICE_MAP[expCycleData.peakDate]).toLocaleString()+" on "+expCycleData.peakDate);
+    if(curHP)row("  BTC price at current cycle halving","$"+Math.round(curHP).toLocaleString());
     lines.push("  * Outliers excluded via IQR. Not financial advice.");
   }
 
-  // --- HALVING DATES ---
   hr("HALVING DATES");
   var now=new Date();
   HALVINGS.forEach(function(h,i){
-    var cycleNum=i+1;
     var nextH=HALVINGS[i+1];
     var isPast=h<now&&(!nextH||nextH<now);
     var isCurrent=h<=now&&nextH&&nextH>now;
@@ -1559,18 +1517,15 @@ function exportSummary(){
     var extra="";
     if(isCurrent){var pct=Math.min(100,((now-h)/(nextH-h))*100);extra=" · "+pct.toFixed(0)+"% elapsed";}
     else if(!isPast){var daysAway=Math.round((h-now)/(1000*60*60*24));extra=" · "+daysAway.toLocaleString()+"d away";}
-    row("  C"+cycleNum+" halving",h.toISOString().slice(0,10)+" ["+status+extra+"]");
+    row("  C"+(i+1)+" halving",h.toISOString().slice(0,10)+" ["+status+extra+"]");
   });
 
-  // --- FOOTER ---
-  lines.push("");
-  lines.push("=".repeat(60));
+  lines.push("");lines.push("=".repeat(60));
   lines.push("Built by Sirapob Dangpad — a numbers-obsessed nerd who finds");
   lines.push("beauty in price patterns and on-chain data. Still learning,");
   lines.push("still experimenting. This dashboard is a passion project, not");
   lines.push("professional financial analysis.");
-  lines.push("");
-  lines.push("NOT FINANCIAL ADVICE. Do your own research.");
+  lines.push("");lines.push("NOT FINANCIAL ADVICE. Do your own research.");
   lines.push("=".repeat(60));
   lines.push("Generated: "+new Date().toISOString().slice(0,10));
   lines.push("Tip: paste this file into any AI assistant to ask questions");
@@ -1609,7 +1564,7 @@ function buildProjections(){
   var cyclePeakPrices={};
   var cyclePeakMVRV={};
   s.availCycles.forEach(function(c){
-    var sub=DATA.filter(function(d){return d.cycle===c&&d.price});
+    var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price});
     if(sub.length){
       var best=sub.reduce(function(a,b){return b.price>a.price?b:a});
       cyclePeakPrices[c]=best.price;
@@ -1646,7 +1601,7 @@ function buildProjections(){
   var halvData=s.availCycles.map(function(c){
     var halvingDate=HALVINGS[c-1];
     if(!halvingDate)return null;
-    var hPrice=PRICE_MAP[halvingDate.toISOString().slice(0,10)];
+    var hPrice=priceAtHalving(halvingDate);
     var ath=cyclePeakPrices[c];
     if(!hPrice||!ath)return null;
     return{cycle:c,mult:ath/hPrice,halvingPrice:hPrice,price:ath};
@@ -1655,7 +1610,7 @@ function buildProjections(){
   var cleanHalvData=halvData.filter(function(p){return!iqrOutlier(p.mult,halvMults)});
   // Use log-log regression: log(mult) ~ log(cycle) — multipliers decay as a power law
   var halvLogLogR=cleanHalvData.length>=2?linReg(cleanHalvData.map(function(p){return Math.log(p.cycle)}),cleanHalvData.map(function(p){return Math.log(p.mult)})):null;
-  var curHalvPrice=HALVINGS[curCycle-1]?PRICE_MAP[HALVINGS[curCycle-1].toISOString().slice(0,10)]:null;
+  var curHalvPrice=HALVINGS[curCycle-1]?priceAtHalving(HALVINGS[curCycle-1]):null;
   var projMult=halvLogLogR?Math.exp(halvLogLogR.slope*Math.log(curCycle)+halvLogLogR.intercept):med(cleanHalvData.map(function(p){return p.mult}));
   var m2=curHalvPrice&&projMult?curHalvPrice*projMult:null;
   models.push({
