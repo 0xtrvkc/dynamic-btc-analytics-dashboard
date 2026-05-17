@@ -475,6 +475,9 @@ function switchTab(i){
 
 function buildOverview(){
   var s=STATS,l=s.last;
+  var now=new Date();
+
+  // --- Stat cards ---
   var priceCard=hasPriceData&&l.price?statCard("BTC Price","$"+Math.round(l.price).toLocaleString(),fmtDate(l.date),CC.amber):"";
   var cards=[
     statCard("Current MVRV",l.mvrv.toFixed(3),fmtDate(l.date),l.mvrv<1.5?CC.teal:l.mvrv>3?CC.red:CC.text),
@@ -484,58 +487,62 @@ function buildOverview(){
   ];
   if(priceCard)cards.push(priceCard);
 
-  // --- Halving timeline ---
-  var now=new Date();
+  // Compression teaser — shows narrowing band
+  var compCards=s.cycleData.map(function(c){
+    var range=((c.peak-c.trough)/c.peak*100).toFixed(0);
+    return statCard("C"+c.cycle+" range",range+"%","peak "+c.peak.toFixed(2)+" → floor "+c.trough.toFixed(2),CYCLE_COLORS[c.cycle]||CC.muted);
+  }).join("");
+
+  // --- Cycle summary table ---
+  var rows=s.cycleData.map(function(c){
+    var priceCol=hasPriceData?"<td>"+priceAtDate(c.peakDate)+"</td>":"";
+    var color=CYCLE_COLORS[c.cycle]||CC.muted;
+    return'<tr><td style="color:'+color+';font-weight:600">C'+c.cycle+'</td><td>'+(CYCLE_LABELS[c.cycle]||"—")+'</td><td style="color:'+CC.green+';font-weight:500">'+c.peak.toFixed(2)+'</td><td>'+c.peakDate+'</td>'+priceCol+'<td style="color:'+CC.red+'">'+c.trough.toFixed(2)+'</td><td>'+c.troughDate+'</td><td>'+c.days+'</td></tr>';
+  }).join("");
+  var priceHeader=hasPriceData?"<th>BTC @ Peak</th>":"";
+
+  // --- Halving timeline (bottom) ---
   var halvingRows=HALVINGS.map(function(h,i){
     var cycleNum=i+1;
     var nextH=HALVINGS[i+1];
     var isPast=h<now&&(!nextH||nextH<now);
     var isCurrent=h<=now&&nextH&&nextH>now;
-    var isFuture=h>now;
     var dot=isPast?"●":isCurrent?"◉":"○";
     var dotColor=isPast?CC.muted:isCurrent?CC.accent:CC.faint;
-    var label="C"+cycleNum+" Halving";
     var dateStr=h.toISOString().slice(0,10);
-    var status="";
-    var progressBar="";
-    var projNote="";
-
+    var status="",progressBar="",projNote="";
     if(isPast){
       var cd=s.cycleData.find(function(c){return c.cycle===cycleNum});
       status='<span style="color:'+CC.muted+'">completed</span>';
       if(cd)projNote='<span style="color:'+(CYCLE_COLORS[cycleNum]||CC.muted)+'">peak MVRV '+cd.peak.toFixed(2)+'</span>';
     } else if(isCurrent){
-      var elapsed=now-h;
-      var total=nextH-h;
+      var elapsed=now-h,total=nextH-h;
       var pct=Math.min(100,(elapsed/total)*100);
       var daysLeft=Math.round((nextH-now)/(1000*60*60*24));
       var barColor=pct<50?CC.green:pct<75?CC.amber:CC.red;
       status='<span style="color:'+CC.accent+'">← you are here</span>';
       progressBar='<div style="margin-top:6px;display:flex;align-items:center;gap:10px">'
         +'<div style="flex:1;height:5px;background:var(--faint);border-radius:99px;overflow:hidden">'
-        +'<div style="width:'+pct.toFixed(1)+'%;height:100%;background:'+barColor+';border-radius:99px;transition:width .5s"></div>'
+        +'<div style="width:'+pct.toFixed(1)+'%;height:100%;background:'+barColor+';border-radius:99px"></div>'
         +'</div>'
-        +'<span style="font-size:0.8rem;color:'+barColor+';white-space:nowrap">'+pct.toFixed(0)+'% · '+daysLeft.toLocaleString()+'d to next halving</span>'
+        +'<span style="font-size:0.8rem;color:'+barColor+';white-space:nowrap">'+pct.toFixed(0)+'% · '+daysLeft.toLocaleString()+'d to next</span>'
         +'</div>';
-      var logProj=s.logR?Math.max(0,s.logR.slope*Math.log(cycleNum)+s.logR.intercept):null;
-      if(logProj)projNote='<span style="color:'+CC.amber+'">log proj. peak '+logProj.toFixed(2)+'</span>';
+      var lp=s.logR?Math.max(0,s.logR.slope*Math.log(cycleNum)+s.logR.intercept):null;
+      if(lp)projNote='<span style="color:'+CC.amber+'">proj. peak '+lp.toFixed(2)+'</span>';
     } else {
       var daysAway=Math.round((h-now)/(1000*60*60*24));
       status='<span style="color:var(--faint)">upcoming · '+daysAway.toLocaleString()+'d away</span>';
-      var logProj=s.logR?Math.max(0,s.logR.slope*Math.log(cycleNum)+s.logR.intercept):null;
-      if(logProj)projNote='<span style="color:var(--faint)">log proj. peak '+logProj.toFixed(2)+'</span>';
+      var lp=s.logR?Math.max(0,s.logR.slope*Math.log(cycleNum)+s.logR.intercept):null;
+      if(lp)projNote='<span style="color:var(--faint)">proj. peak '+lp.toFixed(2)+'</span>';
     }
-
     return'<div style="display:flex;flex-direction:column;padding:10px 0;border-bottom:.5px solid var(--border)">'
-      +'<div style="display:flex;align-items:baseline;gap:12px">'
+      +'<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">'
       +'<span style="font-size:1.1rem;color:'+dotColor+'">'+dot+'</span>'
-      +'<span style="font-weight:600;color:'+(isCurrent?CC.accent:isPast?CC.muted:"var(--faint)")+'">'+label+'</span>'
+      +'<span style="font-weight:600;color:'+(isCurrent?CC.accent:isPast?CC.muted:"var(--faint)")+'">C'+cycleNum+' Halving</span>'
       +'<span style="font-size:0.9rem;color:var(--muted)">'+dateStr+'</span>'
       +'<span style="font-size:0.85rem">'+status+'</span>'
       +(projNote?'<span style="font-size:0.82rem;margin-left:auto">'+projNote+'</span>':"")
-      +'</div>'
-      +progressBar
-      +'</div>';
+      +'</div>'+progressBar+'</div>';
   }).join("");
 
   var halvingTimeline='<div class="chart-card"><div class="chart-title">Halving timeline</div>'
@@ -543,19 +550,75 @@ function buildOverview(){
     +'<div style="font-size:0.8rem;color:var(--faint);margin-top:10px">Future halvings are estimates. Log model projections shown for upcoming cycles.</div>'
     +'</div>';
 
-  var rows=s.cycleData.map(function(c){
-    var priceCol=hasPriceData?"<td>"+priceAtDate(c.peakDate)+"</td>":"";
-    var color=CYCLE_COLORS[c.cycle]||CC.muted;
-    return'<tr><td style="color:'+color+';font-weight:600">C'+c.cycle+'</td><td>'+(CYCLE_LABELS[c.cycle]||"—")+'</td><td style="color:'+CC.green+';font-weight:500">'+c.peak.toFixed(2)+'</td><td>'+c.peakDate+'</td>'+priceCol+'<td style="color:'+CC.red+'">'+c.trough.toFixed(2)+'</td><td>'+c.troughDate+'</td><td>'+c.days+'</td></tr>'}).join("");
-  var priceHeader=hasPriceData?"<th>BTC @ Peak</th>":"";
-  var priceChartHtml=hasPriceData?'<div class="chart-card"><div class="chart-title">BTC Price (USD) over time</div>'+makeCanvas("c0b",200)+'</div>':"";
-  document.getElementById("p0").innerHTML='<div class="g4">'+cards.join("")+'</div>'+halvingTimeline+'<div class="chart-card"><div class="chart-title">MVRV with MA20 / MA50 / MA200</div>'+makeCanvas("c0",280)+'</div>'+priceChartHtml+'<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>Peak</th><th>Peak date</th>'+priceHeader+'<th>Trough</th><th>Trough date</th><th>Days</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  var priceChartHtml=hasPriceData?'<div class="chart-card"><div class="chart-title">BTC Price (USD) over time · vertical lines = halvings</div>'+makeCanvas("c0b",200)+'</div>':"";
+
+  document.getElementById("p0").innerHTML=
+    '<div class="g4">'+cards.join("")+'</div>'
+    +'<div class="chart-card"><div class="chart-title">MVRV with MA20 / MA50 / MA200 · vertical lines = halvings</div>'+makeCanvas("c0",300)+'</div>'
+    +priceChartHtml
+    +'<div class="chart-card" style="padding:20px 24px"><div class="chart-title" style="margin-bottom:12px">Volatility compression — peak-to-trough range per cycle (see Cycle Extremes for full analysis)</div><div class="g4">'+compCards+'</div></div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>Peak</th><th>Peak date</th>'+priceHeader+'<th>Trough</th><th>Trough date</th><th>Days</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +halvingTimeline;
+
   destroyChart("c0");destroyChart("c0b");
+
+  // Build halving annotation lines — snap to nearest label in sampled data
   var cd=sample(DATA,300);
-  CHARTS.c0=new Chart(document.getElementById("c0"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:[{label:"MVRV",data:cd.map(function(d){return d.mvrv}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3},{label:"MA20",data:cd.map(function(d){return d.ma20}),borderColor:CC.amber,borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA50",data:cd.map(function(d){return d.ma50}),borderColor:CC.teal,borderWidth:1.5,pointRadius:0,tension:.3},{label:"MA200",data:cd.map(function(d){return d.ma200}),borderColor:CC.red,borderWidth:1.5,pointRadius:0,tension:.3}]},options:withLegend(chartDefs())});
+  var halvingAnnotations={};
+  HALVINGS.forEach(function(h,i){
+    var hStr=h.toISOString().slice(0,10);
+    // Find nearest date in sampled array
+    var nearest=cd.reduce(function(a,b){
+      return Math.abs(new Date(b.dateStr)-h)<Math.abs(new Date(a.dateStr)-h)?b:a;
+    });
+    // Only draw if halving is within data range
+    if(h<new Date(cd[0].dateStr)||h>new Date(cd[cd.length-1].dateStr))return;
+    halvingAnnotations["halving"+i]={
+      type:"line",
+      xMin:nearest.dateStr,xMax:nearest.dateStr,
+      borderColor:(CYCLE_COLORS[i+1]||CC.muted)+"88",
+      borderWidth:1.5,
+      borderDash:[4,3],
+      label:{display:true,content:"C"+(i+1),position:"start",
+        backgroundColor:"transparent",color:CYCLE_COLORS[i+1]||CC.muted,
+        font:{size:11,family:"JetBrains Mono"}}
+    };
+  });
+  var mvrvOpts=withLegend(Object.assign({},chartDefs(),{
+    plugins:Object.assign({},withLegend(chartDefs()).plugins,{
+      annotation:{annotations:halvingAnnotations}
+    })
+  }));
+  CHARTS.c0=new Chart(document.getElementById("c0"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:[
+    {label:"MVRV",data:cd.map(function(d){return d.mvrv}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3},
+    {label:"MA20",data:cd.map(function(d){return d.ma20}),borderColor:CC.amber,borderWidth:1.5,pointRadius:0,tension:.3},
+    {label:"MA50",data:cd.map(function(d){return d.ma50}),borderColor:CC.teal,borderWidth:1.5,pointRadius:0,tension:.3},
+    {label:"MA200",data:cd.map(function(d){return d.ma200}),borderColor:CC.red,borderWidth:1.5,pointRadius:0,tension:.3}
+  ]},options:mvrvOpts});
+
   if(hasPriceData){
     var cdp=sample(DATA.filter(function(d){return d.price}),300);
-    CHARTS.c0b=new Chart(document.getElementById("c0b"),{type:"line",data:{labels:cdp.map(function(d){return d.dateStr}),datasets:[{label:"BTC Price (USD)",data:cdp.map(function(d){return d.price}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.amber+"11"}}]},options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return"$"+v.toLocaleString()}})})}})  )});
+    // Build same halving annotations for price chart
+    var priceHalvingAnnotations={};
+    HALVINGS.forEach(function(h,i){
+      if(h<new Date(cdp[0].dateStr)||h>new Date(cdp[cdp.length-1].dateStr))return;
+      var nearest=cdp.reduce(function(a,b){
+        return Math.abs(new Date(b.dateStr)-h)<Math.abs(new Date(a.dateStr)-h)?b:a;
+      });
+      priceHalvingAnnotations["halving"+i]={
+        type:"line",xMin:nearest.dateStr,xMax:nearest.dateStr,
+        borderColor:(CYCLE_COLORS[i+1]||CC.muted)+"88",borderWidth:1.5,borderDash:[4,3],
+        label:{display:true,content:"C"+(i+1),position:"start",backgroundColor:"transparent",
+          color:CYCLE_COLORS[i+1]||CC.muted,font:{size:11,family:"JetBrains Mono"}}
+      };
+    });
+    var priceOpts=withLegend(Object.assign({},chartDefs(),{
+      scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return"$"+v.toLocaleString()}})})},
+      plugins:Object.assign({},withLegend(chartDefs()).plugins,{annotation:{annotations:priceHalvingAnnotations}})
+    }));
+    CHARTS.c0b=new Chart(document.getElementById("c0b"),{type:"line",data:{labels:cdp.map(function(d){return d.dateStr}),datasets:[
+      {label:"BTC Price (USD)",data:cdp.map(function(d){return d.price}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.amber+"11"}}
+    ]},options:priceOpts});
   }
 }
 
@@ -588,8 +651,8 @@ function buildMomentum(){
 
 function buildCycleOverlay(){
   var priceNote=hasPriceData?" Hover a point to see MVRV and BTC price for that date.":"";
-  var priceChartHtml=hasPriceData?'<div class="chart-card"><div class="chart-title">All cycles overlaid — cycle position vs BTC Price · log scale</div>'+makeCanvas("c3b",380)+'</div>':"";
-  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">All cycles overlaid — cycle position vs MVRV · vertical lines = every 6 months</div>'+makeCanvas("c3",420)+'</div><div class="info">Aligns all 4 cycles on a 0-100% time axis (4 years = 48 months). Dashed lines mark every 6 months. Labels show month number.'+priceNote+'</div>'+priceChartHtml;
+  var priceChartHtml2=hasPriceData?'<div class="chart-card"><div class="chart-title">BTC Price — all cycles overlaid · indexed to halving = 100 · log scale</div>'+makeCanvas("c3b",380)+'</div>':"";
+  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">MVRV — all cycles overlaid · cycle position vs MVRV · vertical lines = every 6 months</div>'+makeCanvas("c3",420)+'</div><div class="info">Aligns all cycles on a 0–100% time axis. Dashed lines mark every 6 months.'+priceNote+'</div>'+priceChartHtml2;
   destroyChart("c3");destroyChart("c3b");
 
   var monthPct = 100/48;
@@ -809,8 +872,8 @@ function buildDrawdown(){
     }
     return statCard("C"+c+" max DD",maxDDs[i].toFixed(0)+"%",sub||(CYCLE_LABELS[c]||"—"),CYCLE_COLORS[c]||CC.muted);
   });
-  var priceNote=hasPriceData?" Stat cards show BTC price at the worst drawdown point.":"";
-  document.getElementById("p4").innerHTML='<div class="g4">'+cards.join("")+'</div><div class="chart-card"><div class="chart-title">MVRV drawdown from cycle peak — by cycle position (%)</div>'+makeCanvas("c4",320)+'</div>'+(hasPriceData?'<div class="chart-card"><div class="chart-title">BTC Price at maximum drawdown points by cycle</div>'+makeCanvas("c4b",220)+'</div>':"")+'<div class="info">Drawdown = how far MVRV has fallen from that cycle\'s peak.'+priceNote+'</div>';
+  var priceNote=hasPriceData?" Second chart shows price % drawdown from cycle ATH at the worst MVRV point.":"";
+  document.getElementById("p4").innerHTML='<div class="g4">'+cards.join("")+'</div><div class="chart-card"><div class="chart-title">MVRV drawdown from cycle peak — by cycle position (%)</div>'+makeCanvas("c4",320)+'</div>'+(hasPriceData?'<div class="chart-card"><div class="chart-title">Price % drawdown from cycle ATH at worst MVRV point</div>'+makeCanvas("c4b",220)+'</div>':"")+'<div class="info">Drawdown = how far MVRV has fallen from that cycle\'s peak.'+priceNote+'</div>';
   destroyChart("c4");destroyChart("c4b");
   var datasets=cycles.map(function(c){
     var sub=DATA.filter(function(d){return d.cycle===c&&d.cyclePct!=null&&d.drawdown!=null});
@@ -820,12 +883,27 @@ function buildDrawdown(){
   var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{type:"linear",title:{display:true,text:"Cycle position (%)",color:CC.muted,font:{size:13}}}),y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"Drawdown %",color:CC.muted,font:{size:13}},ticks:{callback:function(v){return v+"%"}}})}}));
   CHARTS.c4=new Chart(document.getElementById("c4"),{type:"scatter",data:{datasets:datasets},options:opts});
   if(hasPriceData){
-    var priceAtDD=cycles.map(function(c){
-      var worst=DATA.filter(function(d){return d.cycle===c&&d.drawdown!=null&&d.price});
-      if(!worst.length)return 0;
-      return worst.reduce(function(a,b){return a.drawdown<b.drawdown?a:b}).price||0;
+    // % drawdown from cycle ATH at the worst MVRV drawdown point
+    var pctFromATH=cycles.map(function(c){
+      var sub=DATA.filter(function(d){return d.cycle===c&&d.drawdown!=null&&d.price});
+      if(!sub.length)return null;
+      var worst=sub.reduce(function(a,b){return a.drawdown<b.drawdown?a:b});
+      var ath=DATA.filter(function(d){return d.cycle===c&&d.price}).reduce(function(a,b){return b.price>a.price?b:a},sub[0]);
+      if(!ath||!ath.price||!worst.price)return null;
+      return((worst.price-ath.price)/ath.price*100);
     });
-    CHARTS.c4b=new Chart(document.getElementById("c4b"),{type:"bar",data:{labels:cycles.map(function(c){return"C"+c}),datasets:[{label:"BTC Price at max drawdown",data:priceAtDD,backgroundColor:cycles.map(function(c){return CYCLE_COLORS[c]||CC.muted}),borderRadius:6}]},options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return"$"+v.toLocaleString()}})})}})  )});
+    var validPctFromATH=pctFromATH.filter(function(v){return v!==null});
+    if(validPctFromATH.length){
+      CHARTS.c4b=new Chart(document.getElementById("c4b"),{type:"bar",data:{
+        labels:cycles.filter(function(c,i){return pctFromATH[i]!==null}).map(function(c){return"C"+c}),
+        datasets:[{
+          label:"Price drawdown from cycle ATH at MVRV worst point (%)",
+          data:validPctFromATH,
+          backgroundColor:cycles.filter(function(c,i){return pctFromATH[i]!==null}).map(function(c){return(CYCLE_COLORS[c]||CC.muted)+"cc"}),
+          borderRadius:6
+        }]
+      },options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"% from cycle ATH",color:CC.muted,font:{size:13}},ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v+"%"}})})}})  )});
+    }
   }
 }
 
@@ -863,7 +941,10 @@ function buildZoneDays(){
     }).join("");
     priceZoneHtml='<div class="tbl-wrap" style="margin-top:16px"><table><thead><tr><th>MVRV Zone</th>'+s.cycleData.map(function(c){return"<th>C"+c.cycle+" avg price</th>"}).join("")+'</tr></thead><tbody>'+priceRows+'</tbody></table></div>';
   }
-  document.getElementById("p6").innerHTML='<div class="chart-card"><div class="chart-title">Days spent in each MVRV zone per cycle</div>'+makeCanvas("c6",300)+'</div><div class="tbl-wrap"><table><thead><tr><th>Zone</th>'+s.cycleData.map(function(c){return"<th>C"+c.cycle+"</th>"}).join("")+'</tr></thead><tbody>'+tblRows+'</tbody></table></div>'+priceZoneHtml;
+  document.getElementById("p6").innerHTML='<div class="chart-card"><div class="chart-title">Days spent in each MVRV zone per cycle</div>'+makeCanvas("c6",300)+'</div>'
+    +(hasPriceData?priceZoneHtml+'<div style="font-size:0.85rem;color:var(--muted);margin:4px 0 12px">Avg BTC price when MVRV was in each zone — actionable accumulation/exit reference</div>':"")
+    +'<div class="tbl-wrap"><table><thead><tr><th>Zone</th>'+s.cycleData.map(function(c){return"<th>C"+c.cycle+"</th>"}).join("")+'</tr></thead><tbody>'+tblRows+'</tbody></table></div>'
+    +'<div class="info">Zone days show how long MVRV spent in each band per cycle. Avg price per zone is the most actionable reference — it tells you what BTC historically cost during each on-chain signal state.</div>';
   destroyChart("c6");
   var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{stacked:true}),y:Object.assign({},chartDefs().scales.y,{stacked:true})}}));
   CHARTS.c6=new Chart(document.getElementById("c6"),{type:"bar",data:{labels:barData.map(function(d){return d.name}),datasets:[{label:"< 1.0",data:barData.map(function(d){return d.b1}),backgroundColor:CC.red,stack:"a"},{label:"1.0-1.5",data:barData.map(function(d){return d.m1}),backgroundColor:CC.amber,stack:"a"},{label:"1.5-2.0",data:barData.map(function(d){return d.m2}),backgroundColor:CC.accent+"80",stack:"a"},{label:"2.0-3.0",data:barData.map(function(d){return d.m3}),backgroundColor:CC.teal,stack:"a"},{label:"> 3.0",data:barData.map(function(d){return d.a3}),backgroundColor:CC.green,stack:"a"}]},options:opts});
@@ -928,16 +1009,16 @@ function buildRegression(){
 
   document.getElementById("p7").innerHTML=
     '<div class="g4">'+peakCards+troughCards+'</div>'+
-    peakPriceCards+
-    '<div class="chart-card"><div class="chart-title">Cycle extremes — peak & trough MVRV with regression · band is narrowing</div>'+makeCanvas("c7",380)+'</div>'+
+    '<div class="chart-card"><div class="chart-title">Volatility compression — peak-to-trough MVRV range per cycle · the band is narrowing</div>'+makeCanvas("c7b",220)+'</div>'+
+    '<div class="chart-card"><div class="chart-title">Cycle extremes — peak & trough MVRV with regression · peaks declining, floors rising</div>'+makeCanvas("c7",380)+'</div>'+
     '<div class="g4" style="margin-top:0">'+compressionCards+'</div>'+
-    '<div class="chart-card"><div class="chart-title">Peak-to-trough compression — volatility range per cycle (%)</div>'+makeCanvas("c7b",220)+'</div>'+
+    peakPriceCards+
     troughPriceCards+
     '<div class="info">'
       +'<strong style="color:'+CC.amber+'">Peaks</strong>: declining each cycle — diminishing euphoria as market matures. '
       +'<strong style="color:'+CC.teal+'">Troughs</strong>: rising each cycle — strengthening floor as more capital treats BTC as a store of value. '
-      +'The narrowing band between them means lower upside <em>and</em> lower downside — reduced volatility over time. '
-      +'Log model shown in solid lines, linear in dashed. Trust log for long-term planning.'
+      +'The narrowing band means lower upside <em>and</em> lower downside — reduced volatility over time. '
+      +'Solid lines = log model, dashed = linear. Trust log for long-term planning.'
     +'</div>';
 
   destroyChart("c7");destroyChart("c7b");
@@ -1185,13 +1266,16 @@ function buildPricePeaks(){
   document.getElementById("p8").innerHTML=
     '<div class="g4">'+cards+'</div>'+
     '<div class="chart-card"><div class="chart-title">BTC all-time high per cycle · log scale</div>'+makeCanvas("c8a",220)+'</div>'+
-    '<div class="chart-card"><div class="chart-title">Remaining price upside after MVRV peaked · % gain from MVRV peak date to price ATH</div>'+makeCanvas("c8d",200)+'</div>'+
     '<div class="chart-card"><div class="chart-title">MVRV on the day of BTC price peak vs MVRV\'s own peak</div>'+makeCanvas("c8b",200)+'</div>'+
-    '<div class="g4" style="margin-top:0">'+patternCards+'</div>'+
+    '<div class="g4" style="margin-top:0">'+[
+      statCard("Median lead-lag",medDays!==null?medDays+"d":"—","MVRV peaks before price"+(outlierCount?" · "+outlierCount+" outlier"+(outlierCount>1?"s":"")+" excl.":""),CC.amber),
+      statCard("Median remaining upside",medUpside!==null?medUpside.toFixed(0)+"%":"—","After MVRV peaks, price still gains this",CC.teal),
+      statCard("Median divergence",medDiv!==null?medDiv.toFixed(1)+"%":"—","MVRV drop from peak at price ATH",CC.accent),
+    ].join("")+'</div>'+
+    '<div class="chart-card"><div class="chart-title">Remaining price upside after MVRV peaked · % gain from MVRV peak date to price ATH</div>'+makeCanvas("c8d",200)+'</div>'+
     '<div class="chart-card"><div class="chart-title">MVRV divergence at price peak (%)</div>'+makeCanvas("c8c",200)+'</div>'+
-    '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Price @ halving</th><th>ATH</th><th>Halving mult.</th><th>ATH mult. (vs prev)</th></tr></thead><tbody>'+multRows+'</tbody></table></div>'+
-    '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>BTC ATH</th><th>ATH date</th><th>MVRV that day</th><th>Price @ MVRV peak</th><th>Remaining upside</th><th>Lead/lag days</th><th>Divergence</th><th>Ratio</th><th>Direction</th></tr></thead><tbody>'+leadLagRows+'</tbody></table></div>'+
-    '<div class="info">⚠ = statistical outlier (IQR method), excluded from projections. Three ceiling methods: (1) MVRV upside = price at MVRV peak × median remaining upside. (2) Halving mult. = price at halving × log-decay projected multiplier. (3) ATH mult. = previous cycle ATH × log-decay projected multiplier. Not financial advice.</div>';
+    '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>BTC ATH</th><th>ATH date</th><th>MVRV that day</th><th>Price @ MVRV peak</th><th>Remaining upside</th><th>Lead/lag</th><th>Divergence</th><th>Ratio</th><th>Direction</th></tr></thead><tbody>'+leadLagRows+'</tbody></table></div>'+
+    '<div class="info">⚠ = statistical outlier (IQR method), excluded from median stats. Lead/lag: MVRV peaks first, then price follows. Divergence = how far MVRV had already fallen from its peak when BTC price topped. See Projections tab for price ceiling models.</div>';
 
   destroyChart("c8a");destroyChart("c8b");destroyChart("c8c");destroyChart("c8d");
 
@@ -1249,6 +1333,21 @@ function exportSummary(){
   row("Data range",DATA[0].dateStr+" to "+DATA[DATA.length-1].dateStr);
   row("Total data points",DATA.length.toLocaleString());
 
+  // --- CURRENT CYCLE POSITION ---
+  hr("CURRENT CYCLE POSITION");
+  var curCycle=l.cycle;
+  var curCycleData=s.cycleData.find(function(c){return c.cycle===curCycle});
+  row("Current cycle","C"+curCycle+(CYCLE_LABELS[curCycle]?" ("+CYCLE_LABELS[curCycle]+")":""));
+  row("Cycle position",(l.cyclePct!=null?l.cyclePct.toFixed(1)+"%":"unknown"));
+  if(curCycleData){
+    row("Cycle peak so far",curCycleData.peak.toFixed(3)+" on "+curCycleData.peakDate);
+    row("Current MVRV vs cycle peak",((l.mvrv/curCycleData.peak)*100).toFixed(0)+"% of cycle peak");
+    row("Days in current cycle",curCycleData.days);
+    // Current drawdown from cycle peak
+    var curDD=((l.mvrv-curCycleData.peak)/curCycleData.peak*100);
+    row("Current drawdown from cycle peak",curDD.toFixed(1)+"%");
+  }
+
   // --- CYCLE SUMMARY ---
   hr("CYCLE SUMMARY");
   s.cycleData.forEach(function(c){
@@ -1256,16 +1355,64 @@ function exportSummary(){
     lines.push("Cycle "+c.cycle+(CYCLE_LABELS[c.cycle]?" ("+CYCLE_LABELS[c.cycle]+")":"")+":");
     row("  Peak MVRV",c.peak.toFixed(3)+" on "+c.peakDate);
     row("  Trough MVRV",c.trough.toFixed(3)+" on "+c.troughDate);
+    row("  Peak-to-trough range",((c.peak-c.trough)/c.peak*100).toFixed(0)+"% compression");
     row("  Duration",c.days+" days");
     if(hasPriceData){
       var p=PRICE_MAP[c.peakDate];
       if(p)row("  BTC price at MVRV peak","$"+Math.round(p).toLocaleString());
+      var t=PRICE_MAP[c.troughDate];
+      if(t)row("  BTC price at MVRV trough","$"+Math.round(t).toLocaleString());
     }
   });
 
+  // --- DRAWDOWN ANALYSIS ---
+  hr("DRAWDOWN — Max MVRV drawdown from cycle peak");
+  s.cycleData.forEach(function(c){
+    var pts=DATA.filter(function(d){return d.cycle===c.cycle&&d.drawdown!=null});
+    if(!pts.length)return;
+    var worst=pts.reduce(function(a,b){return a.drawdown<b.drawdown?a:b});
+    lines.push("");
+    lines.push("Cycle "+c.cycle+":");
+    row("  Max drawdown",worst.drawdown.toFixed(1)+"% on "+worst.dateStr);
+    if(hasPriceData&&worst.price){
+      var ath=DATA.filter(function(d){return d.cycle===c.cycle&&d.price});
+      if(ath.length){
+        var athPt=ath.reduce(function(a,b){return b.price>a.price?b:a});
+        var priceDd=((worst.price-athPt.price)/athPt.price*100);
+        row("  BTC price at worst MVRV drawdown","$"+Math.round(worst.price).toLocaleString());
+        row("  Price drawdown from cycle ATH at that point",priceDd.toFixed(1)+"%");
+      }
+    }
+  });
+
+  // --- MA CROSSOVERS ---
+  hr("MA CROSSOVERS — Golden & death cross events (MA20 vs MA50)");
+  var crossovers=[];
+  for(var i=1;i<DATA.length;i++){
+    var prev=DATA[i-1],curr=DATA[i];
+    if(prev.ma20<prev.ma50&&curr.ma20>=curr.ma50){
+      crossovers.push({date:curr.dateStr,type:"Golden cross",cycle:curr.cycle,mvrv:curr.mvrv,price:curr.price||null});
+    } else if(prev.ma20>prev.ma50&&curr.ma20<=curr.ma50){
+      crossovers.push({date:curr.dateStr,type:"Death cross",cycle:curr.cycle,mvrv:curr.mvrv,price:curr.price||null});
+    }
+  }
+  if(crossovers.length){
+    crossovers.forEach(function(x){
+      var info="C"+x.cycle+" · MVRV "+x.mvrv.toFixed(3);
+      if(hasPriceData&&x.price)info+=" · $"+Math.round(x.price).toLocaleString();
+      row("  "+x.date+" "+x.type,info);
+    });
+    // Current MA state context
+    var lastCross=crossovers[crossovers.length-1];
+    var daysSince=Math.round((new Date(l.dateStr)-new Date(lastCross.date))/(1000*60*60*24));
+    row("Last crossover",lastCross.type+" on "+lastCross.date+" ("+daysSince+"d ago)");
+  } else {
+    lines.push("  No MA20/MA50 crossovers detected in dataset.");
+  }
+  row("Current MA20 vs MA50",l.ma20>l.ma50?"MA20 above MA50 (bullish bias)":"MA20 below MA50 (bearish bias)");
+
   // --- ZONE ANALYSIS ---
   hr("ZONE ANALYSIS — Days spent in each MVRV zone per cycle");
-  var zones=[["Below 1.0","below1"],["1.0-1.5","below1_5_extra"],["1.5-2.0","mid"],["2.0-3.0","above2_extra"],["Above 3.0","above3"]];
   s.cycleData.forEach(function(c){
     lines.push("");
     lines.push("Cycle "+c.cycle+":");
@@ -1282,10 +1429,14 @@ function exportSummary(){
       });
     }
   });
+  // Current zone
+  var curZone=l.mvrv<1?"Below 1.0":l.mvrv<1.5?"1.0-1.5":l.mvrv<2?"1.5-2.0":l.mvrv<3?"2.0-3.0":"Above 3.0";
+  lines.push("");
+  row("Current MVRV zone",curZone+" (MVRV "+l.mvrv.toFixed(3)+")");
 
   // --- PEAK DIVERGENCE ---
   if(hasPriceData){
-    hr("PRICE PEAK DIVERGENCE — MVRV behavior at BTC price ATH");
+    hr("PRICE PEAK DIVERGENCE — MVRV lead/lag vs BTC price ATH");
     STATS.availCycles.forEach(function(c){
       var sub=DATA.filter(function(d){return d.cycle===c&&d.price});
       if(!sub.length)return;
@@ -1300,47 +1451,130 @@ function exportSummary(){
       row("  BTC ATH","$"+Math.round(best.price).toLocaleString()+" on "+best.dateStr);
       row("  MVRV at price ATH",best.mvrv.toFixed(3));
       row("  MVRV own peak",mvrvPeak.peak.toFixed(3)+" on "+mvrvPeak.peakDate);
-      row("  Divergence",divPct.toFixed(1)+"% (MVRV had fallen this far from its peak when price topped)");
-      row("  Ratio",ratio.toFixed(0)+"% of MVRV peak still intact when price peaked");
+      row("  MVRV drawdown at price ATH",divPct.toFixed(1)+"%");
+      row("  MVRV integrity at price ATH",ratio.toFixed(0)+"% of MVRV peak still intact");
       row("  Lead/lag",daysDiff>0?"Price peaked "+daysDiff+"d AFTER MVRV":daysDiff<0?"Price peaked "+Math.abs(daysDiff)+"d BEFORE MVRV":"Same day");
     });
   }
 
   // --- REGRESSION PROJECTIONS ---
-  hr("REGRESSION PROJECTIONS — Cycle peak MVRV");
-  row("Model basis","Completed cycles: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.peak.toFixed(2)}).join(", "));
-  row("Next cycle (C"+s.nextCycle+") log model projection",s.nextLogPeak.toFixed(3));
-  row("Next cycle (C"+s.nextCycle+") linear model projection",s.nextLinPeak.toFixed(3));
-  row("Log model note","Peaks decay but never reach zero — more realistic long-term");
-  row("Linear model note","Suggests peaks trend toward zero by C7-8 — use with caution");
+  hr("REGRESSION PROJECTIONS — Cycle peak & trough MVRV");
+  row("Peak model basis","Completed cycles: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.peak.toFixed(2)}).join(", "));
+  row("Trough model basis","Completed cycles: "+s.cycleData.map(function(c){return"C"+c.cycle+"="+c.trough.toFixed(2)}).join(", "));
   for(var i=1;i<=s.nextCycle+1;i++){
     var logP=Math.max(0,s.logR.slope*Math.log(i)+s.logR.intercept);
-    var linP=s.linR.slope*i+s.linR.intercept;
-    row("  C"+i+" projected peak (log/linear)",logP.toFixed(3)+" / "+linP.toFixed(3));
+    var linP=Math.max(0,s.linR.slope*i+s.linR.intercept);
+    var logT=Math.max(0,s.troughLogR.slope*Math.log(i)+s.troughLogR.intercept);
+    var linT=Math.max(0,s.troughLinR.slope*i+s.troughLinR.intercept);
+    row("  C"+i+" peak (log/linear)",logP.toFixed(3)+" / "+linP.toFixed(3));
+    row("  C"+i+" bottom (log/linear)",logT.toFixed(3)+" / "+linT.toFixed(3));
   }
 
-  // --- NOTABLE HALVINGS ---
+  // --- PRICE PROJECTIONS ---
+  if(hasPriceData){
+    hr("PRICE PROJECTIONS — 4-Model consensus (current cycle)");
+    var expC=s.last.cycle;
+    var expCycleData=s.cycleData.find(function(c){return c.cycle===expC});
+
+    // Re-derive the 4 models (mirrors buildProjections logic)
+    function med(arr){if(!arr.length)return null;var sorted=arr.slice().sort(function(a,b){return a-b});var mid=Math.floor(sorted.length/2);return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;}
+    function iqrOutlier(val,arr){if(arr.length<4)return false;var sorted=arr.slice().sort(function(a,b){return a-b});var q1=sorted[Math.floor(sorted.length*0.25)];var q3=sorted[Math.floor(sorted.length*0.75)];var iqr=q3-q1;return val<q1-1.5*iqr||val>q3+1.5*iqr;}
+
+    // Cycle peak prices
+    var cyclePeakPrices={};
+    s.cycleData.forEach(function(c){var p=PRICE_MAP[c.peakDate];if(p)cyclePeakPrices[c.cycle]=p;});
+
+    // Model 1: MVRV upside
+    var curMvrvPkRow=expCycleData;
+    var curLogPeakMVRV=Math.max(0,s.logR.slope*Math.log(expC)+s.logR.intercept);
+    var m1=l.price&&l.mvrv&&curLogPeakMVRV?(l.price/l.mvrv)*curLogPeakMVRV:null;
+
+    // Model 2: Halving multiplier
+    var halvData=[];var halvMults=[];
+    s.cycleData.forEach(function(c){
+      var hDate=HALVINGS[c.cycle-1]?HALVINGS[c.cycle-1].toISOString().slice(0,10):null;
+      var hPrice=hDate?PRICE_MAP[hDate]:null;
+      if(hPrice&&cyclePeakPrices[c.cycle]){var mult=cyclePeakPrices[c.cycle]/hPrice;halvData.push({cycle:c.cycle,halvingPrice:hPrice,price:cyclePeakPrices[c.cycle],mult:mult});halvMults.push(mult);}
+    });
+    var cleanHalv=halvData.filter(function(p){return!iqrOutlier(p.mult,halvMults)});
+    var halvLogR=cleanHalv.length>=2?linReg(cleanHalv.map(function(p){return Math.log(p.cycle)}),cleanHalv.map(function(p){return Math.log(p.mult)})):null;
+    var curHalvDate=HALVINGS[expC-1]?HALVINGS[expC-1].toISOString().slice(0,10):null;
+    var curHalvPrice=curHalvDate?PRICE_MAP[curHalvDate]:null;
+    var projHalvMult=halvLogR?Math.exp(halvLogR.slope*Math.log(expC)+halvLogR.intercept):med(cleanHalv.map(function(p){return p.mult}));
+    var m2=curHalvPrice&&projHalvMult?curHalvPrice*projHalvMult:null;
+
+    // Model 3: ATH multiplier
+    var athMults=[];var cycleList=s.availCycles;
+    for(var ai=1;ai<cycleList.length;ai++){var ac=cycleList[ai],ap=cycleList[ai-1];if(cyclePeakPrices[ac]&&cyclePeakPrices[ap])athMults.push({cycle:ac,mult:cyclePeakPrices[ac]/cyclePeakPrices[ap]});}
+    var athMultVals=athMults.map(function(p){return p.mult});
+    var cleanAth=athMults.filter(function(p){return!iqrOutlier(p.mult,athMultVals)});
+    var athLogR=cleanAth.length>=2?linReg(cleanAth.map(function(p){return Math.log(p.cycle)}),cleanAth.map(function(p){return Math.log(p.mult)})):null;
+    var prevATH=cyclePeakPrices[cycleList[cycleList.length-2]]||null;
+    var projAthMult=athLogR?Math.exp(athLogR.slope*Math.log(expC)+athLogR.intercept):med(cleanAth.map(function(p){return p.mult}));
+    var m3=prevATH&&projAthMult?prevATH*projAthMult:null;
+
+    // Model 4: MVRV × Realized Cap
+    var m4=l.price&&l.mvrv&&curLogPeakMVRV?(l.price/l.mvrv)*curLogPeakMVRV:null;
+
+    var modelResults=[
+      {name:"MVRV Upside",price:m1},
+      {name:"Halving Multiplier",price:m2,mult:projHalvMult},
+      {name:"ATH Multiplier",price:m3,mult:projAthMult},
+      {name:"MVRV × Realized Cap",price:m4}
+    ].filter(function(m){return m.price!=null});
+
+    var validPrices=modelResults.map(function(m){return m.price});
+    var cleanPrices=validPrices.filter(function(v){return!iqrOutlier(v,validPrices)});
+    var consensusMin=cleanPrices.length?Math.min.apply(null,cleanPrices):null;
+    var consensusMax=cleanPrices.length?Math.max.apply(null,cleanPrices):null;
+    var consensusMid=med(cleanPrices);
+    var excluded=validPrices.length-cleanPrices.length;
+
+    modelResults.forEach(function(m){
+      var isOutl=iqrOutlier(m.price,validPrices);
+      var note=isOutl?"⚠ outlier — excluded from consensus":"included";
+      var detail=m.mult?" (projected multiplier ×"+m.mult.toFixed(2)+")":"";
+      row("  "+m.name,"$"+Math.round(m.price).toLocaleString()+detail+" ["+note+"]");
+    });
+    lines.push("");
+    if(consensusMid){
+      row("  Consensus midpoint","$"+Math.round(consensusMid).toLocaleString());
+      row("  Consensus range","$"+Math.round(consensusMin).toLocaleString()+" – $"+Math.round(consensusMax).toLocaleString());
+      if(excluded)row("  Outlier models excluded",excluded);
+    }
+    if(curHalvPrice)row("  BTC price at current cycle halving","$"+Math.round(curHalvPrice).toLocaleString());
+    if(expCycleData&&PRICE_MAP[expCycleData.peakDate])row("  BTC price at current MVRV peak so far","$"+Math.round(PRICE_MAP[expCycleData.peakDate]).toLocaleString()+" on "+expCycleData.peakDate);
+    lines.push("  * Outliers excluded via IQR. Not financial advice.");
+  }
+
+  // --- HALVING DATES ---
   hr("HALVING DATES");
+  var now=new Date();
   HALVINGS.forEach(function(h,i){
-    row("Halving "+(i+1),h.toISOString().slice(0,10));
+    var cycleNum=i+1;
+    var nextH=HALVINGS[i+1];
+    var isPast=h<now&&(!nextH||nextH<now);
+    var isCurrent=h<=now&&nextH&&nextH>now;
+    var status=isPast?"completed":isCurrent?"current cycle":"upcoming";
+    var extra="";
+    if(isCurrent){var pct=Math.min(100,((now-h)/(nextH-h))*100);extra=" · "+pct.toFixed(0)+"% elapsed";}
+    else if(!isPast){var daysAway=Math.round((h-now)/(1000*60*60*24));extra=" · "+daysAway.toLocaleString()+"d away";}
+    row("  C"+cycleNum+" halving",h.toISOString().slice(0,10)+" ["+status+extra+"]");
   });
 
-  // --- CURRENT CYCLE POSITION ---
-  hr("CURRENT CYCLE POSITION");
-  var curCycle=l.cycle;
-  var curCycleData=s.cycleData.find(function(c){return c.cycle===curCycle});
-  row("Current cycle","C"+curCycle+(CYCLE_LABELS[curCycle]?" ("+CYCLE_LABELS[curCycle]+")":""));
-  row("Cycle position",(l.cyclePct!=null?l.cyclePct.toFixed(1)+"%":"unknown"));
-  if(curCycleData){
-    row("Cycle peak so far",curCycleData.peak.toFixed(3)+" on "+curCycleData.peakDate);
-    row("Current MVRV vs cycle peak",((l.mvrv/curCycleData.peak)*100).toFixed(0)+"% of cycle peak");
-    row("Days in current cycle",curCycleData.days);
-  }
-
-  // Footer
-  lines.push("","=== END OF REPORT ===");
+  // --- FOOTER ---
+  lines.push("");
+  lines.push("=".repeat(60));
+  lines.push("Built by Sirapob Dangpad — a numbers-obsessed nerd who finds");
+  lines.push("beauty in price patterns and on-chain data. Still learning,");
+  lines.push("still experimenting. This dashboard is a passion project, not");
+  lines.push("professional financial analysis.");
+  lines.push("");
+  lines.push("NOT FINANCIAL ADVICE. Do your own research.");
+  lines.push("=".repeat(60));
   lines.push("Generated: "+new Date().toISOString().slice(0,10));
-  lines.push("Note: Feed this file to any AI assistant and ask questions about Bitcoin MVRV cycles.");
+  lines.push("Tip: paste this file into any AI assistant to ask questions");
+  lines.push("about Bitcoin MVRV cycles and what the data might mean.");
 
   var blob=new Blob([lines.join("\n")],{type:"text/plain"});
   var a=document.createElement("a");
@@ -1415,7 +1649,7 @@ function buildProjections(){
     var hPrice=PRICE_MAP[halvingDate.toISOString().slice(0,10)];
     var ath=cyclePeakPrices[c];
     if(!hPrice||!ath)return null;
-    return{cycle:c,mult:ath/hPrice,halvingPrice:hPrice};
+    return{cycle:c,mult:ath/hPrice,halvingPrice:hPrice,price:ath};
   }).filter(Boolean);
   var halvMults=halvData.map(function(p){return p.mult});
   var cleanHalvData=halvData.filter(function(p){return!iqrOutlier(p.mult,halvMults)});
@@ -1510,12 +1744,26 @@ function buildProjections(){
       +'</tr>';
   }).join("");
 
+  // --- Multiplier history table (moved from Price Peaks) ---
+  var multRows=halvData.map(function(p){
+    var athMult=athMults.find(function(a){return a.cycle===p.cycle});
+    var hOutlier=iqrOutlier(p.mult,halvMults);
+    var aOutlier=athMult&&iqrOutlier(athMult.mult,athMults.map(function(x){return x.mult}));
+    return'<tr><td style="color:'+(CYCLE_COLORS[p.cycle]||CC.muted)+';font-weight:600">C'+p.cycle+'</td>'
+      +'<td>$'+Math.round(p.halvingPrice).toLocaleString()+'</td>'
+      +'<td>$'+Math.round(p.price).toLocaleString()+'</td>'
+      +'<td style="color:'+CC.teal+'">×'+p.mult.toFixed(1)+(hOutlier?" ⚠":"")+'</td>'
+      +'<td style="color:'+CC.amber+'">'+(athMult?"×"+athMult.mult.toFixed(2)+(aOutlier?" ⚠":""):"—")+'</td>'
+      +'</tr>';
+  }).join("");
+
   document.getElementById("p9").innerHTML=
     consensusHtml+
     '<div class="g4" style="margin-top:0">'+modelCards+'</div>'+
     '<div class="chart-card"><div class="chart-title">Model comparison · C'+curCycle+' price ceiling estimates</div>'+makeCanvas("c9a",260)+'</div>'+
     '<div class="tbl-wrap"><table><thead><tr><th>Model</th><th>Projection</th><th>Basis</th><th>Confidence</th></tr></thead><tbody>'+methodRows+'</tbody></table></div>'+
-    '<div class="info">Each model uses a different lens: MVRV Upside uses on-chain signal lead-lag, Halving Multiplier uses scarcity-driven price multiples from halving dates, ATH Multiplier tracks diminishing cycle-over-cycle returns, MVRV × Realized Cap back-calculates implied price from projected MVRV peak. Outliers excluded from consensus via IQR. All projections update automatically as new cycle data is added.</div>';
+    '<div class="tbl-wrap"><div class="chart-title" style="padding:16px 0 10px">Historical multipliers — data behind the models</div><table><thead><tr><th>Cycle</th><th>Price @ halving</th><th>ATH</th><th>Halving mult.</th><th>ATH mult. (vs prev)</th></tr></thead><tbody>'+multRows+'</tbody></table></div>'+
+    '<div class="info">⚠ = statistical outlier excluded from log-log regression. Halving mult. = ATH ÷ price at halving date. ATH mult. = this cycle ATH ÷ previous cycle ATH. Both decay as power laws — fit via log-log regression. All projections update automatically as new cycles are added.</div>';
 
   destroyChart("c9a");
 
