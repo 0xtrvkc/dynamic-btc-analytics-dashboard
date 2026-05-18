@@ -323,26 +323,6 @@ function makeCanvas(id,h){return'<div class="chart-wrap" style="height:'+h+'px">
 function statCard(label,val,sub,color){return'<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+(color||CC.text)+'">'+val+'</div>'+(sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>'}
 
 var PRICE_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/btc_daily_price.json";
-var MVRV_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/mvrv.json";
-
-function fetchMvrvData(){
-  fetch(MVRV_JSON_URL)
-    .then(function(r){return r.json();})
-    .then(function(json){
-      var arr=json.values||json.mvrv||[];
-      var rows=arr.map(function(pt){
-        var ts=+pt.x,v=+pt.y;
-        if(!ts||isNaN(v)||v<=0)return null;
-        return{date:new Date(ts>1e10?ts:ts*1000),mvrv:v};
-      }).filter(Boolean).sort(function(a,b){return a.date-b.date});
-      if(rows.length<10)throw new Error("Not enough data");
-      pendingRows=rows;
-      if(priceFetchDone){loadData(rows);pendingRows=null;}
-    })
-    .catch(function(){
-      // fetch failed — upload screen stays visible as fallback
-    });
-}
 
 var pendingRows=null;
 var priceFetchDone=false;
@@ -419,7 +399,6 @@ function joinPrice(){
 }
 
 fetchPriceData();
-fetchMvrvData();
 
 function enrichData(rows) {
   var mvrvs = rows.map(function(r) { return r.mvrv });
