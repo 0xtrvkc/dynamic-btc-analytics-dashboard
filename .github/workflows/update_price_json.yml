@@ -2,8 +2,8 @@ name: Update MVRV data
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # daily at 6am UTC
-  workflow_dispatch:        # manual trigger button in GitHub UI
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 jobs:
   update:
@@ -13,8 +13,11 @@ jobs:
 
       - name: Fetch MVRV from blockchain.info
         run: |
-          curl -s "https://api.blockchain.info/charts/mvrv?timespan=all&sampled=false&format=json&cors=true" \
+          curl -s "https://api.blockchain.info/charts/mvrv?timespan=all&sampled=false&format=json" \
+            -H "Accept: application/json" \
             -o mvrv.json
+          # Verify it's valid JSON
+          python3 -c "import json; data=json.load(open('mvrv.json')); print(f'OK: {len(data[\"values\"])} rows')"
 
       - name: Commit if changed
         run: |
