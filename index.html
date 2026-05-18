@@ -95,6 +95,11 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira M
     text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff;
   }
 }
+/* Respect user's reduced-motion preference — keep title readable, no flashing */
+@media (prefers-reduced-motion: reduce) {
+  .upload-title { animation: none; color: var(--accent); text-shadow: none; }
+  .progress-bar { animation: none; }
+}
 .drop-zone{width:100%;max-width:624px;border:1.5px dashed var(--border);border-radius:20px;padding:62px 42px;cursor:pointer;transition:all .2s;background:transparent}
 .drop-zone:hover,.drop-zone.dragging{border-color:var(--accent);background:#16123a}
 .drop-icon{font-size:2.925rem;margin-bottom:16px}
@@ -245,6 +250,7 @@ const CONFIG = {
   SAMPLE_SIZE: 300,        // chart data points (downsampled)
   ZSCORE_CAPITULATION: -1.5,
   ZSCORE_CAUTION: 1.0,
+  ZSCORE_WINDOW: 365,      // rolling window (days) for z-score calculation
   ROC_SHORT: 30,
   ROC_LONG: 90,
   HALVING_DATE_TOLERANCE_DAYS: 3, // ± days to search for price when exact date missing
@@ -479,10 +485,19 @@ function enrichData(rows) {
   var ma50  = movingAvg(mvrvs, 50);
   var ma200 = movingAvg(mvrvs, 200);
 
+  // Pre-compute true cycle peaks (two-pass) so drawdown is correct for
+  // every historical point, not just the running-max-so-far.
   var cyclePeaks = {};
+  rows.forEach(function(r) {
+    var c = 0;
+    for (var j = 0; j < HALVINGS.length - 1; j++) {
+      if (r.date >= HALVINGS[j] && r.date < HALVINGS[j + 1]) { c = j + 1; break; }
+    }
+    if (r.date >= HALVINGS[HALVINGS.length - 1]) c = HALVINGS.length;
+    if (c > 0) cyclePeaks[c] = Math.max(cyclePeaks[c] || 0, r.mvrv);
+  });
 
-  // Welford online algorithm — O(n) single-pass z-score, numerically stable
-  var wn=0, wmean=0, wM2=0;
+  // Welford state is now local to each iteration (rolling window) — no outer vars needed.
 
   return rows.map(function(r, i) {
     var cycle = 0;
@@ -506,19 +521,25 @@ function enrichData(rows) {
     }
     if (r.date < HALVINGS[0]) cycle = 0;
 
-    // Z-score via Welford — O(n) total, no re-scanning previous values
-    wn++; var delta = r.mvrv - wmean;
-    wmean += delta/wn; wM2 += delta*(r.mvrv - wmean);
-    var wstd = wn < 3 ? 1 : Math.sqrt(wM2/wn);
+    // Z-score — rolling 365-day window (causal: only past + current values).
+    // Warm-up: window grows from 1 → 365 days, then stays fixed at 365.
+    // This avoids early 2012-2013 data permanently anchoring mean/std for
+    // every subsequent year — making the signal cycle-relevant, not all-time.
+    var winStart = Math.max(0, i - CONFIG.ZSCORE_WINDOW + 1);
+    var wn = 0, wmean = 0, wM2 = 0;
+    for (var wi = winStart; wi <= i; wi++) {
+      wn++; var delta = mvrvs[wi] - wmean;
+      wmean += delta / wn; wM2 += delta * (mvrvs[wi] - wmean);
+    }
+    var wstd = wn < 3 ? 1 : Math.sqrt(wM2 / wn);
     var zscore = wstd > 0 ? (r.mvrv - wmean) / wstd : 0;
 
     // ROC — null for warm-up period (not 0, which is a false flat reading)
     var roc30 = i >= CONFIG.ROC_SHORT ? ((r.mvrv - mvrvs[i-CONFIG.ROC_SHORT]) / mvrvs[i-CONFIG.ROC_SHORT]) * 100 : null;
     var roc90 = i >= CONFIG.ROC_LONG  ? ((r.mvrv - mvrvs[i-CONFIG.ROC_LONG])  / mvrvs[i-CONFIG.ROC_LONG])  * 100 : null;
 
-    // Drawdown from cycle peak
-    if (cycle > 0) cyclePeaks[cycle] = Math.max(cyclePeaks[cycle] || 0, r.mvrv);
-    var peak = cyclePeaks[cycle] || r.mvrv;
+    // Drawdown from true cycle peak (pre-computed above — two-pass)
+    var peak = (cycle > 0 && cyclePeaks[cycle]) ? cyclePeaks[cycle] : r.mvrv;
     var drawdown = cycle > 0 ? ((r.mvrv - peak) / peak) * 100 : null;
 
     return Object.assign({}, r, {
@@ -618,7 +639,7 @@ function buildOverview(){
   var priceCard=hasPriceData&&l.price?statCard("BTC Price","$"+Math.round(l.price).toLocaleString(),fmtDate(l.date),CC.amber):"";
   var cards=[
     statCard("Current MVRV",l.mvrv.toFixed(3),fmtDate(l.date),l.mvrv<1.5?CC.teal:l.mvrv>3?CC.red:CC.text),
-    statCard("Z-score",l.zscore.toFixed(2),l.zscore<0?"Undervalued":"Elevated",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),
+    statCard("Z-score",l.zscore.toFixed(2),l.zscore<0?"Undervalued (365d rolling)":"Elevated (365d rolling)",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),
     statCard("All-time peak",s.peakRow.mvrv.toFixed(2),s.peakRow.dateStr,CC.amber),
     statCard("All-time bottom",s.botRow.mvrv.toFixed(2),s.botRow.dateStr,CC.teal),
   ];
@@ -722,7 +743,7 @@ function buildOverview(){
 function buildZScore(){
   var s=STATS,l=s.last;
   var signal=l.zscore<CONFIG.ZSCORE_CAPITULATION?"Capitulation":l.zscore<0?"Accumulate":l.zscore<CONFIG.ZSCORE_CAUTION?"Neutral":"Caution";
-  document.getElementById("p1").innerHTML='<div class="g3">'+[statCard("Current Z-score",l.zscore.toFixed(2),"",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),statCard("Historical mean MVRV",s.mean.toFixed(3),"Z = 0 baseline"),statCard("Signal",signal,"",l.zscore<0?CC.teal:CC.amber)].join("")+'</div><div class="chart-card"><div class="chart-title">All-time Z-score (expanding window)</div>'+makeCanvas("c1",300)+'</div><div class="info">Z &gt; +2 has marked every major top. Z &lt; -1 = historical buy zone. Z &lt; '+CONFIG.ZSCORE_CAPITULATION+' = capitulation — every case preceded a major recovery.</div>';
+  document.getElementById("p1").innerHTML='<div class="g3">'+[statCard("Current Z-score",l.zscore.toFixed(2),"",l.zscore<-1?CC.teal:l.zscore>1.5?CC.red:CC.text),statCard("Rolling mean MVRV",wmean365(DATA,DATA.length-1).toFixed(3),"365-day window baseline"),statCard("Signal",signal,"",l.zscore<0?CC.teal:CC.amber)].join("")+'</div><div class="chart-card"><div class="chart-title">Z-score — rolling 365-day window</div>'+makeCanvas("c1",300)+'</div><div class="info">Z-score is calculated over a rolling 365-day window, so recent cycles are compared against the past year of data rather than all-time history. This makes the signal cycle-relevant and avoids early 2012-2013 data anchoring the baseline permanently. Z &gt; +2 has marked every major top. Z &lt; -1 = historical buy zone. Z &lt; '+CONFIG.ZSCORE_CAPITULATION+' = capitulation — every case preceded a major recovery.</div>';
   destroyChart("c1");
   var cd=sample(DATA,CONFIG.SAMPLE_SIZE);
   var datasets=[{label:"Z-score",data:cd.map(function(d){return d.zscore}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.accent+"22",below:CC.accent+"11"}},{label:"+2",data:cd.map(function(){return 2}),borderColor:CC.red+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"-1",data:cd.map(function(){return -1}),borderColor:CC.teal+"88",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"0",data:cd.map(function(){return 0}),borderColor:CC.muted+"44",borderWidth:1,pointRadius:0}];
@@ -1823,6 +1844,14 @@ function buildProjections(){
       })
     }))
   });
+}
+
+// Returns the 365-day rolling mean at index i — used in the Z-score tab stat card.
+function wmean365(data, i) {
+  var start = Math.max(0, i - CONFIG.ZSCORE_WINDOW + 1);
+  var sum = 0, n = 0;
+  for (var k = start; k <= i; k++) { sum += data[k].mvrv; n++; }
+  return n ? sum / n : 0;
 }
 
 function priceAtDate(dateStr){
