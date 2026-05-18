@@ -313,14 +313,87 @@ function buildHalvingAnnotations(sampledData){
   });
   return annotations;
 }
-function linReg(xs,ys){var n=xs.length,mx=xs.reduce(function(a,b){return a+b},0)/n,my=ys.reduce(function(a,b){return a+b},0)/n,num=xs.reduce(function(s,x,i){return s+(x-mx)*(ys[i]-my)},0),den=xs.reduce(function(s,x){return s+(x-mx)*(x-mx)},0);return{slope:num/den,intercept:my-(num/den)*mx}}
-function logReg(xs,ys){return linReg(xs.map(Math.log),ys)}
-function sample(arr,n){if(!n)n=CONFIG.SAMPLE_SIZE;if(arr.length<=n)return arr;var step=Math.ceil(arr.length/n);return arr.filter(function(_,i){return i%step===0||i===arr.length-1})}
-function chartDefs(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,titleFont:{size:13},bodyFont:{size:14}}},scales:{x:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:13},maxTicksLimit:8},border:{display:false}},y:{grid:{color:"#1e1e2e88"},ticks:{color:CC.muted,font:{size:13}},border:{display:false}}}}}
-function withLegend(opts){return Object.assign({},opts,{plugins:Object.assign({},opts.plugins,{legend:{display:true,labels:{color:CC.muted,font:{size:13},boxWidth:24,boxHeight:2}}})})}
-function destroyChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}}
-function makeCanvas(id,h){return'<div class="chart-wrap" style="height:'+h+'px"><canvas id="'+id+'"></canvas></div>'}
-function statCard(label,val,sub,color){return'<div class="stat"><div class="stat-label">'+label+'</div><div class="stat-val" style="color:'+(color||CC.text)+'">'+val+'</div>'+(sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>'}
+// Linear regression — returns { slope, intercept }
+function linReg(xs, ys) {
+  const n = xs.length;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  const num = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
+  const den = xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+  const slope = num / den;
+  return { slope, intercept: my - slope * mx };
+}
+
+// Log regression — fits y = a*ln(x) + b by linearising x
+function logReg(xs, ys) {
+  return linReg(xs.map(Math.log), ys);
+}
+
+// Downsample arr to at most n evenly-spaced points, always keeping the last
+function sample(arr, n) {
+  if (!n) n = CONFIG.SAMPLE_SIZE;
+  if (arr.length <= n) return arr;
+  const step = Math.ceil(arr.length / n);
+  return arr.filter((_, i) => i % step === 0 || i === arr.length - 1);
+}
+
+// Base Chart.js options shared by all charts — defined once, not recreated per call.
+// Deep-clone with structuredClone() before mutating (e.g. adding scales or plugins).
+const CHART_DEFAULTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: CC.surface2,
+      borderColor: CC.border,
+      borderWidth: 1,
+      titleColor: CC.muted,
+      bodyColor: CC.text,
+      padding: 12,
+      titleFont: { size: 13 },
+      bodyFont: { size: 14 }
+    }
+  },
+  scales: {
+    x: {
+      grid: { color: "#1e1e2e88" },
+      ticks: { color: CC.muted, font: { size: 13 }, maxTicksLimit: 8 },
+      border: { display: false }
+    },
+    y: {
+      grid: { color: "#1e1e2e88" },
+      ticks: { color: CC.muted, font: { size: 13 } },
+      border: { display: false }
+    }
+  }
+};
+
+// Returns a fresh deep clone of CHART_DEFAULTS safe to mutate per chart
+function chartDefs() { return structuredClone(CHART_DEFAULTS); }
+
+// Extends chartDefs with legend enabled
+function withLegend(opts) {
+  return Object.assign({}, opts, {
+    plugins: Object.assign({}, opts.plugins, {
+      legend: { display: true, labels: { color: CC.muted, font: { size: 13 }, boxWidth: 24, boxHeight: 2 } }
+    })
+  });
+}
+
+function destroyChart(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+
+function makeCanvas(id, h) {
+  return `<div class="chart-wrap" style="height:${h}px"><canvas id="${id}"></canvas></div>`;
+}
+
+function statCard(label, val, sub, color) {
+  return `<div class="stat">
+    <div class="stat-label">${label}</div>
+    <div class="stat-val" style="color:${color || CC.text}">${val}</div>
+    ${sub ? `<div class="stat-sub">${sub}</div>` : ""}
+  </div>`;
+}
 
 var PRICE_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/btc_daily_price.json";
 
