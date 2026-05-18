@@ -1,42 +1,25 @@
-name: Update Dashboard Data
+name: Update MVRV data
 
 on:
-  workflow_dispatch:  # Manual trigger — "Run workflow" button in GitHub Actions
   schedule:
-    - cron: "0 6 * * *"  # Auto-run daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: pip install pandas kaggle
-
-      - name: Download Kaggle CSV
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      - name: Fetch MVRV from blockchain.info
         run: |
-          kaggle datasets download -d mczielinski/bitcoin-historical-data --unzip
-          ls -lh btcusd_1-min_data.csv
+          curl -s "https://api.blockchain.info/charts/mvrv?timespan=all&sampled=false&format=json&cors=true" \
+            -o mvrv.json
 
-      - name: Generate daily price JSON
-        run: python generate_price_json.py
-
-      - name: Commit and push
+      - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add btc_daily_price.json
-          git diff --cached --quiet && echo "No changes to commit" || \
-            git commit -m "chore: update btc_daily_price.json [$(date -u +%Y-%m-%d)]"
+          git add mvrv.json
+          git diff --staged --quiet || git commit -m "chore: update MVRV data"
           git push
