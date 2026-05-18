@@ -11,13 +11,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch MVRV from blockchain.info
+      - name: Fetch MVRV from BGeometrics
+        env:
+          API_KEY: ${{ secrets.BGEOMETRICS_API_KEY }}
         run: |
-          curl -s "https://api.blockchain.info/charts/mvrv?timespan=all&sampled=false&format=json" \
-            -H "Accept: application/json" \
-            -o mvrv.json
-          # Verify it's valid JSON
-          python3 -c "import json; data=json.load(open('mvrv.json')); print(f'OK: {len(data[\"values\"])} rows')"
+          curl -s "https://bitcoin-data.com/api/mvrv?api_key=$API_KEY" -o mvrv_raw.json
+          python3 << 'EOF'
+          import json
+          raw = json.load(open('mvrv_raw.json'))
+          print('Keys:', list(raw.keys()))
+          rows = [{'x': entry['t'], 'y': entry['v']} for entry in raw['data']]
+          out = {'values': rows}
+          json.dump(out, open('mvrv.json', 'w'))
+          print(f'OK: {len(rows)} rows written')
+          EOF
 
       - name: Commit if changed
         run: |
