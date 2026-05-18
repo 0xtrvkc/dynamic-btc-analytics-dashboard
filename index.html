@@ -2074,8 +2074,10 @@ function buildBacktest(){
     avgCard("MVRV × RC",m4Avg,"avg error · completed cycles")+
   '</div>';
 
+var completedLabels = completedResults.map(function(r){ return "C" + r.cycle; }).join(", ");
+
   var introHtml='<div class="info" style="margin-bottom:18px">'+
-    '📊 <strong>How backtesting works:</strong> For each completed cycle (C2, C3), the models are re-run using only data that would have been available at the <em>start</em> of that cycle. '+
+    '📊 <strong>How backtesting works:</strong> For each completed cycle (' + completedLabels + '), the models are re-run using only data that would have been available at the <em>start</em> of that cycle. '+
     'This simulates what the projection would have been in real time — not with hindsight. C4 is shown as ongoing. '+
     'Error = (predicted − actual) / actual × 100. Green = within 20%, amber = 20–50%, red = &gt;50% miss.'+
   '</div>';
