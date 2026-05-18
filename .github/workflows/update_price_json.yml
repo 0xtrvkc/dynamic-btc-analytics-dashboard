@@ -16,15 +16,7 @@ jobs:
           API_KEY: ${{ secrets.BGEOMETRICS_API_KEY }}
         run: |
           curl -s "https://bitcoin-data.com/api/mvrv?api_key=$API_KEY" -o mvrv_raw.json
-          python3 << 'EOF'
-          import json
-          raw = json.load(open('mvrv_raw.json'))
-          print('Keys:', list(raw.keys()))
-          rows = [{'x': entry['t'], 'y': entry['v']} for entry in raw['data']]
-          out = {'values': rows}
-          json.dump(out, open('mvrv.json', 'w'))
-          print(f'OK: {len(rows)} rows written')
-          EOF
+          cat mvrv_raw.json
 
       - name: Commit if changed
         run: |
