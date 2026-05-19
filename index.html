@@ -183,11 +183,12 @@ tr:last-child td{border-bottom:none}
     <div class="panel" id="p8"></div>
     <div class="panel" id="p9"></div>
     <div class="panel" id="p10"></div>
+    <div class="panel" id="p11"></div>
   </div>
 </div>
 
 <script>
-const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Cycle Extremes","Price Peaks","Projections","Backtest"];
+const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Cycle Extremes","Price Peaks","Price Bottoms","Projections","Backtest"];
 const CC = {bg:"#0a0a0f",surface:"#111118",surface2:"#16161f",border:"#1e1e2e",text:"#e8e6f0",muted:"#6b6880",faint:"#2a2838",accent:"#7c6af7",teal:"#2dd4bf",amber:"#f59e0b",red:"#f43f5e",green:"#22c55e"};
 const HALVINGS = [
     new Date("2012-11-28"), // 1st
@@ -591,7 +592,7 @@ function resetApp(){
   pendingRows=null;
 }
 
-var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression,buildPricePeaks,buildProjections,buildBacktest];
+var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression,buildPricePeaks,buildPriceBottoms,buildProjections,buildBacktest];
 
 function buildTabs(){
   document.getElementById("tabs").innerHTML=TAB_NAMES.map(function(n,i){return'<button class="tab'+(i===0?" active":"")+'" onclick="switchTab('+i+')">'+n+'</button>'}).join("");
@@ -1393,6 +1394,169 @@ function buildPricePeaks(){
   },options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"Divergence (%)",color:CC.muted,font:{size:13}},ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v+"%"}})})}})  )});
 }
 
+function buildPriceBottoms(){
+  if(!hasPriceData){
+    document.getElementById("p9").innerHTML='<div class="info" style="margin-top:40px;text-align:center;color:var(--muted)">Price data is required for this panel.</div>';
+    return;
+  }
+  var s=STATS;
+
+  function median(arr){
+    if(!arr.length)return null;
+    var sorted=arr.slice().sort(function(a,b){return a-b});
+    var mid=Math.floor(sorted.length/2);
+    return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+  }
+  function isOutlier(val,arr){
+    if(arr.length<4)return false;
+    var sorted=arr.slice().sort(function(a,b){return a-b});
+    var q1=sorted[Math.floor(sorted.length*0.25)];
+    var q3=sorted[Math.floor(sorted.length*0.75)];
+    var iqr=q3-q1;
+    return val<q1-1.5*iqr||val>q3+1.5*iqr;
+  }
+
+  // --- Compute price bottoms per cycle ---
+  var priceBottoms=[];
+  s.availCycles.forEach(function(c){
+    var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price;});
+    if(!sub.length)return;
+    // Price bottom = lowest price in cycle
+    var worst=sub.reduce(function(a,b){return b.price<a.price?b:a});
+    var mvrvTrough=s.cycleData.find(function(cd){return cd.cycle===c;});
+    var mvrvTroughDate=mvrvTrough?mvrvTrough.troughDate:null;
+    var mvrvTroughMvrv=mvrvTrough?mvrvTrough.trough:null;
+    var daysDiff=null;
+    if(mvrvTroughDate){
+      var d1=new Date(mvrvTroughDate),d2=new Date(worst.dateStr);
+      daysDiff=Math.round((d2-d1)/(1000*60*60*24));
+    }
+    var mvrvOnBottomDay=worst.mvrv||null;
+    var divergencePct=mvrvOnBottomDay&&mvrvTroughMvrv?((mvrvOnBottomDay-mvrvTroughMvrv)/mvrvTroughMvrv)*100:null;
+    var priceAtMvrvTrough=mvrvTroughDate?PRICE_MAP[mvrvTroughDate]:null;
+    // Further downside: how much lower did price go after MVRV bottomed
+    var furtherDownside=priceAtMvrvTrough&&worst.price?((worst.price-priceAtMvrvTrough)/priceAtMvrvTrough)*100:null;
+    priceBottoms.push({
+      cycle:c,price:worst.price,date:worst.dateStr,
+      mvrvOnDay:mvrvOnBottomDay,
+      mvrvTroughDate:mvrvTroughDate,mvrvTroughMvrv:mvrvTroughMvrv,
+      daysDiff:daysDiff,divergencePct:divergencePct,
+      priceAtMvrvTrough:priceAtMvrvTrough,furtherDownside:furtherDownside
+    });
+  });
+
+  // --- Outlier detection ---
+  var allDays=priceBottoms.filter(function(p){return p.daysDiff!==null;}).map(function(p){return p.daysDiff;});
+  var allDiv=priceBottoms.filter(function(p){return p.divergencePct!==null;}).map(function(p){return p.divergencePct;});
+  var allDown=priceBottoms.filter(function(p){return p.furtherDownside!==null;}).map(function(p){return p.furtherDownside;});
+  priceBottoms.forEach(function(p){
+    p.isOutlierDays=p.daysDiff!==null&&isOutlier(p.daysDiff,allDays);
+    p.isOutlierDiv=p.divergencePct!==null&&isOutlier(p.divergencePct,allDiv);
+    p.isOutlierDown=p.furtherDownside!==null&&isOutlier(p.furtherDownside,allDown);
+  });
+
+  var cleanDays=priceBottoms.filter(function(p){return p.daysDiff!==null&&!p.isOutlierDays;}).map(function(p){return p.daysDiff;});
+  var cleanDown=priceBottoms.filter(function(p){return p.furtherDownside!==null&&!p.isOutlierDown;}).map(function(p){return p.furtherDownside;});
+  var cleanDiv=priceBottoms.filter(function(p){return p.divergencePct!==null&&!p.isOutlierDiv;}).map(function(p){return p.divergencePct;});
+  var medDays=median(cleanDays);
+  var medDown=median(cleanDown);
+  var medDiv=median(cleanDiv);
+  var outlierCount=priceBottoms.filter(function(p){return p.isOutlierDays||p.isOutlierDiv||p.isOutlierDown;}).length;
+
+  // Trend: is lead-lag changing?
+  var nonOutlierDaysPairs=priceBottoms.filter(function(p){return p.daysDiff!==null&&!p.isOutlierDays;});
+  var leadLagTrend=nonOutlierDaysPairs.length>=2?linReg(nonOutlierDaysPairs.map(function(p){return p.cycle;}),nonOutlierDaysPairs.map(function(p){return p.daysDiff;})):null;
+  var downTrend=cleanDown.length>=2?linReg(priceBottoms.filter(function(p){return p.furtherDownside!==null&&!p.isOutlierDown;}).map(function(p){return p.cycle;}),cleanDown):null;
+
+  // Current cycle projection
+  var curCycle=s.last.cycle;
+  var curMvrvTrough=s.cycleData.find(function(c){return c.cycle===curCycle;});
+  var curMvrvTroughPrice=curMvrvTrough?PRICE_MAP[curMvrvTrough.troughDate]:null;
+  var projectedFloor=curMvrvTroughPrice&&medDown!==null?curMvrvTroughPrice*(1+medDown/100):null;
+  var projectedLeadLag=leadLagTrend?Math.round(leadLagTrend.slope*curCycle+leadLagTrend.intercept):medDays;
+
+  // --- Stat cards ---
+  var cards=priceBottoms.map(function(p){
+    return statCard("C"+p.cycle+" bottom","$"+Math.round(p.price).toLocaleString(),p.date,CYCLE_COLORS[p.cycle]||CC.muted);
+  }).join("");
+
+  var patternCards=[
+    statCard("Median lead-lag",medDays!==null?medDays+"d":"—","MVRV troughs before price"+(outlierCount?" · "+outlierCount+" outlier"+(outlierCount>1?"s":"")+" excluded":""),CC.teal),
+    statCard("Median further downside",medDown!==null?medDown.toFixed(0)+"%":"—","After MVRV troughs, price can still drop this much",CC.red),
+    statCard("Median divergence",medDiv!==null?medDiv.toFixed(1)+"%":"—","MVRV rise from trough at price bottom",CC.accent),
+    projectedFloor?statCard("Floor · MVRV downside","$"+Math.round(projectedFloor).toLocaleString(),"Price @ MVRV trough × median further downside",CC.teal):statCard("Floor · MVRV downside","—","MVRV trough not yet confirmed",CC.muted),
+  ].join("");
+
+  // --- Table rows ---
+  var tableRows=priceBottoms.filter(function(p){return p.daysDiff!==null&&p.mvrvTroughDate;}).map(function(p){
+    var lag=p.daysDiff>0?"Price +"+p.daysDiff+"d after MVRV":p.daysDiff<0?"Price "+Math.abs(p.daysDiff)+"d before MVRV":"Same day";
+    var outlierFlag=(p.isOutlierDays||p.isOutlierDiv||p.isOutlierDown)?" ⚠":"";
+    var divCell=p.divergencePct!==null?'<td style="color:'+(Math.abs(p.divergencePct)<5?CC.amber:CC.teal)+'">'+p.divergencePct.toFixed(1)+'%'+(p.isOutlierDiv?" ⚠":"")+'</td>':'<td>—</td>';
+    var downCell=p.furtherDownside!==null?'<td style="color:'+CC.red+'">'+p.furtherDownside.toFixed(0)+'%'+(p.isOutlierDown?" ⚠":"")+'</td>':'<td>—</td>';
+    return'<tr><td style="color:'+(CYCLE_COLORS[p.cycle]||CC.muted)+';font-weight:600">C'+p.cycle+outlierFlag+'</td>'
+      +'<td>$'+Math.round(p.price).toLocaleString()+'</td>'
+      +'<td>'+p.date+'</td>'
+      +'<td>'+(p.mvrvOnDay?p.mvrvOnDay.toFixed(3):"—")+'</td>'
+      +'<td>'+(p.priceAtMvrvTrough?"$"+Math.round(p.priceAtMvrvTrough).toLocaleString():"—")+'</td>'
+      +downCell
+      +'<td>'+(p.daysDiff+(p.isOutlierDays?" ⚠":""))+'d</td>'
+      +divCell
+      +'<td>'+lag+'</td></tr>';
+  }).join("");
+
+  document.getElementById("p9").innerHTML=
+    '<div class="g4">'+cards+'</div>'+
+    '<div class="chart-card"><div class="chart-title">BTC price bottom per cycle · log scale</div>'+makeCanvas("c9bot_a",220)+'</div>'+
+    '<div class="chart-card"><div class="chart-title">MVRV on the day of BTC price bottom vs MVRV\'s own trough</div>'+makeCanvas("c9bot_b",200)+'</div>'+
+    '<div class="g4" style="margin-top:0">'+[
+      statCard("Median lead-lag",medDays!==null?medDays+"d":"—","MVRV troughs before price"+(outlierCount?" · "+outlierCount+" outlier"+(outlierCount>1?"s":"")+" excl.":""),CC.teal),
+      statCard("Median further downside",medDown!==null?medDown.toFixed(0)+"%":"—","After MVRV troughs, price can still drop this much",CC.red),
+      statCard("Median divergence",medDiv!==null?medDiv.toFixed(1)+"%":"—","MVRV rise from trough at price bottom",CC.accent),
+    ].join("")+'</div>'+
+    '<div class="chart-card"><div class="chart-title">Further price downside after MVRV troughed · % drop from MVRV trough date to price bottom</div>'+makeCanvas("c9bot_d",200)+'</div>'+
+    '<div class="chart-card"><div class="chart-title">MVRV divergence at price bottom (%)</div>'+makeCanvas("c9bot_c",200)+'</div>'+
+    '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>BTC Bottom</th><th>Bottom date</th><th>MVRV that day</th><th>Price @ MVRV trough</th><th>Further downside</th><th>Lead/lag</th><th>Divergence</th><th>Direction</th></tr></thead><tbody>'+tableRows+'</tbody></table></div>'+
+    '<div class="info">⚠ = statistical outlier (IQR method), excluded from median stats. Lead/lag: MVRV troughs first, then price follows. Divergence = how far MVRV had already risen from its trough when BTC price bottomed. Further downside = % drop from price-at-MVRV-trough to actual price bottom. See Projections tab for price floor models.</div>';
+
+  destroyChart("c9bot_a");destroyChart("c9bot_b");destroyChart("c9bot_c");destroyChart("c9bot_d");
+
+  // Bottom price bar chart (log scale)
+  CHARTS.c9bot_a=new Chart(document.getElementById("c9bot_a"),{type:"bar",data:{
+    labels:priceBottoms.map(function(p){return"C"+p.cycle;}),
+    datasets:[{label:"BTC Bottom (USD)",data:priceBottoms.map(function(p){return p.price;}),backgroundColor:priceBottoms.map(function(p){return CYCLE_COLORS[p.cycle]||CC.muted;}),borderRadius:6}]
+  },options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{type:"logarithmic",ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v>=1000000?"$"+(v/1000000).toFixed(0)+"M":v>=1000?"$"+(v/1000).toFixed(0)+"k":"$"+v;}})})}}))});
+
+  // Further downside bar chart
+  var downCycles=priceBottoms.filter(function(p){return p.furtherDownside!==null;});
+  CHARTS.c9bot_d=new Chart(document.getElementById("c9bot_d"),{type:"bar",data:{
+    labels:downCycles.map(function(p){return"C"+p.cycle+(p.isOutlierDown?" ⚠":"");}),
+    datasets:[
+      {label:"Further downside %",data:downCycles.map(function(p){return p.furtherDownside;}),backgroundColor:downCycles.map(function(p){return p.isOutlierDown?CC.muted+"55":(CYCLE_COLORS[p.cycle]||CC.muted)+"cc";}),borderRadius:6},
+      {label:"Median (excl. outliers)",data:downCycles.map(function(){return medDown;}),borderColor:CC.teal,borderWidth:2,borderDash:[6,3],pointRadius:0,type:"line",fill:false}
+    ]
+  },options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"% further drop after MVRV troughed",color:CC.muted,font:{size:13}},ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v+"%"}})})}})  )});
+
+  // MVRV compare bar chart
+  var mvrvCompareCycles=priceBottoms.filter(function(p){return p.mvrvOnDay&&p.mvrvTroughMvrv;});
+  CHARTS.c9bot_b=new Chart(document.getElementById("c9bot_b"),{type:"bar",data:{
+    labels:mvrvCompareCycles.map(function(p){return"C"+p.cycle;}),
+    datasets:[
+      {label:"MVRV at price bottom",data:mvrvCompareCycles.map(function(p){return p.mvrvOnDay;}),backgroundColor:mvrvCompareCycles.map(function(p){return(CYCLE_COLORS[p.cycle]||CC.muted)+"cc";}),borderRadius:6},
+      {label:"MVRV trough",data:mvrvCompareCycles.map(function(p){return p.mvrvTroughMvrv;}),backgroundColor:CC.muted+"55",borderRadius:6}
+    ]
+  },options:withLegend(Object.assign({},chartDefs(),{scales:{x:Object.assign({},chartDefs().scales.x,{stacked:false}),y:Object.assign({},chartDefs().scales.y,{min:0,title:{display:true,text:"MVRV",color:CC.muted,font:{size:13}}})}}))});
+
+  // Divergence bar chart
+  var divCycles=priceBottoms.filter(function(p){return p.divergencePct!==null;});
+  CHARTS.c9bot_c=new Chart(document.getElementById("c9bot_c"),{type:"bar",data:{
+    labels:divCycles.map(function(p){return"C"+p.cycle+(p.isOutlierDiv?" ⚠":"");}),
+    datasets:[
+      {label:"Divergence %",data:divCycles.map(function(p){return p.divergencePct;}),backgroundColor:divCycles.map(function(p){return p.isOutlierDiv?CC.muted+"55":(CYCLE_COLORS[p.cycle]||CC.muted)+"cc";}),borderRadius:6},
+      {label:"Median (excl. outliers)",data:divCycles.map(function(){return medDiv;}),borderColor:CC.teal,borderWidth:2,borderDash:[6,3],pointRadius:0,type:"line",fill:false}
+    ]
+  },options:withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{title:{display:true,text:"Divergence (%)",color:CC.muted,font:{size:13}},ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return v+"%"}})})}})  )});
+}
+
 function exportSummary(){
   var s=STATS, l=s.last;
   var lines=[];
@@ -1825,13 +1989,97 @@ function buildProjections(){
       +'</tr>';
   }).join("");
 
-  document.getElementById("p9").innerHTML=
+  // ---- FLOOR MODELS ----
+  var floorModels=[];
+  var cycleBotPrices={};
+  s.availCycles.forEach(function(c){
+    var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price;});
+    if(sub.length){var worst=sub.reduce(function(a,b){return b.price<a.price?b:a});cycleBotPrices[c]=worst.price;}
+  });
+  // Floor M1: MVRV further downside
+  var curMvrvTrough2=s.cycleData.find(function(c){return c.cycle===curCycle;});
+  var curMvrvTroughPrice2=curMvrvTrough2?PRICE_MAP[curMvrvTrough2.troughDate]:null;
+  var furtherDownsides=s.availCycles.map(function(c){
+    var cd=s.cycleData.find(function(x){return x.cycle===c;});
+    if(!cd)return null;
+    var troughP=PRICE_MAP[cd.troughDate];var bot=cycleBotPrices[c];
+    if(!troughP||!bot)return null;
+    return(bot-troughP)/troughP*100;
+  }).filter(function(x){return x!==null;});
+  var cleanFD=furtherDownsides.filter(function(v){return!iqrOutlier(v,furtherDownsides);});
+  var medFD=med(cleanFD);
+  var fm1=curMvrvTroughPrice2&&medFD!==null?curMvrvTroughPrice2*(1+medFD/100):null;
+  floorModels.push({name:"MVRV Downside",price:fm1,basis:"Price at MVRV trough × median further downside ("+(medFD?medFD.toFixed(0):"\u2014")+"%) across cycles",confidence:"Medium — depends on MVRV trough being confirmed",color:CC.teal,available:!!fm1});
+  // Floor M2: Halving floor ratio
+  var halvFloorData=s.availCycles.map(function(c){
+    var halvingDate=HALVINGS[c-1];if(!halvingDate)return null;
+    var hPrice=priceAtHalving(halvingDate);var bot=cycleBotPrices[c];
+    if(!hPrice||!bot)return null;
+    return{cycle:c,ratio:bot/hPrice};
+  }).filter(Boolean);
+  var halvFloorRatios=halvFloorData.map(function(p){return p.ratio;});
+  var cleanHFD=halvFloorData.filter(function(p){return!iqrOutlier(p.ratio,halvFloorRatios);});
+  var halvFloorLogR=cleanHFD.length>=2?linReg(cleanHFD.map(function(p){return Math.log(p.cycle);}),cleanHFD.map(function(p){return Math.log(p.ratio);})):null;
+  var projFloorRatio=halvFloorLogR?Math.exp(halvFloorLogR.slope*Math.log(curCycle)+halvFloorLogR.intercept):med(cleanHFD.map(function(p){return p.ratio;}));
+  var fm2=curHalvPrice&&projFloorRatio?curHalvPrice*projFloorRatio:null;
+  floorModels.push({name:"Halving Floor Ratio",price:fm2,basis:"Price on halving date ("+(curHalvPrice?"$"+Math.round(curHalvPrice).toLocaleString():"\u2014")+") × log-decay floor ratio (×"+(projFloorRatio?projFloorRatio.toFixed(2):"\u2014")+")",confidence:"Medium — ratio rises each cycle",color:CC.amber,available:!!fm2});
+  // Floor M3: Previous bottom multiplier
+  var botMults2=[];
+  for(var bi=1;bi<cycleList.length;bi++){
+    var bc=cycleList[bi],bprev=cycleList[bi-1];
+    if(cycleBotPrices[bc]&&cycleBotPrices[bprev])botMults2.push({cycle:bc,mult:cycleBotPrices[bc]/cycleBotPrices[bprev]});
+  }
+  var botMultVals=botMults2.map(function(p){return p.mult;});
+  var cleanBotMult=botMults2.filter(function(p){return!iqrOutlier(p.mult,botMultVals);});
+  var botMultLogR=cleanBotMult.length>=2?linReg(cleanBotMult.map(function(p){return Math.log(p.cycle);}),cleanBotMult.map(function(p){return Math.log(p.mult);})):null;
+  var prevBotPrice=cycleBotPrices[cycleList[cycleList.length-2]]||null;
+  var projBotMult=botMultLogR?Math.exp(botMultLogR.slope*Math.log(curCycle)+botMultLogR.intercept):med(cleanBotMult.map(function(p){return p.mult;}));
+  var fm3=prevBotPrice&&projBotMult?prevBotPrice*projBotMult:null;
+  floorModels.push({name:"Bottom Multiplier",price:fm3,basis:"Previous cycle bottom ($"+(prevBotPrice?Math.round(prevBotPrice).toLocaleString():"\u2014")+") × log-decay projected mult. (×"+(projBotMult?projBotMult.toFixed(2):"\u2014")+")",confidence:"Medium — fewest data points",color:CC.red,available:!!fm3});
+  // Floor M4: MVRV trough x realized cap
+  var curCycleLogTroughMVRV=Math.max(0,s.troughLogR.slope*Math.log(curCycle)+s.troughLogR.intercept);
+  var fm4bot=l.price&&l.mvrv&&curCycleLogTroughMVRV?(l.price/l.mvrv)*curCycleLogTroughMVRV:null;
+  floorModels.push({name:"MVRV Trough × RC",price:fm4bot,basis:"Current price ÷ current MVRV × projected cycle trough MVRV ("+curCycleLogTroughMVRV.toFixed(3)+"). Realized cap assumed constant.",confidence:"Low-Medium — tends to overestimate floor",color:CC.accent,available:!!fm4bot});
+  // Floor consensus
+  var validFloors=floorModels.filter(function(m){return m.available;}).map(function(m){return m.price;});
+  var cleanFloors=validFloors.filter(function(v){return!iqrOutlier(v,validFloors);});
+  var floorMin=cleanFloors.length?Math.min.apply(null,cleanFloors):null;
+  var floorMax=cleanFloors.length?Math.max.apply(null,cleanFloors):null;
+  var floorMid=med(cleanFloors);
+  var floorExcluded=validFloors.length-cleanFloors.length;
+  var floorConsensusHtml='<div style="background:var(--surface2);border:.5px solid var(--border);border-radius:16px;padding:24px 28px;margin-bottom:0">'
+    +'<div style="font-size:0.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Floor Range · C'+curCycle+(floorExcluded?' · '+floorExcluded+' outlier model'+(floorExcluded>1?'s':'')+' excluded':'')+'</div>'
+    +(floorMid?
+      '<div style="font-size:2.4rem;font-weight:700;color:'+CC.teal+';letter-spacing:-.02em">$'+Math.round(floorMid).toLocaleString()+'</div>'
+      +'<div style="font-size:1rem;color:'+CC.muted+';margin-top:4px">midpoint · range $'+Math.round(floorMin).toLocaleString()+' – $'+Math.round(floorMax).toLocaleString()+'</div>'
+      :'<div style="font-size:1.5rem;color:var(--muted)">Insufficient data</div>')
+    +'<div style="font-size:0.85rem;color:var(--faint);margin-top:10px">Based on '+cleanFloors.length+' model'+(cleanFloors.length!==1?'s':'')+' · not financial advice</div>'
+    +'</div>';
+  var floorModelCards=floorModels.map(function(m){
+    if(!m.available)return statCard(m.name,"\u2014","No data yet",CC.muted);
+    var isOutl=iqrOutlier(m.price,validFloors);
+    return statCard(m.name+(isOutl?" ⚠":""),"$"+Math.round(m.price).toLocaleString(),isOutl?"outlier — excluded from consensus":m.confidence.split("\u2014")[0].trim(),isOutl?CC.muted:m.color);
+  }).join("");
+  var floorMethodRows=floorModels.map(function(m){
+    return'<tr><td style="color:'+m.color+';font-weight:600">'+m.name+'</td>'
+      +'<td>'+(m.available?"$"+Math.round(m.price).toLocaleString():"\u2014")+'</td>'
+      +'<td style="font-size:0.85rem">'+m.basis+'</td>'
+      +'<td style="font-size:0.85rem;color:'+(m.confidence.charAt(0)==="H"?CC.green:m.confidence.charAt(0)==="M"?CC.amber:CC.red)+'">'+m.confidence+'</td></tr>';
+  }).join("");
+
+  document.getElementById("p10").innerHTML=
+    '<div style="font-size:0.85rem;font-weight:600;color:'+CC.accent+';margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase">▲ Ceiling — How High</div>'+
     consensusHtml+
     '<div class="g4" style="margin-top:0">'+modelCards+'</div>'+
-    '<div class="chart-card"><div class="chart-title">Model comparison · C'+curCycle+' price ceiling estimates</div>'+makeCanvas("c9a",260)+'</div>'+
-    '<div class="tbl-wrap"><table><thead><tr><th>Model</th><th>Projection</th><th>Basis</th><th>Confidence</th></tr></thead><tbody>'+methodRows+'</tbody></table></div>'+
+    '<div class="chart-card"><div class="chart-title">Ceiling model comparison · C'+curCycle+' price ceiling estimates</div>'+makeCanvas("c9a",260)+'</div>'+
+    '<div class="tbl-wrap"><table><thead><tr><th>Model</th><th>Ceiling</th><th>Basis</th><th>Confidence</th></tr></thead><tbody>'+methodRows+'</tbody></table></div>'+
+    '<div style="font-size:0.85rem;font-weight:600;color:'+CC.teal+';margin:24px 0 8px;letter-spacing:.08em;text-transform:uppercase">▼ Floor — How Low</div>'+
+    floorConsensusHtml+
+    '<div class="g4" style="margin-top:0">'+floorModelCards+'</div>'+
+    '<div class="chart-card"><div class="chart-title">Floor model comparison · C'+curCycle+' price floor estimates</div>'+makeCanvas("c9b_floor",260)+'</div>'+
+    '<div class="tbl-wrap"><table><thead><tr><th>Model</th><th>Floor</th><th>Basis</th><th>Confidence</th></tr></thead><tbody>'+floorMethodRows+'</tbody></table></div>'+
     '<div class="tbl-wrap"><div class="chart-title" style="padding:16px 0 10px">Historical multipliers — data behind the models</div><table><thead><tr><th>Cycle</th><th>Price @ halving</th><th>ATH</th><th>Halving mult.</th><th>ATH mult. (vs prev)</th></tr></thead><tbody>'+multRows+'</tbody></table></div>'+
-    '<div class="info">⚠ = statistical outlier excluded from log-log regression. Halving mult. = ATH ÷ price at halving date. ATH mult. = this cycle ATH ÷ previous cycle ATH. Both decay as power laws — fit via log-log regression. All projections update automatically as new cycles are added.</div>';
+    '<div class="info">⚠ = statistical outlier excluded from log-log regression. Ceiling: Halving mult. = ATH ÷ halving price. ATH mult. = this ATH ÷ previous ATH. Floor: Halving Floor Ratio = bottom ÷ halving price. Bottom Multiplier = this bottom ÷ previous bottom. All decay as power laws. Projections update automatically as new cycles are added.</div>';
 
   destroyChart("c9a");
 
@@ -1863,6 +2111,37 @@ function buildProjections(){
       })
     }))
   });
+
+  // Floor chart
+  destroyChart("c9b_floor");
+  var floorBarData=floorModels.filter(function(m){return m.available;});
+  var floorMidVal=floorMid;
+  CHARTS.c9b_floor=new Chart(document.getElementById("c9b_floor"),{
+    type:"bar",
+    data:{
+      labels:floorBarData.map(function(m){return m.name;}),
+      datasets:[
+        {label:"Floor projection",data:floorBarData.map(function(m){return m.price;}),backgroundColor:floorBarData.map(function(m){return iqrOutlier(m.price,validFloors)?CC.muted+"55":m.color+"cc";}),borderRadius:8},
+        {label:"Floor consensus midpoint",data:floorBarData.map(function(){return floorMidVal;}),borderColor:CC.teal+"88",borderWidth:2,borderDash:[6,3],pointRadius:0,type:"line",fill:false}
+      ]
+    },
+    options:withLegend(Object.assign({},chartDefs(),{
+      scales:{
+        x:chartDefs().scales.x,
+        y:Object.assign({},chartDefs().scales.y,{
+          ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return"$"+v.toLocaleString();}}),
+          title:{display:true,text:"Price (USD)",color:CC.muted,font:{size:13}}
+        })
+      },
+      plugins:Object.assign({},withLegend(chartDefs()).plugins,{
+        tooltip:{callbacks:{label:function(ctx){
+          if(ctx.dataset.type==="line")return"Floor consensus: $"+Math.round(ctx.parsed.y).toLocaleString();
+          var m=floorBarData[ctx.dataIndex];
+          return[m.name+": $"+Math.round(m.price).toLocaleString(),iqrOutlier(m.price,validFloors)?"⚠ outlier — excluded":m.confidence];
+        }}}
+      })
+    }))
+  });
 }
 
 // -------- runBacktest — pure data, no HTML --------
@@ -1877,9 +2156,13 @@ function runBacktest(){
   function iqrOutlier(val,arr){ if(arr.length<4)return false; var sorted=arr.slice().sort(function(a,b){return a-b}); var q1=sorted[Math.floor(sorted.length*0.25)]; var q3=sorted[Math.floor(sorted.length*0.75)]; var iqr=q3-q1; return val<q1-1.5*iqr||val>q3+1.5*iqr; }
 
   var cyclePeakPrices={};
+  var cycleBotPricesRbt={};
   s.availCycles.forEach(function(c){
     var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price;});
-    if(sub.length){ var best=sub.reduce(function(a,b){return b.price>a.price?b:a;}); cyclePeakPrices[c]=best.price; }
+    if(sub.length){
+      var best=sub.reduce(function(a,b){return b.price>a.price?b:a;}); cyclePeakPrices[c]=best.price;
+      var worst=sub.reduce(function(a,b){return b.price<a.price?b:a;}); cycleBotPricesRbt[c]=worst.price;
+    }
   });
 
   var backtestCycles=s.availCycles.filter(function(c){ return c>=2&&cyclePeakPrices[c]; });
@@ -1949,16 +2232,81 @@ function runBacktest(){
     var curCycleLogPeakMVRV=priorLogR?Math.max(0,priorLogR.slope*Math.log(targetCycle)+priorLogR.intercept):null;
     var m4Pred=(lastPrior&&lastPrior.price&&lastPrior.mvrv&&curCycleLogPeakMVRV)?(lastPrior.price/lastPrior.mvrv)*curCycleLogPeakMVRV:null;
 
-    // Consensus (IQR)
+    // Consensus (IQR) — peaks
     var preds=[m1Pred,m2Pred,m3Pred,m4Pred].filter(function(x){return x!==null;});
     var cleanPreds=preds.filter(function(v){return!iqrOutlier(v,preds);});
     var consensusPred=med(cleanPreds);
 
+    // --- Bottom models (backtested) ---
+    var actualBottom=cycleBotPricesRbt[targetCycle]||null;
+
+    // BM1: MVRV further downside
+    var priorFurtherDownsides=priorCycles.map(function(c){
+      var cd=s.cycleData.find(function(x){return x.cycle===c;});if(!cd)return null;
+      var trP=PRICE_MAP[cd.troughDate];var bot=priorPeakPrices[c]?null:null;
+      // use actual bottom from prior cycles (not peak prices)
+      var priorSub=(BY_CYCLE[c]||[]).filter(function(d){return d.price;});
+      if(!priorSub.length)return null;
+      var priorBot=priorSub.reduce(function(a,b){return b.price<a.price?b:a;}).price;
+      if(!trP||!priorBot)return null;
+      return(priorBot-trP)/trP*100;
+    }).filter(function(x){return x!==null;});
+    var cleanPFD=priorFurtherDownsides.filter(function(v){return!iqrOutlier(v,priorFurtherDownsides);});
+    var medPFD=med(cleanPFD);
+    var targetCycleDataB=s.cycleData.find(function(c){return c.cycle===targetCycle;});
+    var targetMvrvTroughPrice=targetCycleDataB?PRICE_MAP[targetCycleDataB.troughDate]:null;
+    var bm1Pred=targetMvrvTroughPrice&&medPFD!==null?targetMvrvTroughPrice*(1+medPFD/100):null;
+
+    // BM2: Halving floor ratio
+    var halvFloorRbtData=priorCycles.map(function(c){
+      var halvingDate=HALVINGS[c-1];if(!halvingDate)return null;
+      var hPrice=priceAtHalving(halvingDate);
+      var priorSub2=(BY_CYCLE[c]||[]).filter(function(d){return d.price;});
+      if(!priorSub2.length)return null;
+      var priorBot2=priorSub2.reduce(function(a,b){return b.price<a.price?b:a;}).price;
+      if(!hPrice||!priorBot2)return null;
+      return{cycle:c,ratio:priorBot2/hPrice};
+    }).filter(Boolean);
+    var hfrRatios=halvFloorRbtData.map(function(p){return p.ratio;});
+    var cleanHFR=halvFloorRbtData.filter(function(p){return!iqrOutlier(p.ratio,hfrRatios);});
+    var hfrLogR=cleanHFR.length>=2?linReg(cleanHFR.map(function(p){return Math.log(p.cycle);}),cleanHFR.map(function(p){return Math.log(p.ratio);})):null;
+    var projHFR=hfrLogR?Math.exp(hfrLogR.slope*Math.log(targetCycle)+hfrLogR.intercept):med(cleanHFR.map(function(p){return p.ratio;}));
+    var bm2Pred=curHalvPrice&&projHFR?curHalvPrice*projHFR:null;
+
+    // BM3: Previous bottom multiplier
+    var priorBotMults=[];
+    for(var bmi=1;bmi<priorCycles.length;bmi++){
+      var bmc=priorCycles[bmi],bmprev=priorCycles[bmi-1];
+      var sub1=(BY_CYCLE[bmc]||[]).filter(function(d){return d.price;});
+      var sub2=(BY_CYCLE[bmprev]||[]).filter(function(d){return d.price;});
+      if(sub1.length&&sub2.length){
+        var b1=sub1.reduce(function(a,b){return b.price<a.price?b:a;}).price;
+        var b2=sub2.reduce(function(a,b){return b.price<a.price?b:a;}).price;
+        priorBotMults.push({cycle:bmc,mult:b1/b2});
+      }
+    }
+    var pbmVals=priorBotMults.map(function(p){return p.mult;});
+    var cleanPBM=priorBotMults.filter(function(p){return!iqrOutlier(p.mult,pbmVals);});
+    var pbmLogR=cleanPBM.length>=2?linReg(cleanPBM.map(function(p){return Math.log(p.cycle);}),cleanPBM.map(function(p){return Math.log(p.mult);})):null;
+    var lastPriorCycle=priorCycles[priorCycles.length-1];
+    var lastPriorBotSub=(BY_CYCLE[lastPriorCycle]||[]).filter(function(d){return d.price;});
+    var lastPriorBot=lastPriorBotSub.length?lastPriorBotSub.reduce(function(a,b){return b.price<a.price?b:a;}).price:null;
+    var projPBM=pbmLogR?Math.exp(pbmLogR.slope*Math.log(targetCycle)+pbmLogR.intercept):med(cleanPBM.map(function(p){return p.mult;}));
+    var bm3Pred=lastPriorBot&&projPBM?lastPriorBot*projPBM:null;
+
+    // Bottom consensus
+    var botPreds=[bm1Pred,bm2Pred,bm3Pred].filter(function(x){return x!==null;});
+    var cleanBotPreds=botPreds.filter(function(v){return!iqrOutlier(v,botPreds);});
+    var consensusBotPred=med(cleanBotPreds);
+
     allResults.push({
       cycle:targetCycle,
       actualATH:actualATH,
+      actualBottom:actualBottom,
       m1:m1Pred, m2:m2Pred, m3:m3Pred, m4:m4Pred,
       consensus:consensusPred,
+      bm1:bm1Pred, bm2:bm2Pred, bm3:bm3Pred,
+      consensusBot:consensusBotPred,
       halvingPrice:curHalvPrice,
       isCurrent:targetCycle===s.last.cycle
     });
@@ -1970,7 +2318,7 @@ function runBacktest(){
 
 function buildBacktest(){
   if(!hasPriceData){
-    document.getElementById("p10").innerHTML='<div class="info" style="margin-top:24px">⚠ Price data is required for backtest analysis. Please wait for price data to load and try again.</div>';
+    document.getElementById("p11").innerHTML='<div class="info" style="margin-top:24px">⚠ Price data is required for backtest analysis. Please wait for price data to load and try again.</div>';
     return;
   }
 
@@ -2015,10 +2363,11 @@ function buildBacktest(){
   var consData=allResults.map(function(r){return r.consensus;});
 
   // -------- Per-model detail rows --------
-  function modelDetailBlock(modelKey,modelLabel,color,desc){
+  function modelDetailBlock(modelKey,modelLabel,color,desc,actualKey){
+    var aKey=actualKey||"actualATH";
     var rows=allResults.map(function(r){
       var pred=r[modelKey];
-      var actual=r.actualATH;
+      var actual=r[aKey];
       var err=pctErr(pred,actual);
       var cycleColor=CYCLE_COLORS[r.cycle]||CC.muted;
       var maxVal=Math.max(pred||0,actual||1);
@@ -2042,9 +2391,9 @@ function buildBacktest(){
             '<span class="bt-bar-val" style="color:'+color+'">'+fmtPred(pred)+'</span>'+
           '</div>'+
           '<div class="bt-bar-row">'+
-            '<span class="bt-bar-label">'+(r.isCurrent?"ATH so far":"Actual ATH")+'</span>'+
+            '<span class="bt-bar-label">'+(r.isCurrent?(aKey==="actualBottom"?"Low so far":"ATH so far"):(aKey==="actualBottom"?"Actual Low":"Actual ATH"))+'</span>'+
             '<div class="bt-track"><div class="bt-fill" style="width:'+actW+'%;background:'+CC.green+(r.isCurrent?"55":"")+'"></div></div>'+
-            '<span class="bt-bar-val" style="color:'+CC.green+'">$'+Math.round(actual).toLocaleString()+(r.isCurrent?' <span style="font-size:0.75rem;color:var(--muted)">(so far)</span>':'')+' </span>'+
+            '<span class="bt-bar-val" style="color:'+(aKey==="actualBottom"?CC.teal:CC.green)+'">$'+Math.round(actual).toLocaleString()+(r.isCurrent?' <span style="font-size:0.75rem;color:var(--muted)">(so far)</span>':'')+' </span>'+
           '</div>'+
           '<div class="bt-err-row">'+errLabel(err)+
             (r.isCurrent?'<span style="font-size:0.8rem;color:var(--muted);margin-left:8px">cycle not confirmed over</span>':'')+
@@ -2069,8 +2418,9 @@ function buildBacktest(){
 
   // -------- Error heatmap rows --------
   var heatmapRows=allResults.map(function(r){
-    function cell(pred){
-      var e=pctErr(pred,r.actualATH);
+    function cell(pred,actual){
+      var a=(actual!==undefined&&actual!==null)?actual:r.actualATH;
+      var e=pctErr(pred,a);
       if(e===null)return'<td style="color:var(--muted);text-align:center;padding:8px 10px;font-size:0.85rem">—</td>';
       var abs=Math.abs(e);
       var bg=abs<20?"#22c55e22":abs<40?"#f59e0b22":"#f43f5e22";
@@ -2084,16 +2434,39 @@ function buildBacktest(){
       '<td style="padding:8px 10px;font-size:0.85rem;color:var(--muted)">'+(r.halvingPrice?"$"+Math.round(r.halvingPrice).toLocaleString():"—")+'</td>'+
       '<td style="padding:8px 10px;font-size:0.85rem;color:'+CC.green+'">'+(r.actualATH?"$"+Math.round(r.actualATH).toLocaleString()+(r.isCurrent?" ⬆":""):"—")+'</td>'+
       cell(r.m1)+cell(r.m2)+cell(r.m3)+cell(r.m4)+cell(r.consensus)+
+      '<td style="padding:8px 10px;font-size:0.85rem;color:'+CC.teal+'">'+(r.actualBottom?"$"+Math.round(r.actualBottom).toLocaleString()+(r.isCurrent?" ⬇":""):"—")+'</td>'+
+      cell(r.bm1,r.actualBottom)+cell(r.bm2,r.actualBottom)+cell(r.bm3,r.actualBottom)+cell(r.consensusBot,r.actualBottom)+
     '</tr>';
   }).join("");
 
   // -------- Assemble HTML --------
+  // Bottom model averages
+  function avgBotErr(key){
+    var errs=completedResults.map(function(r){var e=r.actualBottom?pctErr(r[key],r.actualBottom):null;return e!==null?e:null;}).filter(function(x){return x!==null;});
+    if(!errs.length)return null;
+    return errs.reduce(function(a,b){return a+b;},0)/errs.length;
+  }
+  var bm1Avg=avgBotErr("bm1"),bm2Avg=avgBotErr("bm2"),bm3Avg=avgBotErr("bm3"),cbAvg=avgBotErr("consensusBot");
+
   var summaryCards='<div class="g4" style="margin-bottom:0">'+
     avgCard("MVRV Upside",m1Avg,"avg error · completed cycles")+
     avgCard("Halving Mult.",m2Avg,"avg error · completed cycles")+
     avgCard("ATH Mult.",m3Avg,"avg error · completed cycles")+
     avgCard("MVRV × RC",m4Avg,"avg error · completed cycles")+
   '</div>';
+
+  var bottomSummaryCards='<div class="g4" style="margin-bottom:0">'+
+    avgCard("MVRV Downside",bm1Avg,"avg error · completed cycles")+
+    avgCard("Halving Floor",bm2Avg,"avg error · completed cycles")+
+    avgCard("Bottom Mult.",bm3Avg,"avg error · completed cycles")+
+    avgCard("Bot Consensus",cbAvg,"avg error · completed cycles")+
+  '</div>';
+
+  var bm1Data=allResults.map(function(r){return r.bm1;});
+  var bm2Data=allResults.map(function(r){return r.bm2;});
+  var bm3Data=allResults.map(function(r){return r.bm3;});
+  var consBotData=allResults.map(function(r){return r.consensusBot;});
+  var actualBotData=allResults.map(function(r){return r.actualBottom;});
 
   var completedLabels=completedResults.map(function(r){return'C'+r.cycle;}).join(', ');
   var currentCycleLabel='C'+s.last.cycle;
@@ -2103,7 +2476,7 @@ function buildBacktest(){
     'Error = (predicted − actual) / actual × 100. Green = within 20%, amber = 20–50%, red = &gt;50% miss.'+
   '</div>';
 
-  document.getElementById("p10").innerHTML=
+  document.getElementById("p11").innerHTML=
     '<style>'+
       '.bt-model-block{background:var(--surface);border:.5px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:16px}'+
       '.bt-model-header{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 18px;background:var(--surface2);border-bottom:.5px solid var(--border);gap:8px;flex-wrap:wrap}'+
@@ -2147,6 +2520,11 @@ function buildBacktest(){
         '<th style="color:'+CC.amber+'">ATH Mult.</th>'+
         '<th style="color:'+CC.accent+'">MVRV × RC</th>'+
         '<th style="color:'+CC.text+'">Consensus</th>'+
+        '<th style="color:var(--muted)">Actual Bottom</th>'+
+        '<th style="color:'+CC.teal+'">BM1 Downside</th>'+
+        '<th style="color:'+CC.amber+'">BM2 Halving</th>'+
+        '<th style="color:'+CC.red+'">BM3 Bottom Mult.</th>'+
+        '<th style="color:'+CC.text+'">Bot Consensus</th>'+
       '</tr></thead><tbody>'+heatmapRows+'</tbody></table></div>'+
       '<div style="font-size:0.8rem;color:var(--faint);margin-top:10px">🔄 = current cycle · ⬆ = highest price seen so far (cycle not confirmed over). Green &lt;20% error · Amber 20–50% · Red &gt;50%</div>'+
     '</div>'+
@@ -2156,10 +2534,24 @@ function buildBacktest(){
     modelDetailBlock("m3","ATH Multiplier",CC.amber,"Previous cycle ATH × log-decay ATH ratio (using only prior cycle ratios)")+
     modelDetailBlock("m4","MVRV × Realized Cap",CC.accent,"Price at cycle start ÷ MVRV × log-projected cycle peak MVRV (prior data only)")+
     modelDetailBlock("consensus","Consensus (IQR midpoint)","#e8e6f0","Median of models after IQR outlier exclusion")+
-    '<div class="info">All projections are computed using only data available before each cycle began — no lookahead. C4 remains open and its &quot;error&quot; is measured against the current ATH so far. Not financial advice.</div>';
+    '<div style="font-size:0.9rem;color:var(--muted);margin:24px 0 12px;letter-spacing:.06em;text-transform:uppercase">▼ Bottom predictions vs actual</div>'+
+    '<div class="chart-card" style="margin-bottom:18px">'+
+      '<div class="chart-title">Accuracy summary — average bottom prediction error per model (completed cycles only)</div>'+
+      bottomSummaryCards+
+      '<div style="font-size:0.8rem;color:var(--faint);margin-top:12px">Positive % = overshot floor (predicted too high). Negative % = undershot floor (predicted too low). Lower absolute value = more accurate.</div>'+
+    '</div>'+
+    '<div class="chart-card" style="margin-bottom:18px">'+
+      '<div class="chart-title">Bottom prediction vs Actual price bottom — all models · all cycles</div>'+
+      makeCanvas("c10b",280)+
+    '</div>'+
+    modelDetailBlock("bm1","MVRV Downside",CC.teal,"Price at MVRV trough × median further downside (using only prior cycles)","actualBottom")+
+    modelDetailBlock("bm2","Halving Floor Ratio",CC.amber,"Price at halving × log-decay floor ratio fitted on prior cycles","actualBottom")+
+    modelDetailBlock("bm3","Bottom Multiplier",CC.red,"Previous cycle bottom × log-decay multiplier (using only prior cycle ratios)","actualBottom")+
+    modelDetailBlock("consensusBot","Bot Consensus (IQR midpoint)","#2dd4bf","Median of bottom models after IQR outlier exclusion","actualBottom")+
+    '<div class="info">All projections are computed using only data available before each cycle began — no lookahead. C4 remains open and its error is measured against the current price low so far. Not financial advice.</div>';
 
-  // Grouped bar chart
-  destroyChart("c10a");
+  // Grouped bar chart — peaks
+  destroyChart("c10a");destroyChart("c10b");
   var barLabels=cycleLabels;
   CHARTS.c10a=new Chart(document.getElementById("c10a"),{
     type:"bar",
@@ -2172,6 +2564,37 @@ function buildBacktest(){
         {label:"ATH Mult.",data:m3Data,backgroundColor:CC.amber+"66",borderRadius:4,order:3},
         {label:"MVRV × RC",data:m4Data,backgroundColor:CC.accent+"66",borderRadius:4,order:4},
         {label:"Consensus",data:consData,type:"line",borderColor:CC.text+"cc",borderWidth:2,borderDash:[5,3],pointRadius:5,pointBackgroundColor:CC.text,fill:false,order:-1}
+      ]
+    },
+    options:withLegend(Object.assign({},chartDefs(),{
+      scales:{
+        x:chartDefs().scales.x,
+        y:Object.assign({},chartDefs().scales.y,{
+          ticks:Object.assign({},chartDefs().scales.y.ticks,{callback:function(v){return"$"+v.toLocaleString()}}),
+          title:{display:true,text:"Price (USD)",color:CC.muted,font:{size:13}}
+        })
+      },
+      plugins:Object.assign({},withLegend(chartDefs()).plugins,{
+        tooltip:{callbacks:{label:function(ctx){
+          var v=ctx.parsed.y;
+          if(v==null)return ctx.dataset.label+": N/A";
+          return ctx.dataset.label+": $"+Math.round(v).toLocaleString();
+        }}}
+      })
+    }))
+  });
+
+  // Grouped bar chart — bottoms
+  CHARTS.c10b=new Chart(document.getElementById("c10b"),{
+    type:"bar",
+    data:{
+      labels:barLabels,
+      datasets:[
+        {label:"Actual Bottom",data:actualBotData,backgroundColor:CC.teal+"aa",borderRadius:4,order:0},
+        {label:"MVRV Downside",data:bm1Data,backgroundColor:CC.teal+"33",borderRadius:4,order:1},
+        {label:"Halving Floor",data:bm2Data,backgroundColor:CC.amber+"55",borderRadius:4,order:2},
+        {label:"Bottom Mult.",data:bm3Data,backgroundColor:CC.red+"44",borderRadius:4,order:3},
+        {label:"Bot Consensus",data:consBotData,type:"line",borderColor:CC.teal+"cc",borderWidth:2,borderDash:[5,3],pointRadius:5,pointBackgroundColor:CC.teal,fill:false,order:-1}
       ]
     },
     options:withLegend(Object.assign({},chartDefs(),{
