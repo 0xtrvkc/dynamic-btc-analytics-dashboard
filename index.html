@@ -1661,6 +1661,8 @@ function exportSummary(){
 
   if(hasPriceData){
     hr("PRICE PEAK DIVERGENCE — MVRV lead/lag vs BTC price ATH");
+    var xmedFn=function(arr){if(!arr.length)return null;var s2=arr.slice().sort(function(a,b){return a-b});var m=Math.floor(s2.length/2);return s2.length%2?s2[m]:(s2[m-1]+s2[m])/2;};
+    var allRemainingUpsides=[],allPeakDaysDiffs=[];
     s.availCycles.forEach(function(c){
       var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price});
       if(!sub.length)return;
@@ -1669,13 +1671,53 @@ function exportSummary(){
       if(!mvrvPeak)return;
       var daysDiff=Math.round((new Date(best.dateStr)-new Date(mvrvPeak.peakDate))/(1000*60*60*24));
       var divPct=((best.mvrv-mvrvPeak.peak)/mvrvPeak.peak*100);
+      var priceAtMvrvPeak=PRICE_MAP[mvrvPeak.peakDate];
+      var remainingUpside=priceAtMvrvPeak&&best.price?((best.price-priceAtMvrvPeak)/priceAtMvrvPeak*100):null;
+      allPeakDaysDiffs.push(daysDiff);
+      if(remainingUpside!==null)allRemainingUpsides.push(remainingUpside);
       lines.push("");lines.push("Cycle "+c+":");
       row("  BTC ATH","$"+Math.round(best.price).toLocaleString()+" on "+best.dateStr);
       row("  MVRV at price ATH",best.mvrv.toFixed(3));
       row("  MVRV own peak",mvrvPeak.peak.toFixed(3)+" on "+mvrvPeak.peakDate);
       row("  MVRV drawdown at price ATH",divPct.toFixed(1)+"%");
+      if(priceAtMvrvPeak)row("  Price at MVRV peak","$"+Math.round(priceAtMvrvPeak).toLocaleString());
+      if(remainingUpside!==null)row("  Remaining upside after MVRV peaked","+"+remainingUpside.toFixed(0)+"%");
       row("  Lead/lag",daysDiff>0?"Price peaked "+daysDiff+"d AFTER MVRV":daysDiff<0?"Price peaked "+Math.abs(daysDiff)+"d BEFORE MVRV":"Same day");
     });
+    if(allPeakDaysDiffs.length){
+      lines.push("");
+      row("  Median lead-lag (all cycles)",xmedFn(allPeakDaysDiffs)+"d");
+      if(allRemainingUpsides.length)row("  Median remaining upside after MVRV peaked","+"+xmedFn(allRemainingUpsides).toFixed(0)+"%");
+    }
+
+    hr("PRICE BOTTOM DIVERGENCE — MVRV lead/lag vs BTC price low");
+    var allFurtherDownsides=[],allBotDaysDiffs=[];
+    s.availCycles.forEach(function(c){
+      var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price});
+      if(!sub.length)return;
+      var worst=sub.reduce(function(a,b){return b.price<a.price?b:a});
+      var mvrvTrough=s.cycleData.find(function(cd){return cd.cycle===c});
+      if(!mvrvTrough)return;
+      var daysDiff=Math.round((new Date(worst.dateStr)-new Date(mvrvTrough.troughDate))/(1000*60*60*24));
+      var divPct=((worst.mvrv-mvrvTrough.trough)/mvrvTrough.trough*100);
+      var priceAtMvrvTrough=PRICE_MAP[mvrvTrough.troughDate];
+      var furtherDownside=priceAtMvrvTrough&&worst.price?((worst.price-priceAtMvrvTrough)/priceAtMvrvTrough*100):null;
+      allBotDaysDiffs.push(daysDiff);
+      if(furtherDownside!==null)allFurtherDownsides.push(furtherDownside);
+      lines.push("");lines.push("Cycle "+c+":");
+      row("  BTC price low","$"+Math.round(worst.price).toLocaleString()+" on "+worst.dateStr);
+      row("  MVRV at price low",worst.mvrv.toFixed(3));
+      row("  MVRV own trough",mvrvTrough.trough.toFixed(3)+" on "+mvrvTrough.troughDate);
+      row("  MVRV recovery at price low","+"+divPct.toFixed(1)+"%");
+      if(priceAtMvrvTrough)row("  Price at MVRV trough","$"+Math.round(priceAtMvrvTrough).toLocaleString());
+      if(furtherDownside!==null)row("  Further downside after MVRV troughed",furtherDownside.toFixed(0)+"%");
+      row("  Lead/lag",daysDiff>0?"Price bottomed "+daysDiff+"d AFTER MVRV":daysDiff<0?"Price bottomed "+Math.abs(daysDiff)+"d BEFORE MVRV":"Same day");
+    });
+    if(allBotDaysDiffs.length){
+      lines.push("");
+      row("  Median lead-lag (all cycles)",xmedFn(allBotDaysDiffs)+"d");
+      if(allFurtherDownsides.length)row("  Median further downside after MVRV troughed",xmedFn(allFurtherDownsides).toFixed(0)+"%");
+    }
   }
 
   hr("REGRESSION PROJECTIONS — Cycle peak & trough MVRV");
@@ -1689,101 +1731,129 @@ function exportSummary(){
   }
 
   if(hasPriceData){
-    hr("PRICE PROJECTIONS — 4-Model consensus (current cycle)");
+    hr("PRICE PROJECTIONS — Ceiling & Floor consensus (current cycle)");
     // Use runBacktest() as the single source of truth — same logic as the Backtest tab
     var btData=runBacktest();
     var curResult=btData.allResults.find(function(r){return r.isCurrent;});
+    function xoutlier(val,arr){if(arr.length<4)return false;var so=arr.slice().sort(function(a,b){return a-b});var q1=so[Math.floor(so.length*0.25)];var q3=so[Math.floor(so.length*0.75)];var iqr=q3-q1;return val<q1-1.5*iqr||val>q3+1.5*iqr;}
+    function xmed(arr){if(!arr.length)return null;var sorted=arr.slice().sort(function(a,b){return a-b});var mid=Math.floor(sorted.length/2);return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;}
     if(curResult){
       var curHP=curResult.halvingPrice;
-      var models=[
+      lines.push("");
+      lines.push("  --- CEILING MODELS ---");
+      var ceilModels=[
         {name:"MVRV Upside",price:curResult.m1},
         {name:"Halving Multiplier",price:curResult.m2},
         {name:"ATH Multiplier",price:curResult.m3},
-        {name:"MVRV × Realized Cap",price:curResult.m4}
+        {name:"MVRV x Realized Cap",price:curResult.m4}
       ];
-      var validPrices=models.filter(function(m){return m.price!=null}).map(function(m){return m.price;});
-      function xoutlier(val,arr){if(arr.length<4)return false;var so=arr.slice().sort(function(a,b){return a-b});var q1=so[Math.floor(so.length*0.25)];var q3=so[Math.floor(so.length*0.75)];var iqr=q3-q1;return val<q1-1.5*iqr||val>q3+1.5*iqr;}
-      function xmed(arr){if(!arr.length)return null;var sorted=arr.slice().sort(function(a,b){return a-b});var mid=Math.floor(sorted.length/2);return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;}
-      models.forEach(function(m){
+      var validCeil=ceilModels.filter(function(m){return m.price!=null}).map(function(m){return m.price;});
+      ceilModels.forEach(function(m){
         if(m.price==null)return;
-        row("  "+m.name,"$"+Math.round(m.price).toLocaleString()+(xoutlier(m.price,validPrices)?" [outlier — excluded]":" [included]"));
+        row("  "+m.name,"$"+Math.round(m.price).toLocaleString()+(xoutlier(m.price,validCeil)?" [outlier — excluded]":" [included]"));
       });
       lines.push("");
-      var cleanPrices=validPrices.filter(function(v){return!xoutlier(v,validPrices);});
-      if(cleanPrices.length){
-        row("  Consensus midpoint","$"+Math.round(xmed(cleanPrices)).toLocaleString());
-        row("  Consensus range","$"+Math.round(Math.min.apply(null,cleanPrices)).toLocaleString()+" – $"+Math.round(Math.max.apply(null,cleanPrices)).toLocaleString());
+      var cleanCeil=validCeil.filter(function(v){return!xoutlier(v,validCeil);});
+      if(cleanCeil.length){
+        row("  Ceiling consensus midpoint","$"+Math.round(xmed(cleanCeil)).toLocaleString());
+        row("  Ceiling consensus range","$"+Math.round(Math.min.apply(null,cleanCeil)).toLocaleString()+" – $"+Math.round(Math.max.apply(null,cleanCeil)).toLocaleString());
       }
-      if(curHP)row("  BTC price at current cycle halving","$"+Math.round(curHP).toLocaleString());
+      lines.push("");
+      lines.push("  --- FLOOR MODELS ---");
+      var floorModels=[
+        {name:"MVRV Downside",price:curResult.bm1},
+        {name:"Halving Floor Ratio",price:curResult.bm2},
+        {name:"Bottom Multiplier",price:curResult.bm3}
+      ];
+      var validFloor=floorModels.filter(function(m){return m.price!=null}).map(function(m){return m.price;});
+      floorModels.forEach(function(m){
+        if(m.price==null)return;
+        row("  "+m.name,"$"+Math.round(m.price).toLocaleString()+(xoutlier(m.price,validFloor)?" [outlier — excluded]":" [included]"));
+      });
+      lines.push("");
+      var cleanFloor=validFloor.filter(function(v){return!xoutlier(v,validFloor);});
+      if(cleanFloor.length){
+        row("  Floor consensus midpoint","$"+Math.round(xmed(cleanFloor)).toLocaleString());
+        row("  Floor consensus range","$"+Math.round(Math.min.apply(null,cleanFloor)).toLocaleString()+" – $"+Math.round(Math.max.apply(null,cleanFloor)).toLocaleString());
+      }
+      if(curHP){ lines.push(""); row("  BTC price at current cycle halving","$"+Math.round(curHP).toLocaleString()); }
     } else {
       lines.push("  No current cycle data available.");
     }
     lines.push("  * Outliers excluded via IQR. Not financial advice.");
 
     // ---- Backtest accuracy section ----
-    hr("BACKTEST — How accurate were the models on past cycles?");
-    lines.push("Each model is re-run using ONLY data available before that cycle started.");
-    lines.push("This simulates a real-time prediction — no hindsight, no future data.");
+    hr("BACKTEST — Ceiling & Floor model accuracy on past cycles");
+    lines.push("Each model is re-run using ONLY data available before each cycle began — no lookahead.");
     lines.push("Error = (predicted − actual) / actual × 100.");
-    lines.push("  Positive = overshot (model was too optimistic)");
-    lines.push("  Negative = undershot (model was too conservative)");
-    lines.push("  Within ±20% = good · ±20–50% = ok · >50% = poor");
+    lines.push("  Positive = overshot  |  Negative = undershot  |  Within ±20% = good · ±40% = ok · >40% = poor");
     lines.push("");
 
-    var modelKeys=[
-      {key:"m1",label:"MVRV Upside",desc:"Price at MVRV peak × median remaining upside from prior cycles"},
-      {key:"m2",label:"Halving Multiplier",desc:"Price at halving × log-decay multiplier fitted on prior cycles"},
-      {key:"m3",label:"ATH Multiplier",desc:"Previous cycle ATH × log-decay ATH ratio from prior cycles"},
-      {key:"m4",label:"MVRV × Realized Cap",desc:"Cycle-start price ÷ MVRV × log-projected peak MVRV from prior cycles"},
-      {key:"consensus",label:"Consensus (IQR midpoint)",desc:"Median of the above models after IQR outlier exclusion"}
+    var ceilKeys=[
+      {key:"m1",label:"MVRV Upside",desc:"Price at MVRV peak x median remaining upside from prior cycles"},
+      {key:"m2",label:"Halving Multiplier",desc:"Price at halving x log-decay multiplier fitted on prior cycles"},
+      {key:"m3",label:"ATH Multiplier",desc:"Previous cycle ATH x log-decay ATH ratio from prior cycles"},
+      {key:"m4",label:"MVRV x Realized Cap",desc:"Cycle-start price / MVRV x log-projected peak MVRV from prior cycles"},
+      {key:"consensus",label:"Ceiling Consensus",desc:"IQR midpoint of ceiling models"}
+    ];
+    var floorKeys=[
+      {key:"bm1",label:"MVRV Downside",desc:"Price at MVRV trough x median further downside from prior cycles"},
+      {key:"bm2",label:"Halving Floor Ratio",desc:"Price at halving x log-decay floor ratio from prior cycles"},
+      {key:"bm3",label:"Bottom Multiplier",desc:"Previous cycle bottom x log-decay multiplier from prior cycles"},
+      {key:"consensusBot",label:"Floor Consensus",desc:"IQR midpoint of floor models"}
     ];
 
-    // Overall accuracy summary per model
-    lines.push("--- Model accuracy summary (completed cycles only) ---");
-    lines.push("");
-    modelKeys.forEach(function(mk){
-      var errs=btData.completedResults.map(function(r){
-        var pred=r[mk.key],actual=r.actualATH;
-        return pred&&actual?((pred-actual)/actual*100):null;
-      }).filter(function(x){return x!==null;});
-      if(!errs.length){
-        row("  "+mk.label,"not enough data");
+    function modelAccuracyBlock(keys, actualKey, sectionLabel){
+      lines.push("--- "+sectionLabel+" (completed cycles only) ---");
+      lines.push("");
+      keys.forEach(function(mk){
+        var errs=btData.completedResults.map(function(r){
+          var pred=r[mk.key], actual=r[actualKey];
+          return pred&&actual?((pred-actual)/actual*100):null;
+        }).filter(function(x){return x!==null;});
+        if(!errs.length){ row("  "+mk.label,"not enough data"); lines.push("    "+mk.desc); lines.push(""); return; }
+        var avgE=errs.reduce(function(a,b){return a+b;},0)/errs.length;
+        var absAvgE=errs.map(Math.abs).reduce(function(a,b){return a+b;},0)/errs.length;
+        var quality=absAvgE<20?"good":absAvgE<40?"ok":"poor";
+        row("  "+mk.label,(avgE>0?"+":"")+avgE.toFixed(1)+"% avg error · "+absAvgE.toFixed(1)+"% avg absolute · "+quality);
         lines.push("    "+mk.desc);
         lines.push("");
-        return;
-      }
-      var avgE=errs.reduce(function(a,b){return a+b;},0)/errs.length;
-      var absAvgE=errs.map(Math.abs).reduce(function(a,b){return a+b;},0)/errs.length;
-      var sign=avgE>0?"+":"";
-      var quality=absAvgE<20?"good":absAvgE<50?"ok":"poor";
-      row("  "+mk.label,sign+avgE.toFixed(1)+"% avg error · "+absAvgE.toFixed(1)+"% avg absolute error · "+quality);
-      lines.push("    "+mk.desc);
-      lines.push("");
-    });
+      });
+    }
+
+    modelAccuracyBlock(ceilKeys,"actualATH","CEILING model accuracy");
+    modelAccuracyBlock(floorKeys,"actualBottom","FLOOR model accuracy");
 
     // Per-cycle breakdown
     lines.push("--- Per-cycle breakdown ---");
     lines.push("");
     btData.allResults.forEach(function(r){
-      lines.push("  C"+r.cycle+(r.isCurrent?" (current — cycle not confirmed over)":"")+":");
+      lines.push("  C"+r.cycle+(r.isCurrent?" (current — open)":"")+":");
       if(r.halvingPrice)row("    Price at halving","$"+Math.round(r.halvingPrice).toLocaleString());
-      row("    "+(r.isCurrent?"ATH so far":"Actual ATH"),"$"+Math.round(r.actualATH).toLocaleString());
       lines.push("");
-      modelKeys.forEach(function(mk){
-        var pred=r[mk.key];
-        if(pred==null){lines.push("    "+mk.label+": — (not enough prior data)");return;}
+      lines.push("    CEILING:");
+      row("      "+(r.isCurrent?"ATH so far":"Actual ATH"),r.actualATH?"$"+Math.round(r.actualATH).toLocaleString():"—");
+      ceilKeys.forEach(function(mk){
+        var pred=r[mk.key]; if(pred==null){lines.push("      "+mk.label+": — (insufficient prior data)");return;}
         var err=r.actualATH?((pred-r.actualATH)/r.actualATH*100):null;
-        var errStr=err!==null?(err>0?"+":"")+err.toFixed(1)+"% "+(err>0?"overshot":"undershot"):"—";
-        var quality=err!==null?(Math.abs(err)<20?" ✓ good":Math.abs(err)<50?" ~ ok":" ✗ poor"):"";
-        lines.push("    "+mk.label+": $"+Math.round(pred).toLocaleString()+(err!==null?" · "+errStr+quality:"")+(r.isCurrent?" · live projection":""));
+        var tag=err!==null?(Math.abs(err)<20?" v":Math.abs(err)<40?" ~":" x"):"";
+        lines.push("      "+mk.label+": $"+Math.round(pred).toLocaleString()+(err!==null?" · "+(err>0?"+":"")+err.toFixed(1)+"%"+tag+(r.isCurrent?" (live)":""):""));
+      });
+      lines.push("");
+      lines.push("    FLOOR:");
+      row("      "+(r.isCurrent?"Low so far":"Actual low"),r.actualBottom?"$"+Math.round(r.actualBottom).toLocaleString():"—");
+      floorKeys.forEach(function(mk){
+        var pred=r[mk.key]; if(pred==null){lines.push("      "+mk.label+": — (insufficient prior data)");return;}
+        var err=r.actualBottom?((pred-r.actualBottom)/r.actualBottom*100):null;
+        var tag=err!==null?(Math.abs(err)<20?" v":Math.abs(err)<40?" ~":" x"):"";
+        lines.push("      "+mk.label+": $"+Math.round(pred).toLocaleString()+(err!==null?" · "+(err>0?"+":"")+err.toFixed(1)+"%"+tag+(r.isCurrent?" (live)":""):""));
       });
       lines.push("");
     });
 
-    lines.push("  * Backtest projections use only data from prior cycles — no lookahead bias.");
-    lines.push("  * Current cycle error is measured against highest price seen so far, not the final ATH.");
+    lines.push("  * No lookahead — only prior cycle data used per projection.");
+    lines.push("  * Current cycle errors measured against ATH/low seen so far, not the final confirmed value.");
   }
-
   hr("HALVING DATES");
   var now=new Date();
   HALVINGS.forEach(function(h,i){
