@@ -1,34 +1,85 @@
-# Dynamic BTC Analytics Dashboard
+# MVRV Analytics — BTC Dashboard
 
-A responsive, client-side Bitcoin tracking workspace explicitly optimized for identifying cyclical asset macro extensions via the **MVRV Ratio** (Market Value to Realized Value) and Rolling Volatility Distributions.
+> Client-side Bitcoin cycle analysis tool. Drop a JSON file, get instant on-chain insights. No backend, no tracking, no BS.
 
-Live Deployment: **https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/**
-
----
-
-## Architectural Layout Data Streams
-
-This platform uses a decoupled file architecture to process on-chain models securely with zero tracking overhead:
-1. **Automated Price Database Updates (Daily CRON Pipeline)**: A GitHub Actions workflow runs systematically daily to grab standard closing data vectors using `generate_price_json.py`. This automatically refreshes and commits updates directly into `btc_daily_price.json`.
-2. **On-Chain Metric Parsing (Manual Client Import)**: MVRV matrix data points are handled on-demand locally in browser memory. Uploaded files stay isolated within the application run cycle context.
+🔗 **[Live Demo](https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/)**
 
 ---
 
-## Operational Guide
+## What it does
 
-### 1. Extract Target Data Model
-Navigate to the public charting directory at [blockchain.com/explorer/charts/mvrv](https://www.blockchain.com/explorer/charts/mvrv). Set your tracking boundary configuration to **ALL**, and select **Download JSON** from the sub-menu tracking bar.
+Upload your MVRV data exported from blockchain.com and the dashboard computes:
 
-### 2. Upload and Run Dashboard
-Open your local deployment url or your production GitHub Pages endpoint. Drop your file asset inside the configuration window to parse elements automatically.
+- **Z-Score** — rolling 365-day normalized MVRV with capitulation / caution thresholds
+- **Cycle Overlay** — all four Bitcoin halving cycles overlaid on the same axis
+- **Momentum** — 30-day vs 90-day rate-of-change signals
+- **Drawdown & MA Crossovers** — peak drawdown tracking and moving average crossover signals
+- **Projections** — four independent price target models (MVRV Upside, Halving Multiplier, ATH Multiplier, MVRV × Realized Cap) with IQR consensus
+- **Backtest** — no-lookahead validation of every model across completed cycles, with error heatmap and per-model accuracy cards
 
 ---
 
-## Repository Cleanliness Manifest
+## Architecture
 
-| File System Target | Operational Focus Status |
-| :--- | :--- |
-| `index.html` | Client Interface. Handles context loops, memory lifecycle mapping, and chart creation. |
-| `generate_price_json.py` | Executed via GitHub runner to build current day indexes. |
-| `btc_daily_price.json` | Parsed array matrix tracking closing valuations over time. |
-| `.github/workflows/` | GitHub Action configuration files controlling pipeline automation properties. |
+| File | Role |
+|---|---|
+| `index.html` | Entire client app — parsing, state, charts |
+| `btc_daily_price.json` | Daily BTC closes — auto-updated by CI |
+| `generate_price_json.py` | Script run by GitHub Actions to refresh price data |
+| `.github/workflows/` | Daily CRON pipeline config |
+
+**Price data** is updated automatically every day via GitHub Actions — no manual intervention needed.  
+**MVRV data** is loaded client-side from a JSON you export manually (stays in your browser, never uploaded anywhere).
+
+---
+
+## Usage
+
+**Get your MVRV data:**
+
+1. Go to [blockchain.com/explorer/charts/mvrv](https://www.blockchain.com/explorer/charts/mvrv)
+2. Set timeframe to **ALL** → **Download JSON**
+
+**Run the dashboard:**
+
+1. Open the [live site](https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/) (or `index.html` locally)
+2. Drop the downloaded JSON onto the upload zone
+3. Explore the 12 analysis tabs
+
+---
+
+## Projection Models
+
+| Model | Method |
+|---|---|
+| MVRV Upside | Price at MVRV peak × median remaining upside from prior cycles |
+| Halving Multiplier | Price at halving × log-decay projected multiplier |
+| ATH Multiplier | Previous ATH × log-decay ATH ratio |
+| MVRV × Realized Cap | Cycle-start price ÷ MVRV × projected peak MVRV |
+| **Consensus** | IQR-trimmed median of the four above |
+
+Backtesting uses only data available *before* each cycle began — no lookahead bias.
+
+---
+
+## Stack
+
+Vanilla JS · [Chart.js 4.4](https://www.chartjs.org/) · [98.css](https://jdan.github.io/98.css/) · GitHub Actions
+
+---
+
+## Config
+
+```js
+const CONFIG = {
+  ZSCORE_WINDOW: 365,
+  ZSCORE_CAPITULATION: -1.5,
+  ZSCORE_CAUTION: 1.0,
+  ROC_SHORT: 30,
+  ROC_LONG: 90,
+};
+```
+
+---
+
+Not financial advice.
