@@ -590,6 +590,31 @@ function statCard(label, val, sub, color) {
 }
 
 var PRICE_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/btc_daily_price.json";
+var MVRV_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/mvrv.json";
+
+function autoLoadMVRV(){
+  var errEl=document.getElementById("upload-error");
+  fetch(MVRV_JSON_URL+"?t="+Date.now())
+    .then(function(res){
+      if(!res.ok)throw new Error("HTTP "+res.status);
+      return res.json();
+    })
+    .then(function(json){
+      var arr=json.mvrv||json.values||null;
+      if(!arr||!arr.length)throw new Error("Couldn't find mvrv data array in JSON.");
+      var rows=arr.map(function(pt){
+        var ts=+pt.x,v=+pt.y;
+        if(!ts||isNaN(v)||v<=0)return null;
+        return{date:new Date(ts>1e10?ts:ts*1000),mvrv:v};
+      }).filter(Boolean).sort(function(a,b){return a.date-b.date});
+      if(rows.length<10)throw new Error("Not enough valid data points.");
+      if(priceFetchDone){loadData(rows);}else{pendingRows=rows;}
+    })
+    .catch(function(err){
+      errEl.textContent="Auto-load failed: "+err.message+" — please upload manually.";
+      errEl.style.display="block";
+    });
+}
 
 var pendingRows=null;
 var priceFetchDone=false;
@@ -666,6 +691,7 @@ function joinPrice(){
 }
 
 fetchPriceData();
+autoLoadMVRV();
 
 function enrichData(rows) {
   var mvrvs = rows.map(function(r) { return r.mvrv });
