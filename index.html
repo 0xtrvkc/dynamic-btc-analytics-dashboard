@@ -941,7 +941,85 @@ function buildZScore(){
 
 function buildMomentum(){
   var l=STATS.last;
-  document.getElementById("p2").innerHTML='<div class="g3">'+[statCard("ROC 30d",(l.roc30!=null?l.roc30.toFixed(1):"—")+"%","",l.roc30>0?CC.green:CC.red),statCard("ROC 90d",(l.roc90!=null?l.roc90.toFixed(1):"—")+"%","",l.roc90>0?CC.green:CC.red),statCard("MA signal",l.ma20>l.ma50?"Bullish":"Bearish","MA20 vs MA50",l.ma20>l.ma50?CC.green:CC.red)].join("")+'</div><div class="chart-card"><div class="chart-title">30-day and 90-day rate of change (%)'+(hasPriceData?" · BTC price on right axis":"")+'</div>'+makeCanvas("c2",300)+'</div>';
+
+  // --- Dynamic interpretation helpers ---
+  function roc30Signal(v){
+    if(v==null)return{label:"No data",color:CC.muted,detail:"Rate of change data is unavailable."};
+    if(v> 60)return{label:"Overheating",color:CC.red,detail:"30-day momentum is extremely elevated — historically this pace has often preceded short-term pullbacks."};
+    if(v> 25)return{label:"Strong",color:CC.green,detail:"30-day momentum is well above average, indicating broad buying pressure over the past month."};
+    if(v>  5)return{label:"Positive",color:CC.green,detail:"Moderate positive momentum over 30 days. Price is trending upward at a measured pace."};
+    if(v>  -5)return{label:"Neutral",color:CC.amber,detail:"30-day momentum is close to zero — price has moved sideways. No clear short-term direction."};
+    if(v>-25)return{label:"Weak",color:CC.red,detail:"30-day momentum is negative. Selling pressure has dominated over the past month."};
+    return{label:"Sharply down",color:CC.red,detail:"30-day momentum is deeply negative. This pace of decline has historically been a stress event."};
+  }
+  function roc90Signal(v){
+    if(v==null)return{label:"No data",color:CC.muted,detail:"90-day rate of change data unavailable."};
+    if(v>100)return{label:"Parabolic",color:CC.red,detail:"90-day momentum is parabolic. Historically, moves of this scale have resolved with sharp corrections."};
+    if(v> 40)return{label:"Strong trend",color:CC.green,detail:"A strong 3-month trend is in place. Sustained upward momentum over 90 days points to a maturing bull run."};
+    if(v>  5)return{label:"Positive trend",color:CC.green,detail:"Gradual positive trend over 90 days. The longer-term bias is upward but not extreme."};
+    if(v>  -5)return{label:"Sideways",color:CC.amber,detail:"3-month momentum is roughly flat. No dominant trend has established itself over the medium term."};
+    if(v>-40)return{label:"Downtrend",color:CC.red,detail:"Negative 90-day momentum points to a sustained downtrend. Bulls have not been able to reclaim control."};
+    return{label:"Severe downtrend",color:CC.red,detail:"90-day momentum is severely negative, consistent with deep bear market phases."};
+  }
+  function maSignal(ma20,ma50){
+    if(!ma20||!ma50)return{label:"No data",color:CC.muted,detail:"Moving average data unavailable."};
+    var spread=((ma20-ma50)/ma50*100).toFixed(1);
+    var dir=ma20>ma50?"above":"below";
+    var tone=ma20>ma50?CC.green:CC.red;
+    return{
+      label:ma20>ma50?"Bullish":"Bearish",
+      color:tone,
+      detail:"The 20-day MA is "+Math.abs(spread)+"% "+dir+" the 50-day MA. "+
+        (ma20>ma50
+          ? "A bullish golden-cross alignment — short-term average is leading, confirming upward price momentum."
+          : "A bearish dead-cross alignment — the shorter average is lagging behind, confirming that recent price action is weaker than the medium-term trend.")
+    };
+  }
+
+  var r30=roc30Signal(l.roc30);
+  var r90=roc90Signal(l.roc90);
+  var ma=maSignal(l.ma20,l.ma50);
+
+  // Build rich stat cards with inline interpretation badges
+  function richStatCard(title,val,sig){
+    return'<div class="stat" style="position:relative">'+
+      '<div class="stat-label">'+title+'</div>'+
+      '<div class="stat-val" style="color:'+sig.color+'">'+val+'</div>'+
+      '<div style="margin-top:6px;display:inline-block;font-size:0.75rem;padding:2px 10px;border-radius:99px;background:'+sig.color+'22;color:'+sig.color+';border:1px solid '+sig.color+'55;font-weight:600;letter-spacing:.04em">'+sig.label+'</div>'+
+      '<div style="font-size:0.82rem;color:#000000;margin-top:8px;line-height:1.5">'+sig.detail+'</div>'+
+    '</div>';
+  }
+
+  // Momentum summary sentence
+  var trend;
+  var roc30v=l.roc30||0, roc90v=l.roc90||0;
+  if(roc30v>15&&roc90v>15) trend="short and medium-term momentum are both positive — the trend is broadly intact";
+  else if(roc30v>15&&roc90v<0) trend="short-term momentum has recovered but the 3-month trend is still negative — a potential early reversal signal";
+  else if(roc30v<0&&roc90v>15) trend="recent momentum has faded while the 3-month trend remains positive — a possible cooling-off period within a larger uptrend";
+  else if(roc30v<0&&roc90v<0) trend="both short and medium-term momentum are negative — bearish pressure is broad-based";
+  else trend="momentum signals are mixed — no clear directional conviction at this time";
+  var summaryHtml='<div class="info" style="margin-bottom:18px">'+
+    '<strong>📈 Momentum overview:</strong> As of the latest data point, '+trend+'. '+
+    'Rate of change (ROC) measures how much MVRV has moved over a rolling window. '+
+    'The MA signal compares the 20-day and 50-day moving averages of MVRV as a trend-direction filter. '+
+    'These are short-to-medium term signals — they complement, not replace, the MVRV Z-score for cycle positioning.'+
+  '</div>';
+
+  document.getElementById("p2").innerHTML=
+    summaryHtml+
+    '<div class="g3">'+
+      richStatCard("ROC 30d",(l.roc30!=null?l.roc30.toFixed(1):"—")+"%",r30)+
+      richStatCard("ROC 90d",(l.roc90!=null?l.roc90.toFixed(1):"—")+"%",r90)+
+      richStatCard("MA Signal",ma.label,ma)+
+    '</div>'+
+    '<div class="chart-card"><div class="chart-title">30-day and 90-day rate of change (%)'+(hasPriceData?" · BTC price on right axis":"")+'</div>'+makeCanvas("c2",300)+'</div>'+
+    '<div class="info" style="margin-top:4px;font-size:0.85rem">'+
+      '<strong>How to read this chart:</strong> '+
+      'ROC 30d (teal) captures near-term momentum — spikes above ~50% have historically marked local tops. '+
+      'ROC 90d (amber) smooths out noise and shows the broader trend — sustained readings above 40% have coincided with late-cycle acceleration. '+
+      'The zero line (black) is the key threshold: sustained moves below it indicate a loss of momentum. '+
+      (hasPriceData?"The BTC price overlay (right axis, green) lets you cross-reference momentum with actual price levels.":"")+
+    '</div>';
   destroyChart("c2");
   var cd=sample(DATA.filter(function(d){return d.roc30!==null&&d.roc90!==null}),CONFIG.SAMPLE_SIZE);
   var datasets=[{label:"ROC 30d",data:cd.map(function(d){return d.roc30}),borderColor:CC.teal,borderWidth:2,pointRadius:0,tension:.2,yAxisID:"y"},{label:"ROC 90d",data:cd.map(function(d){return d.roc90}),borderColor:CC.amber,borderWidth:2,pointRadius:0,tension:.2,yAxisID:"y"},{label:"0",data:cd.map(function(){return 0}),borderColor:"#000000",borderWidth:1,pointRadius:0,yAxisID:"y"}];
