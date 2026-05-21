@@ -16,7 +16,6 @@ async def main():
 
         captured = {}
 
-        # Intercept every JSON response — grab whichever one contains mvrv data
         async def on_response(response):
             url = response.url
             if "chart" not in url.lower() and "mvrv" not in url.lower():
@@ -27,7 +26,7 @@ async def main():
                     return
                 data = await response.json()
                 vals = data.get("values") or data.get("mvrv") or []
-                if len(vals) > 100:
+                if len(vals) > 1000:   # "All" has 4000+, 1Y only ~365
                     print(f"  ✓ Captured {len(vals)} points from: {url}")
                     captured["data"] = data
                     captured["url"]  = url
@@ -36,31 +35,35 @@ async def main():
 
         page.on("response", on_response)
 
-        print("Opening page (All timeframe)...")
+        print("Opening page...")
         await page.goto(CHART_URL, wait_until="domcontentloaded", timeout=60000)
+
+        # Small wait for page to settle before clicking
+        await asyncio.sleep(3)
 
         # Click "All" timeframe button
         try:
             await page.get_by_text("All", exact=True).first.click()
             print("Clicked 'All'")
+            captured.clear()   # discard any pre-click 1Y data
         except Exception as e:
             print(f"Could not click All: {e}")
 
-        # Wait for data to arrive AND stabilize (point count stops growing)
+        # Wait for data to arrive AND stabilize
         prev_count = 0
         stable_ticks = 0
-        for i in range(30):
+        for i in range(60):   # up to 60 seconds
             await asyncio.sleep(1)
             current_count = len((captured.get("data") or {}).get("values") or [])
             print(f"  waiting... {i+1}s | points: {current_count}")
-            if current_count > 100:
+            if current_count > 1000:
                 if current_count == prev_count:
                     stable_ticks += 1
-                    if stable_ticks >= 3:   # stable for 3 consecutive seconds → done
+                    if stable_ticks >= 3:
                         print("  Data stabilized.")
                         break
                 else:
-                    stable_ticks = 0        # still growing, reset
+                    stable_ticks = 0
             prev_count = current_count
 
         await browser.close()
