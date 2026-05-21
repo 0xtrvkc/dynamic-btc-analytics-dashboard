@@ -46,12 +46,22 @@ async def main():
         except Exception as e:
             print(f"Could not click All: {e}")
 
-        # Wait up to 15s for data to arrive
-        for i in range(15):
+        # Wait for data to arrive AND stabilize (point count stops growing)
+        prev_count = 0
+        stable_ticks = 0
+        for i in range(30):
             await asyncio.sleep(1)
-            if "data" in captured:
-                break
-            print(f"  waiting... {i+1}s")
+            current_count = len((captured.get("data") or {}).get("values") or [])
+            print(f"  waiting... {i+1}s | points: {current_count}")
+            if current_count > 100:
+                if current_count == prev_count:
+                    stable_ticks += 1
+                    if stable_ticks >= 3:   # stable for 3 consecutive seconds → done
+                        print("  Data stabilized.")
+                        break
+                else:
+                    stable_ticks = 0        # still growing, reset
+            prev_count = current_count
 
         await browser.close()
 
