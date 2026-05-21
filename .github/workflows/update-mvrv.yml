@@ -18,8 +18,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install requests
-        run: pip install requests
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
 
       - name: Fetch MVRV data
         run: python scrape_mvrv.py
