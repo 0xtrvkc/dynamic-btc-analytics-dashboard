@@ -1104,8 +1104,8 @@ function buildCycleOverlay(){
   });
 
   // Calculate "You are here" position
-  const currentCycle = cycleDatasets[cycleDatasets.length - 1];
-  const lastPoint = currentCycle.data[currentCycle.data.length - 1];
+  const currentCycle = cycleDatasets.length ? cycleDatasets[cycleDatasets.length - 1] : null;
+  const lastPoint = currentCycle && currentCycle.data.length ? currentCycle.data[currentCycle.data.length - 1] : null;
 
   var allDatasets = monthDatasets.concat(cycleDatasets);
 
@@ -1176,7 +1176,7 @@ function buildCycleOverlay(){
         }
       },
       annotation: {
-        annotations: {
+        annotations: lastPoint ? {
           youAreHereArrow: {
             type: 'line',
             xMin: lastPoint.x,
@@ -1195,8 +1195,8 @@ function buildCycleOverlay(){
               font: {size: 20, weight: 'bold', family: 'JetBrains Mono'},
               yAdjust: -10
             }
-          }
-        }
+          }        ← this was missing
+        } : {}
       }
     })
   }));
