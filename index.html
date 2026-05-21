@@ -601,13 +601,10 @@ function autoLoadMVRV(){
     .then(function(json){
       var arr=json.mvrv||json.values||null;
       if(!arr||!arr.length)throw new Error("Couldn't find mvrv data array in JSON.");
-      var cutoff=new Date("2012-01-01");
       var rows=arr.map(function(pt){
         var ts=+pt.x,v=+pt.y;
         if(!ts||isNaN(v)||v<=0)return null;
-        var d=new Date(ts>1e10?ts:ts*1000);
-        if(d<cutoff)return null;
-        return{date:d,mvrv:v};
+        return{date:new Date(ts>1e10?ts:ts*1000),mvrv:v};
       }).filter(Boolean).sort(function(a,b){return a.date-b.date});
       if(rows.length<10)throw new Error("Not enough valid data points.");
       if(priceFetchDone){loadData(rows);}else{pendingRows=rows;}
@@ -637,13 +634,10 @@ function handleFile(file){
       var json=JSON.parse(e.target.result);
       var arr=json.mvrv||json.values||null;
       if(!arr||!arr.length){errEl.textContent="Couldn't find mvrv data array in JSON.";errEl.style.display="block";return;}
-      var cutoff=new Date("2012-01-01");
       var rows=arr.map(function(pt){
         var ts=+pt.x,v=+pt.y;
         if(!ts||isNaN(v)||v<=0)return null;
-        var d=new Date(ts>1e10?ts:ts*1000);
-        if(d<cutoff)return null;
-        return{date:d,mvrv:v};
+        return{date:new Date(ts>1e10?ts:ts*1000),mvrv:v};
       }).filter(Boolean).sort(function(a,b){return a.date-b.date});
       if(rows.length<10){errEl.textContent="Not enough valid data points.";errEl.style.display="block";return;}
       if(priceFetchDone){loadData(rows);}else{pendingRows=rows;}
@@ -1105,9 +1099,9 @@ function buildCycleOverlay(){
     };
   });
 
-  // Calculate "You are here" position — guard against empty datasets
-  const currentCycle = cycleDatasets.length ? cycleDatasets[cycleDatasets.length - 1] : null;
-  const lastPoint = (currentCycle && currentCycle.data.length) ? currentCycle.data[currentCycle.data.length - 1] : null;
+  // Calculate "You are here" position
+  const currentCycle = cycleDatasets[cycleDatasets.length - 1];
+  const lastPoint = currentCycle.data[currentCycle.data.length - 1];
 
   var allDatasets = monthDatasets.concat(cycleDatasets);
 
@@ -1178,7 +1172,7 @@ function buildCycleOverlay(){
         }
       },
       annotation: {
-        annotations: lastPoint ? {
+        annotations: {
           youAreHereArrow: {
             type: 'line',
             xMin: lastPoint.x,
@@ -1198,7 +1192,7 @@ function buildCycleOverlay(){
               yAdjust: -10
             }
           }
-        } : {}
+        }
       }
     })
   }));
