@@ -2,8 +2,19 @@ import json, asyncio
 from pathlib import Path
 from playwright.async_api import async_playwright
 
-CHART_URL = "https://www.blockchain.com/explorer/charts/mvrv"
-OUT_FILE  = Path("mvrv.json")
+CHART_URL   = "https://www.blockchain.com/explorer/charts/mvrv"
+OUT_FILE    = Path("mvrv.json")
+MIN_VALID_Y = 0.44   # all-time legitimate MVRV bottom; anything below is bad data
+MAX_VALID_Y = 20     # MVRV is never > 20; higher means we grabbed a price chart
+
+
+def is_mvrv(vals: list) -> bool:
+    """Return True only if vals look like real MVRV ratios, not price data."""
+    if not vals:
+        return False
+    y_values = [v.get("y", 0) for v in vals]
+    return max(y_values) <= MAX_VALID_Y and len(vals) > 1000
+
 
 async def main():
     async with async_playwright() as p:
@@ -25,10 +36,13 @@ async def main():
                     return
                 data = await response.json()
                 vals = data.get("values") or data.get("mvrv") or []
-                if len(vals) > 1000:   # "All" has 4000+, 1Y only ~365
-                    print(f"  ✓ Captured {len(vals)} points from: {url}")
-                    captured["data"] = data
-                    captured["url"]  = url
+                if not is_mvrv(vals):
+                    print(f"  ✗ Skipped (not MVRV data, max y={max((v.get('y',0) for v in vals), default=0):.2f}): {url}")
+                    return
+                print(f"  ✓ Captured {len(vals)} MVRV points from: {url}")
+                captured["data"] = data
+                captured["vals"] = vals
+                captured["url"]  = url
             except Exception:
                 pass
 
@@ -36,24 +50,22 @@ async def main():
         print("Opening page...")
         await page.goto(CHART_URL, wait_until="domcontentloaded", timeout=60000)
 
-        # Small wait for page to settle before clicking
         await asyncio.sleep(3)
 
-        # Click "All" timeframe button
         try:
             await page.get_by_text("All", exact=True).first.click()
             print("Clicked 'All'")
-            captured.clear()   # discard any pre-click 1Y data
+            captured.clear()   # discard any pre-click data
         except Exception as e:
             print(f"Could not click All: {e}")
 
-        # Wait for data to arrive AND stabilize
+        # Wait for MVRV data to arrive and stabilize
         prev_count = 0
         stable_ticks = 0
-        for i in range(60):   # up to 60 seconds
+        for i in range(60):
             await asyncio.sleep(1)
-            current_count = len((captured.get("data") or {}).get("values") or [])
-            print(f"  waiting... {i+1}s | points: {current_count}")
+            current_count = len(captured.get("vals") or [])
+            print(f"  waiting... {i+1}s | mvrv points: {current_count}")
             if current_count > 1000:
                 if current_count == prev_count:
                     stable_ticks += 1
@@ -69,36 +81,39 @@ async def main():
         if "data" not in captured:
             raise RuntimeError("No MVRV data captured. The site may have changed its API.")
 
-        OUT_FILE.write_text(json.dumps(captured["data"], separators=(",", ":")))
-        print(f"Saved {OUT_FILE} ({OUT_FILE.stat().st_size:,} bytes) from {captured['url']}")
+        raw_data = captured["data"]
+        vals     = captured["vals"]
+
+        # --- Normalise to the structure index.html expects ---
+        # 1. x: convert seconds → milliseconds if needed
+        if vals[0].get("x", 0) < 1e12:
+            print(f"  Converting x from seconds to milliseconds...")
+            for v in vals:
+                v["x"] = v["x"] * 1000
+
+        # 2. Build output in the exact shape index.html uses
+        out = {
+            "metric1":      "mvrv",
+            "metric2":      "market-price",
+            "mvrv":         vals,
+            "market-price": raw_data.get("market-price", []),
+            "type":         raw_data.get("type", "linear"),
+            "average":      raw_data.get("average", "1d"),
+            "timespan":     raw_data.get("timespan", "all"),
+        }
+
+        # 3. Strip entries below the all-time legitimate minimum
+        original = out["mvrv"]
+        cleaned  = [e for e in original if e.get("y", 0) >= MIN_VALID_Y]
+        removed  = len(original) - len(cleaned)
+        out["mvrv"] = cleaned
+
+        OUT_FILE.write_text(json.dumps(out, separators=(",", ":")))
+        print(f"Saved {OUT_FILE} ({OUT_FILE.stat().st_size:,} bytes)")
+        if removed:
+            print(f"Removed {removed} invalid entries (y < {MIN_VALID_Y})")
+        else:
+            print("No invalid entries — mvrv.json is clean.")
+
 
 asyncio.run(main())
-
-# --- clean invalid entries (y < 0.44, all-time legitimate bottom) ---
-MIN_VALID_Y = 0.44
-
-with open(OUT_FILE) as f:
-    data = json.load(f)
-
-# The site may use "values" or "mvrv" as the key
-list_key = "values" if "values" in data else "mvrv" if "mvrv" in data else None
-
-if isinstance(data, list):
-    original = data
-    cleaned  = [e for e in original if e.get("y", 0) >= MIN_VALID_Y]
-    result   = cleaned
-elif list_key:
-    original = data[list_key]
-    cleaned  = [e for e in original if e.get("y", 0) >= MIN_VALID_Y]
-    result   = {**data, list_key: cleaned}
-else:
-    original = cleaned = []
-    result   = data
-
-removed = len(original) - len(cleaned)
-if removed:
-    with open(OUT_FILE, "w") as f:
-        json.dump(result, f, separators=(",", ":"))
-    print(f"Removed {removed} invalid entries (y < {MIN_VALID_Y}) from {OUT_FILE}")
-else:
-    print(f"No invalid entries found (all y >= {MIN_VALID_Y}) — mvrv.json is clean.")
