@@ -13,7 +13,6 @@ async def main():
                        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
         )
         page = await context.new_page()
-
         captured = {}
 
         async def on_response(response):
@@ -34,7 +33,6 @@ async def main():
                 pass
 
         page.on("response", on_response)
-
         print("Opening page...")
         await page.goto(CHART_URL, wait_until="domcontentloaded", timeout=60000)
 
@@ -75,3 +73,30 @@ async def main():
         print(f"Saved {OUT_FILE} ({OUT_FILE.stat().st_size:,} bytes) from {captured['url']}")
 
 asyncio.run(main())
+
+# --- clean y=0 entries ---
+with open(OUT_FILE) as f:
+    data = json.load(f)
+
+# The site may use "values" or "mvrv" as the key
+list_key = "values" if "values" in data else "mvrv" if "mvrv" in data else None
+
+if isinstance(data, list):
+    original = data
+    cleaned  = [e for e in original if e.get("y") != 0]
+    result   = cleaned
+elif list_key:
+    original = data[list_key]
+    cleaned  = [e for e in original if e.get("y") != 0]
+    result   = {**data, list_key: cleaned}
+else:
+    original = cleaned = []
+    result   = data
+
+removed = len(original) - len(cleaned)
+if removed:
+    with open(OUT_FILE, "w") as f:
+        json.dump(result, f, separators=(",", ":"))
+    print(f"Removed {removed} y=0 entries from {OUT_FILE}")
+else:
+    print("No y=0 entries found — mvrv.json is clean.")
