@@ -2,13 +2,12 @@ import json, asyncio
 from pathlib import Path
 from playwright.async_api import async_playwright
 
-CHART_URL    = "https://www.blockchain.com/explorer/charts/mvrv"
-MVRV_API     = "https://api.blockchain.info/charts/mvrv?timespan=all&sampled=false&format=json"
-PRICE_API    = "https://api.blockchain.info/charts/market-price?timespan=all&sampled=false&format=json"
-OUT_FILE     = Path("mvrv.json")
+CHART_URL = "https://www.blockchain.com/explorer/charts/mvrv"
+MVRV_API  = "https://api.blockchain.info/charts/mvrv?timespan=all&sampled=false&format=json"
+PRICE_API = "https://api.blockchain.info/charts/market-price?timespan=all&sampled=false&format=json"
+OUT_FILE  = Path("mvrv.json")
 
 def normalize_values(values: list) -> list:
-    """Seconds → milliseconds, drop nulls."""
     result = []
     for point in values:
         x = point.get("x")
@@ -17,19 +16,6 @@ def normalize_values(values: list) -> list:
             continue
         x_ms = x * 1000 if x < 1_000_000_000_000 else x
         result.append({"x": x_ms, "y": y})
-    return result
-
-async def fetch_json(page, url: str) -> dict:
-    """Use the live browser context to fetch a JSON API URL (inherits cookies/session)."""
-    result = await page.evaluate(f"""
-        async () => {{
-            const r = await fetch("{url}", {{
-                headers: {{ "Accept": "application/json" }}
-            }});
-            if (!r.ok) throw new Error("HTTP " + r.status);
-            return await r.json();
-        }}
-    """)
     return result
 
 async def main():
@@ -41,15 +27,22 @@ async def main():
         )
         page = await context.new_page()
 
-        # Load the page first so the browser has a valid session/cookies
+        # Visit the page first so context picks up any cookies/headers the API needs
         print("Opening page...")
         await page.goto(CHART_URL, wait_until="domcontentloaded", timeout=60000)
         await asyncio.sleep(3)
 
-        # Now fetch both metrics directly from the API using the live browser context
+        # Use context.request — Playwright's own HTTP client, not the browser's JS fetch.
+        # This bypasses the site's overridden window.fetch entirely.
+        headers = {
+            "Accept": "application/json",
+            "Referer": CHART_URL,
+        }
+
         print("Fetching MVRV ratio from API...")
         try:
-            mvrv_raw = await fetch_json(page, MVRV_API)
+            resp = await context.request.get(MVRV_API, headers=headers)
+            mvrv_raw = await resp.json()
             mvrv_values = normalize_values(mvrv_raw.get("values", []))
             print(f"  ✓ {len(mvrv_values)} MVRV points")
         except Exception as e:
@@ -58,7 +51,8 @@ async def main():
 
         print("Fetching market-price from API...")
         try:
-            price_raw = await fetch_json(page, PRICE_API)
+            resp = await context.request.get(PRICE_API, headers=headers)
+            price_raw = await resp.json()
             price_values = normalize_values(price_raw.get("values", []))
             print(f"  ✓ {len(price_values)} price points")
         except Exception as e:
