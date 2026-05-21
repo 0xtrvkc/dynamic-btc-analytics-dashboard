@@ -74,7 +74,9 @@ async def main():
 
 asyncio.run(main())
 
-# --- clean y=0 entries ---
+# --- clean invalid entries (y < 0.44, all-time legitimate bottom) ---
+MIN_VALID_Y = 0.44
+
 with open(OUT_FILE) as f:
     data = json.load(f)
 
@@ -83,11 +85,11 @@ list_key = "values" if "values" in data else "mvrv" if "mvrv" in data else None
 
 if isinstance(data, list):
     original = data
-    cleaned  = [e for e in original if e.get("y") != 0]
+    cleaned  = [e for e in original if e.get("y", 0) >= MIN_VALID_Y]
     result   = cleaned
 elif list_key:
     original = data[list_key]
-    cleaned  = [e for e in original if e.get("y") != 0]
+    cleaned  = [e for e in original if e.get("y", 0) >= MIN_VALID_Y]
     result   = {**data, list_key: cleaned}
 else:
     original = cleaned = []
@@ -97,6 +99,6 @@ removed = len(original) - len(cleaned)
 if removed:
     with open(OUT_FILE, "w") as f:
         json.dump(result, f, separators=(",", ":"))
-    print(f"Removed {removed} y=0 entries from {OUT_FILE}")
+    print(f"Removed {removed} invalid entries (y < {MIN_VALID_Y}) from {OUT_FILE}")
 else:
-    print("No y=0 entries found — mvrv.json is clean.")
+    print(f"No invalid entries found (all y >= {MIN_VALID_Y}) — mvrv.json is clean.")
