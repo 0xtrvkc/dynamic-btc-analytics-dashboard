@@ -1,0 +1,130 @@
+name: Update MVRV Data
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # runs daily at 01:00 UTC
+  workflow_dispatch:        # allows manual trigger from Actions tab
+
+jobs:
+  update-mvrv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright + Chromium
+        run: |
+          npm init -y
+          npm install playwright
+          npx playwright install chromium --with-deps
+
+      - name: Scrape and download mvrv.json
+        run: |
+          node << 'EOF'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
+          const path = require('path');
+          const os = require('os');
+
+          (async () => {
+            const downloadDir = path.join(os.tmpdir(), 'bc_download');
+            fs.mkdirSync(downloadDir, { recursive: true });
+
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({
+              acceptDownloads: true,
+            });
+            const page = await context.newPage();
+
+            console.log('Navigating to MVRV chart page...');
+            await page.goto('https://www.blockchain.com/explorer/charts/mvrv', {
+              waitUntil: 'networkidle',
+              timeout: 60000,
+            });
+
+            // Click the "All" timeframe button
+            console.log('Clicking ALL timeframe button...');
+            await page.getByRole('button', { name: /^all$/i }).click();
+
+            // Wait 35 seconds for chart data to fully load
+            console.log('Waiting 35s for chart to update...');
+            await page.waitForTimeout(35000);
+
+            // Click the Download JSON button and capture the download
+            console.log('Clicking Download JSON button...');
+            const [download] = await Promise.all([
+              page.waitForEvent('download', { timeout: 30000 }),
+              page.getByRole('button', { name: /download json/i }).click(),
+            ]);
+
+            const downloadPath = path.join(downloadDir, 'mvrv.json');
+            await download.saveAs(downloadPath);
+            console.log('Downloaded to: ' + downloadPath);
+
+            await browser.close();
+
+            // Read and validate
+            const raw = fs.readFileSync(downloadPath, 'utf8');
+            let data;
+            try {
+              data = JSON.parse(raw);
+            } catch (e) {
+              console.error('ERROR: Downloaded file is not valid JSON');
+              process.exit(1);
+            }
+
+            // Validate it has the expected structure
+            if (!data.metric1 || data.metric1 !== 'mvrv') {
+              console.error('ERROR: Unexpected format. metric1=' + data.metric1);
+              process.exit(1);
+            }
+            if (!Array.isArray(data.mvrv) || data.mvrv.length === 0) {
+              console.error('ERROR: mvrv array is missing or empty');
+              process.exit(1);
+            }
+            const sample = data.mvrv[0];
+            if (!('x' in sample) || !('y' in sample)) {
+              console.error('ERROR: Data points missing x/y. Sample: ' + JSON.stringify(sample));
+              process.exit(1);
+            }
+
+            // Compare against existing mvrv.json
+            if (fs.existsSync('mvrv.json')) {
+              const existing = JSON.parse(fs.readFileSync('mvrv.json', 'utf8'));
+              const oldCount = existing.mvrv.length;
+              const newCount = data.mvrv.length;
+              console.log('Existing data points: ' + oldCount + ', New data points: ' + newCount);
+              if (newCount < oldCount) {
+                console.error('ERROR: New data has fewer points (' + newCount + ') than existing (' + oldCount + '). Aborting.');
+                process.exit(1);
+              }
+            } else {
+              console.log('No existing mvrv.json — first run.');
+            }
+
+            // Copy validated file to repo root
+            fs.copyFileSync(downloadPath, 'mvrv.json');
+            console.log('mvrv.json updated successfully.');
+          })();
+          EOF
+
+      - name: Commit and push if data changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add mvrv.json
+          if git diff --cached --quiet; then
+            echo "No changes to mvrv.json — skipping commit."
+          else
+            LATEST_Y=$(node -e "const d=require('./mvrv.json'); const last=d.mvrv[d.mvrv.length-1]; console.log(last.y.toFixed(4));")
+            LATEST_DATE=$(node -e "const d=require('./mvrv.json'); const last=d.mvrv[d.mvrv.length-1]; console.log(new Date(last.x).toISOString().slice(0,10));")
+            git commit -m "chore: update mvrv.json — ${LATEST_DATE} (MVRV: ${LATEST_Y})"
+            git push
+          fi
