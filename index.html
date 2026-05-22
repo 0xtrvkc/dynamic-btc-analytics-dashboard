@@ -205,6 +205,71 @@ tr:nth-child(even) td { background: #f0f0f0; }
 ::-webkit-scrollbar-thumb { background: #808080; border: 2px solid #c0c0c0; }
 ::-webkit-scrollbar-button { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; height: 16px; }
 
+/* Loading overlay — Win98 modal dialog */
+#loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+#loading-overlay.active { display: flex; }
+#loading-dialog {
+  width: 320px;
+  box-shadow: 4px 4px 0 #000;
+  font-family: 'Literata', Georgia, serif;
+}
+#loading-dialog .title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #000080;
+  padding: 3px 4px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: bold;
+}
+#loading-dialog .title-bar-text { padding-left: 2px; }
+#loading-dialog .dialog-body {
+  background: #c0c0c0;
+  padding: 20px 18px 16px;
+  border: 2px solid;
+  border-color: #fff #808080 #808080 #fff;
+}
+#loading-dialog .loading-msg {
+  font-size: 0.88rem;
+  color: #000;
+  margin-bottom: 12px;
+  min-height: 1.4em;
+}
+#loading-dialog .loading-progress-wrap {
+  width: 100%;
+  height: 16px;
+  background: #fff;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+#loading-dialog .loading-progress-bar {
+  height: 100%;
+  background: #000080;
+  width: 0%;
+  transition: width 0.2s linear;
+  /* Win98 chunky block fill effect */
+  background-image: repeating-linear-gradient(
+    90deg,
+    #000080 0px, #000080 12px,
+    #1a1aaa 12px, #1a1aaa 14px
+  );
+}
+#loading-dialog .loading-sub {
+  font-size: 0.78rem;
+  color: #444;
+  text-align: center;
+}
+
 /* ... (Your existing styles) ... */
  .rotate-tip {
   display: flex;
@@ -323,6 +388,22 @@ tr:last-child td{border-bottom:none}
 </style>
 </head>
 <body>
+
+<!-- Win98-style loading dialog -->
+<div id="loading-overlay">
+  <div id="loading-dialog" class="window">
+    <div class="title-bar">
+      <div class="title-bar-text">⏳ Please Wait...</div>
+    </div>
+    <div class="dialog-body">
+      <div class="loading-msg" id="loading-msg">Parsing data...</div>
+      <div class="loading-progress-wrap">
+        <div class="loading-progress-bar" id="loading-bar"></div>
+      </div>
+      <div class="loading-sub" id="loading-sub">This may take a few seconds</div>
+    </div>
+  </div>
+</div>
 
 <div class="win98-window window">
   <div class="title-bar">
@@ -800,26 +881,49 @@ function computeStats(data){
   };
 }
 
+function showLoading(msg, pct, sub) {
+  var overlay = document.getElementById("loading-overlay");
+  document.getElementById("loading-msg").textContent = msg || "Processing...";
+  document.getElementById("loading-bar").style.width = (pct || 0) + "%";
+  document.getElementById("loading-sub").textContent = sub || "";
+  overlay.classList.add("active");
+}
+function hideLoading() {
+  document.getElementById("loading-overlay").classList.remove("active");
+}
+
 function loadData(rows){
-  DATA=enrichData(rows);
-  if(hasPriceData)joinPrice();
-  STATS=computeStats(DATA);
-
-  // Pre-build cycle lookup — avoids repeated DATA.filter() in every tab builder
-  BY_CYCLE={};
-  DATA.forEach(function(d){
-    if(!BY_CYCLE[d.cycle])BY_CYCLE[d.cycle]=[];
-    BY_CYCLE[d.cycle].push(d);
-  });
-
-  document.getElementById("hdr-meta").textContent=DATA.length.toLocaleString()+" pts · "+fmtDate(DATA[0].date)+" → "+fmtDate(DATA[DATA.length-1].date);
-  built.clear();
-  Object.keys(CHARTS).forEach(function(k){CHARTS[k].destroy();delete CHARTS[k]});
-  buildTabs();
-  built.add(0);
-  buildOverview();
-  document.getElementById("upload-screen").style.display="none";
-  document.getElementById("app").style.display="flex";
+  showLoading("Parsing " + rows.length.toLocaleString() + " data points...", 10, "Enriching MVRV data");
+  // setTimeout 0 lets the browser paint the overlay before the CPU-heavy work blocks
+  setTimeout(function(){
+    showLoading("Computing z-scores & moving averages...", 30, "Rolling 365-day window");
+    setTimeout(function(){
+      DATA=enrichData(rows);
+      showLoading("Joining price data...", 60, "Mapping BTC prices");
+      setTimeout(function(){
+        if(hasPriceData)joinPrice();
+        STATS=computeStats(DATA);
+        showLoading("Building dashboard...", 85, "Rendering charts");
+        setTimeout(function(){
+          // Pre-build cycle lookup — avoids repeated DATA.filter() in every tab builder
+          BY_CYCLE={};
+          DATA.forEach(function(d){
+            if(!BY_CYCLE[d.cycle])BY_CYCLE[d.cycle]=[];
+            BY_CYCLE[d.cycle].push(d);
+          });
+          document.getElementById("hdr-meta").textContent=DATA.length.toLocaleString()+" pts · "+fmtDate(DATA[0].date)+" → "+fmtDate(DATA[DATA.length-1].date);
+          built.clear();
+          Object.keys(CHARTS).forEach(function(k){CHARTS[k].destroy();delete CHARTS[k]});
+          buildTabs();
+          built.add(0);
+          buildOverview();
+          document.getElementById("upload-screen").style.display="none";
+          document.getElementById("app").style.display="flex";
+          hideLoading();
+        }, 0);
+      }, 0);
+    }, 0);
+  }, 0);
 }
 
 function resetApp(){
