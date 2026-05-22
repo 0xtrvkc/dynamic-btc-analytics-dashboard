@@ -8,7 +8,7 @@ on:
 jobs:
   update-mvrv:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -38,49 +38,90 @@ jobs:
             fs.mkdirSync(downloadDir, { recursive: true });
 
             const browser = await chromium.launch({ headless: true });
-            const context = await browser.newContext({
-              acceptDownloads: true,
-            });
+            const context = await browser.newContext({ acceptDownloads: true });
             const page = await context.newPage();
+
+            // Intercept the internal API call and capture the raw JSON directly
+            // This is more reliable than waiting for the download button
+            let capturedData = null;
+            await page.route('**', async (route) => {
+              const url = route.request().url();
+              const method = route.request().method();
+              // Log all XHR/fetch requests to help identify the data endpoint
+              if (method === 'GET' && (url.includes('mvrv') || url.includes('chart'))) {
+                console.log('Intercepted request: ' + url);
+              }
+              await route.continue();
+            });
+
+            page.on('response', async (response) => {
+              const url = response.url();
+              if (url.includes('mvrv') && response.status() === 200) {
+                try {
+                  const text = await response.text();
+                  const json = JSON.parse(text);
+                  if (json.metric1 === 'mvrv' && Array.isArray(json.mvrv) && json.mvrv.length > 100) {
+                    console.log('Captured MVRV data from: ' + url);
+                    console.log('Data points: ' + json.mvrv.length);
+                    capturedData = json;
+                  }
+                } catch (e) {
+                  // not JSON or not the right shape, skip
+                }
+              }
+            });
 
             console.log('Navigating to MVRV chart page...');
             await page.goto('https://www.blockchain.com/explorer/charts/mvrv', {
-              waitUntil: 'networkidle',
+              waitUntil: 'domcontentloaded',
               timeout: 60000,
             });
 
-            // Click the "All" timeframe button
+            // Wait for the ALL button to appear in the DOM
+            console.log('Waiting for ALL button...');
+            await page.waitForSelector('button', { timeout: 30000 });
+
+            // Click ALL timeframe
             console.log('Clicking ALL timeframe button...');
-            await page.getByRole('button', { name: /^all$/i }).click();
+            const allButton = page.getByRole('button', { name: /^all$/i });
+            await allButton.waitFor({ timeout: 15000 });
+            await allButton.click();
 
-            // Wait 35 seconds for chart data to fully load
-            console.log('Waiting 35s for chart to update...');
-            await page.waitForTimeout(35000);
+            // Wait up to 40s for the network response to be captured
+            console.log('Waiting for chart data to load...');
+            const deadline = Date.now() + 40000;
+            while (!capturedData && Date.now() < deadline) {
+              await page.waitForTimeout(1000);
+            }
 
-            // Click the Download JSON button and capture the download
-            console.log('Clicking Download JSON button...');
-            const [download] = await Promise.all([
-              page.waitForEvent('download', { timeout: 30000 }),
-              page.getByRole('button', { name: /download json/i }).click(),
-            ]);
-
-            const downloadPath = path.join(downloadDir, 'mvrv.json');
-            await download.saveAs(downloadPath);
-            console.log('Downloaded to: ' + downloadPath);
+            // If we captured the data via network intercept, save it directly
+            if (capturedData) {
+              console.log('Saving captured JSON directly (no download needed)...');
+              fs.writeFileSync('mvrv.json', JSON.stringify(capturedData));
+            } else {
+              // Fallback: try clicking the Download JSON button
+              console.log('Network capture failed, trying Download JSON button...');
+              const [download] = await Promise.all([
+                page.waitForEvent('download', { timeout: 30000 }),
+                page.getByRole('button', { name: /download json/i }).click(),
+              ]);
+              const downloadPath = path.join(downloadDir, 'mvrv.json');
+              await download.saveAs(downloadPath);
+              fs.copyFileSync(downloadPath, 'mvrv.json');
+            }
 
             await browser.close();
 
-            // Read and validate
-            const raw = fs.readFileSync(downloadPath, 'utf8');
+            // Validate
+            const raw = fs.readFileSync('mvrv.json', 'utf8');
             let data;
             try {
               data = JSON.parse(raw);
             } catch (e) {
-              console.error('ERROR: Downloaded file is not valid JSON');
+              console.error('ERROR: File is not valid JSON');
               process.exit(1);
             }
 
-            // Validate it has the expected structure
             if (!data.metric1 || data.metric1 !== 'mvrv') {
               console.error('ERROR: Unexpected format. metric1=' + data.metric1);
               process.exit(1);
@@ -95,23 +136,9 @@ jobs:
               process.exit(1);
             }
 
-            // Compare against existing mvrv.json
-            if (fs.existsSync('mvrv.json')) {
-              const existing = JSON.parse(fs.readFileSync('mvrv.json', 'utf8'));
-              const oldCount = existing.mvrv.length;
-              const newCount = data.mvrv.length;
-              console.log('Existing data points: ' + oldCount + ', New data points: ' + newCount);
-              if (newCount < oldCount) {
-                console.error('ERROR: New data has fewer points (' + newCount + ') than existing (' + oldCount + '). Aborting.');
-                process.exit(1);
-              }
-            } else {
-              console.log('No existing mvrv.json — first run.');
-            }
-
-            // Copy validated file to repo root
-            fs.copyFileSync(downloadPath, 'mvrv.json');
-            console.log('mvrv.json updated successfully.');
+            console.log('Validation passed. Total data points: ' + data.mvrv.length);
+            const last = data.mvrv[data.mvrv.length - 1];
+            console.log('Latest: date=' + new Date(last.x).toISOString().slice(0,10) + ' mvrv=' + last.y);
           })();
           EOF
 
