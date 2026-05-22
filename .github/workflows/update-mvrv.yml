@@ -41,34 +41,29 @@ jobs:
             const context = await browser.newContext({ acceptDownloads: true });
             const page = await context.newPage();
 
-            // Intercept the internal API call and capture the raw JSON directly
-            // This is more reliable than waiting for the download button
-            let capturedData = null;
-            await page.route('**', async (route) => {
-              const url = route.request().url();
-              const method = route.request().method();
-              // Log all XHR/fetch requests to help identify the data endpoint
-              if (method === 'GET' && (url.includes('mvrv') || url.includes('chart'))) {
-                console.log('Intercepted request: ' + url);
-              }
-              await route.continue();
-            });
+            // --- Step 1: Intercept the all-time API call and rewrite timespan ---
+            // The page loads 1year by default; we intercept and upgrade to all+unsampled
+            // then capture the response so we can reformat it into your mvrv.json shape
+            let capturedAllTimeData = null;
 
-            page.on('response', async (response) => {
-              const url = response.url();
-              if (url.includes('mvrv') && response.status() === 200) {
-                try {
-                  const text = await response.text();
-                  const json = JSON.parse(text);
-                  if (json.metric1 === 'mvrv' && Array.isArray(json.mvrv) && json.mvrv.length > 100) {
-                    console.log('Captured MVRV data from: ' + url);
-                    console.log('Data points: ' + json.mvrv.length);
-                    capturedData = json;
-                  }
-                } catch (e) {
-                  // not JSON or not the right shape, skip
+            await page.route('**/api.blockchain.info/charts/mvrv**', async (route) => {
+              const original = route.request().url();
+              const upgraded = original
+                .replace('timespan=1year', 'timespan=all')
+                .replace('sampled=true', 'sampled=false');
+              console.log('Upgrading request: ' + upgraded);
+              // Re-issue the request with upgraded params and capture result
+              const response = await page.request.fetch(upgraded);
+              const body = await response.text();
+              try {
+                const json = JSON.parse(body);
+                if (Array.isArray(json.values) && json.values.length > 100) {
+                  console.log('Captured all-time MVRV data. Points: ' + json.values.length);
+                  capturedAllTimeData = json;
                 }
-              }
+              } catch (e) {}
+              // Still fulfill the original request normally so page renders fine
+              await route.continue();
             });
 
             console.log('Navigating to MVRV chart page...');
@@ -77,42 +72,58 @@ jobs:
               timeout: 60000,
             });
 
-            // Wait for the ALL button to appear in the DOM
-            console.log('Waiting for ALL button...');
-            await page.waitForSelector('button', { timeout: 30000 });
+            // Wait for the page's default 1year chart API call to fire
+            // (this triggers our route intercept above)
+            console.log('Waiting for initial chart API call...');
+            await page.waitForTimeout(15000);
 
-            // Click ALL timeframe
-            console.log('Clicking ALL timeframe button...');
-            const allButton = page.getByRole('button', { name: /^all$/i });
-            await allButton.waitFor({ timeout: 15000 });
-            await allButton.click();
+            // If we captured data via intercept, skip the browser click dance entirely
+            if (capturedAllTimeData) {
+              console.log('Got all-time data via intercept. Reformatting to match mvrv.json...');
 
-            // Wait up to 40s for the network response to be captured
-            console.log('Waiting for chart data to load...');
-            const deadline = Date.now() + 40000;
-            while (!capturedData && Date.now() < deadline) {
-              await page.waitForTimeout(1000);
-            }
+              // The api.blockchain.info endpoint returns seconds-based x values
+              // Your mvrv.json uses millisecond x values — convert
+              const reformatted = {
+                metric1: 'mvrv',
+                metric2: 'market-price',
+                mvrv: capturedAllTimeData.values.map(p => ({
+                  x: p.x * 1000,  // seconds -> milliseconds
+                  y: p.y,
+                })),
+              };
 
-            // If we captured the data via network intercept, save it directly
-            if (capturedData) {
-              console.log('Saving captured JSON directly (no download needed)...');
-              fs.writeFileSync('mvrv.json', JSON.stringify(capturedData));
+              fs.writeFileSync('mvrv.json', JSON.stringify(reformatted));
+              console.log('Saved mvrv.json. Points: ' + reformatted.mvrv.length);
+              await browser.close();
+
             } else {
-              // Fallback: try clicking the Download JSON button
-              console.log('Network capture failed, trying Download JSON button...');
+              // Fallback: click ALL then Download JSON
+              console.log('Intercept did not fire. Falling back to button clicks...');
+
+              // Wait for the ALL timeframe button — look by text content, not role
+              // since blockchain.com uses styled-components buttons without aria roles
+              console.log('Looking for ALL button...');
+              const allBtn = page.locator('button', { hasText: /^All$/i });
+              await allBtn.first().waitFor({ state: 'visible', timeout: 30000 });
+              await allBtn.first().click();
+              console.log('Clicked ALL. Waiting 35s for data...');
+              await page.waitForTimeout(35000);
+
+              // Click Download JSON
+              console.log('Clicking Download JSON...');
+              const dlBtn = page.locator('button', { hasText: /download json/i });
               const [download] = await Promise.all([
                 page.waitForEvent('download', { timeout: 30000 }),
-                page.getByRole('button', { name: /download json/i }).click(),
+                dlBtn.first().click(),
               ]);
               const downloadPath = path.join(downloadDir, 'mvrv.json');
               await download.saveAs(downloadPath);
               fs.copyFileSync(downloadPath, 'mvrv.json');
+              console.log('Saved via download button.');
+              await browser.close();
             }
 
-            await browser.close();
-
-            // Validate
+            // --- Validate ---
             const raw = fs.readFileSync('mvrv.json', 'utf8');
             let data;
             try {
@@ -121,24 +132,22 @@ jobs:
               console.error('ERROR: File is not valid JSON');
               process.exit(1);
             }
-
-            if (!data.metric1 || data.metric1 !== 'mvrv') {
-              console.error('ERROR: Unexpected format. metric1=' + data.metric1);
+            if (data.metric1 !== 'mvrv') {
+              console.error('ERROR: metric1 is not mvrv: ' + data.metric1);
               process.exit(1);
             }
-            if (!Array.isArray(data.mvrv) || data.mvrv.length === 0) {
-              console.error('ERROR: mvrv array is missing or empty');
+            if (!Array.isArray(data.mvrv) || data.mvrv.length < 100) {
+              console.error('ERROR: mvrv array missing or too short: ' + (data.mvrv || []).length);
               process.exit(1);
             }
             const sample = data.mvrv[0];
             if (!('x' in sample) || !('y' in sample)) {
-              console.error('ERROR: Data points missing x/y. Sample: ' + JSON.stringify(sample));
+              console.error('ERROR: bad data point shape: ' + JSON.stringify(sample));
               process.exit(1);
             }
-
-            console.log('Validation passed. Total data points: ' + data.mvrv.length);
             const last = data.mvrv[data.mvrv.length - 1];
-            console.log('Latest: date=' + new Date(last.x).toISOString().slice(0,10) + ' mvrv=' + last.y);
+            console.log('Validation passed. Points: ' + data.mvrv.length);
+            console.log('Latest: ' + new Date(last.x).toISOString().slice(0,10) + ' MVRV=' + last.y);
           })();
           EOF
 
