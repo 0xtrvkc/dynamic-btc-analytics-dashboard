@@ -1,6 +1,6 @@
 # MVRV Analytics — BTC Dashboard
 
-> Client-side Bitcoin cycle analysis tool. Drop a JSON file, get instant on-chain insights. No backend, no tracking, no BS.
+> Client-side Bitcoin cycle analysis tool.
 
 🔗 **[Live Demo](https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/)**
 
