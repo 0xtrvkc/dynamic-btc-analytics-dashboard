@@ -1064,7 +1064,7 @@ function buildZScore(){
   destroyChart("c1");
   var cd=sample(DATA,CONFIG.SAMPLE_SIZE);
   var datasets=[{label:"Z-score",data:cd.map(function(d){return d.zscore}),borderColor:CC.accent,borderWidth:2,pointRadius:0,tension:.3,fill:{target:"origin",above:CC.accent+"ff",below:CC.accent+"ff"}},{label:"+2",data:cd.map(function(){return 2}),borderColor:CC.red+"ff",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"-1",data:cd.map(function(){return -1}),borderColor:CC.teal+"ff",borderWidth:1,borderDash:[4,3],pointRadius:0},{label:"0",data:cd.map(function(){return 0}),borderColor:"#000000",borderWidth:1,pointRadius:0}];
-  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{min:-10,max:10})}}));
+  var opts=withLegend(Object.assign({},chartDefs(),{scales:{x:chartDefs().scales.x,y:Object.assign({},chartDefs().scales.y,{min:-6,max:6})}}));
   CHARTS.c1=new Chart(document.getElementById("c1"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:datasets},options:opts});
 }
 
