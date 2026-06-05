@@ -8,8 +8,6 @@
 
 ## What it does
 
-Upload your MVRV data exported from blockchain.com and the dashboard computes:
-
 - **Z-Score** — rolling 365-day normalized MVRV with capitulation / caution thresholds
 - **Cycle Overlay** — all four Bitcoin halving cycles overlaid on the same axis
 - **Momentum** — 30-day vs 90-day rate-of-change signals
@@ -30,21 +28,6 @@ Upload your MVRV data exported from blockchain.com and the dashboard computes:
 
 **Price data** is updated automatically every day via GitHub Actions — no manual intervention needed.  
 **MVRV data** is loaded client-side from a JSON you export manually (stays in your browser, never uploaded anywhere).
-
----
-
-## Usage
-
-**Get your MVRV data:**
-
-1. Go to [blockchain.com/explorer/charts/mvrv](https://www.blockchain.com/explorer/charts/mvrv)
-2. Set timeframe to **ALL** → **Download JSON**
-
-**Run the dashboard:**
-
-1. Open the [live site](https://0xtrvkc.github.io/dynamic-btc-analytics-dashboard/) (or `index.html` locally)
-2. Drop the downloaded JSON onto the upload zone
-3. Explore the 12 analysis tabs
 
 ---
 
