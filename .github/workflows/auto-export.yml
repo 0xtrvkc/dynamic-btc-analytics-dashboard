@@ -2,14 +2,14 @@ name: Auto Export BTC Snapshot
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # every 5 minutes
-  workflow_dispatch:          # also allow manual trigger
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   export:
     runs-on: ubuntu-latest
     permissions:
-      contents: write         # needed to commit back to repo
+      contents: write
 
     steps:
       - name: Checkout repo
@@ -20,8 +20,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      
+      - name: Refresh BTC price data
+        run: python generate_price_json.py
+
       - name: Run export script
         run: python export_snapshot.py
+      
 
       - name: Commit and push snapshot
         run: |
