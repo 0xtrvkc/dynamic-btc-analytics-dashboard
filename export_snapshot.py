@@ -1,15 +1,13 @@
-# export_snapshot.py
 import json
 import datetime
 import os
 
 def export_snapshot():
     timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    
-    # Load BTC price data
+
     btc_data = {}
     mvrv_data = {}
-    
+
     try:
         with open("btc_daily_price.json", "r") as f:
             btc_data = json.load(f)
