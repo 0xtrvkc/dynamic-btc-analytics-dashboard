@@ -4,18 +4,25 @@ import datetime
 import os
 import math
 
-# ── 1. Fetch MVRV data from blockchain.com ──────────────────────────────────
+# ── 1. Fetch MVRV data from blockchain.info ──────────────────────────────────
 print("Fetching MVRV data...")
-url = "https://api.blockchain.info/charts/mvrv?timespan=all&format=json&cors=true"
-resp = requests.get(url, timeout=30)
+url = "https://blockchain.info/charts/mvrv?timespan=all&format=json&sampled=true"
+headers = {"User-Agent": "Mozilla/5.0"}
+resp = requests.get(url, headers=headers, timeout=30)
 resp.raise_for_status()
 raw = resp.json()
 values = raw.get("values", [])
+print(f"Got {len(values)} MVRV data points")
 
 # ── 2. Fetch BTC price data from CoinGecko ───────────────────────────────────
 print("Fetching BTC price data...")
 price_url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
-price_resp = requests.get(price_url, params={"vs_currency": "usd", "days": "max", "interval": "daily"}, timeout=30)
+price_resp = requests.get(
+    price_url,
+    params={"vs_currency": "usd", "days": "max", "interval": "daily"},
+    headers=headers,
+    timeout=30
+)
 price_resp.raise_for_status()
 price_raw = price_resp.json()
 price_map = {}
@@ -23,6 +30,7 @@ for entry in price_raw.get("prices", []):
     ts_ms, price = entry
     date_str = datetime.datetime.utcfromtimestamp(ts_ms / 1000).strftime("%Y-%m-%d")
     price_map[date_str] = round(price, 2)
+print(f"Got {len(price_map)} price data points")
 
 # ── 3. Build combined dataset ────────────────────────────────────────────────
 data = []
@@ -35,10 +43,12 @@ for v in values:
     btc_price = price_map.get(date_str, None)
     data.append({"date": date_str, "mvrv": mvrv, "price": btc_price})
 
-# ── 4. Calculate analytics ───────────────────────────────────────────────────
-mvrv_values = [d["mvrv"] for d in data if d["mvrv"] is not None]
+print(f"Combined dataset: {len(data)} rows")
 
-# Z-Score (rolling: mean and std of all data up to each point)
+# ── 4. Calculate analytics ───────────────────────────────────────────────────
+mvrv_values = [d["mvrv"] for d in data]
+
+# Z-Score
 def zscore_series(values):
     scores = []
     for i, v in enumerate(values):
@@ -51,9 +61,7 @@ def zscore_series(values):
             scores.append(round((v - mean) / std, 4) if std > 0 else 0)
     return scores
 
-zscores = zscore_series(mvrv_values)
-
-# Moving averages (30d, 90d, 200d)
+# Moving averages
 def moving_avg(values, window):
     result = []
     for i in range(len(values)):
@@ -62,10 +70,6 @@ def moving_avg(values, window):
         else:
             result.append(round(sum(values[i - window + 1 : i + 1]) / window, 4))
     return result
-
-ma30 = moving_avg(mvrv_values, 30)
-ma90 = moving_avg(mvrv_values, 90)
-ma200 = moving_avg(mvrv_values, 200)
 
 # Drawdown from peak
 def drawdown_series(values):
@@ -78,9 +82,7 @@ def drawdown_series(values):
         result.append(dd)
     return result
 
-drawdowns = drawdown_series(mvrv_values)
-
-# Momentum (rate of change over 14 days)
+# Momentum (14-day rate of change)
 def momentum_series(values, period=14):
     result = []
     for i in range(len(values)):
@@ -91,8 +93,6 @@ def momentum_series(values, period=14):
             result.append(round((values[i] - prev) / prev * 100, 4) if prev != 0 else 0)
     return result
 
-momentum = momentum_series(mvrv_values, 14)
-
 # Zone classification
 def mvrv_zone(v):
     if v < 1:   return "Extreme Undervalue"
@@ -101,7 +101,14 @@ def mvrv_zone(v):
     if v < 4:   return "Overvalue"
     return "Extreme Overvalue"
 
-# ── 5. Attach analytics back to data rows ───────────────────────────────────
+print("Calculating analytics...")
+zscores   = zscore_series(mvrv_values)
+ma30      = moving_avg(mvrv_values, 30)
+ma90      = moving_avg(mvrv_values, 90)
+ma200     = moving_avg(mvrv_values, 200)
+drawdowns = drawdown_series(mvrv_values)
+momentum  = momentum_series(mvrv_values, 14)
+
 for i, row in enumerate(data):
     row["zscore"]   = zscores[i]
     row["ma30"]     = ma30[i]
@@ -111,8 +118,8 @@ for i, row in enumerate(data):
     row["momentum"] = momentum[i]
     row["zone"]     = mvrv_zone(row["mvrv"])
 
-# ── 6. Summary stats ─────────────────────────────────────────────────────────
-latest = data[-1]
+# ── 5. Summary stats ─────────────────────────────────────────────────────────
+latest             = data[-1]
 all_time_high_mvrv = max(mvrv_values)
 all_time_low_mvrv  = min(mvrv_values)
 current_mvrv       = latest["mvrv"]
@@ -124,8 +131,9 @@ current_momentum   = latest["momentum"]
 current_ma30       = latest["ma30"]
 current_ma90       = latest["ma90"]
 current_ma200      = latest["ma200"]
+undervalue_periods = [d for d in data if d["mvrv"] < 1]
 
-# Cycle peaks (entries where mvrv > 3.5 and higher than neighbors)
+# Cycle peaks
 peaks = []
 for i in range(1, len(data) - 1):
     if (mvrv_values[i] > 3.5
@@ -133,10 +141,7 @@ for i in range(1, len(data) - 1):
             and mvrv_values[i] > mvrv_values[i + 1]):
         peaks.append({"date": data[i]["date"], "mvrv": mvrv_values[i], "price": data[i]["price"]})
 
-# Undervalue entries (mvrv < 1)
-undervalue_periods = [d for d in data if d["mvrv"] < 1]
-
-# ── 7. Write snapshot txt ────────────────────────────────────────────────────
+# ── 6. Write snapshot txt ────────────────────────────────────────────────────
 timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
 lines = [
@@ -168,7 +173,7 @@ lines = [
     "── HISTORICAL CYCLE PEAKS (MVRV > 3.5) ────────────────",
 ]
 
-for p in peaks[-10:]:  # last 10 peaks
+for p in peaks[-10:]:
     price_str = f"${p['price']:,.2f}" if p["price"] else "N/A"
     lines.append(f"  {p['date']}  MVRV: {p['mvrv']:.4f}  Price: {price_str}")
 
@@ -188,7 +193,7 @@ for row in data[-10:]:
 
 lines += ["", "=" * 60]
 
-# ── 8. Save files ────────────────────────────────────────────────────────────
+# ── 7. Save files ────────────────────────────────────────────────────────────
 os.makedirs("exports", exist_ok=True)
 
 with open("exports/latest_snapshot.txt", "w") as f:
@@ -200,12 +205,12 @@ with open("exports/latest_snapshot.json", "w") as f:
         "latest": latest,
         "summary": {
             "all_time_high_mvrv": all_time_high_mvrv,
-            "all_time_low_mvrv": all_time_low_mvrv,
-            "total_data_points": len(data),
-            "undervalue_days": len(undervalue_periods),
-            "cycle_peaks": peaks,
+            "all_time_low_mvrv":  all_time_low_mvrv,
+            "total_data_points":  len(data),
+            "undervalue_days":    len(undervalue_periods),
+            "cycle_peaks":        peaks,
         }
     }, f, indent=2)
 
 print(f"Done. Snapshot saved to exports/")
-print("\n".join(lines[-20:]))
+print("\n".join(lines))
