@@ -32,24 +32,24 @@ Cycle 1 (2012-15):
   Trough MVRV: 0.553 on 2015-01-15
   Peak-to-trough range: 91% compression
   Duration: 1319 days
-  BTC price at MVRV peak: $608
-  BTC price at MVRV trough: $219
+  BTC price at MVRV peak: $536
+  BTC price at MVRV trough: $211
 
 Cycle 2 (2016-19):
   Peak MVRV: 4.472 on 2017-12-07
   Trough MVRV: 0.690 on 2018-12-15
   Peak-to-trough range: 85% compression
   Duration: 1402 days
-  BTC price at MVRV peak: $15,715
-  BTC price at MVRV trough: $3,153
+  BTC price at MVRV peak: $16,600
+  BTC price at MVRV trough: $3,180
 
 Cycle 3 (2020-23):
   Peak MVRV: 3.977 on 2021-02-21
   Trough MVRV: 0.784 on 2022-11-22
   Peak-to-trough range: 80% compression
   Duration: 1440 days
-  BTC price at MVRV peak: $58,193
-  BTC price at MVRV trough: $16,124
+  BTC price at MVRV peak: $57,493
+  BTC price at MVRV trough: $16,197
 
 Cycle 4 (2024-27):
   Peak MVRV: 2.730 on 2024-11-22
@@ -63,15 +63,15 @@ Cycle 4 (2024-27):
 
 Cycle 1:
   Max drawdown: -90.6% on 2015-01-15
-  BTC price at worst drawdown: $219
+  BTC price at worst drawdown: $211
 
 Cycle 2:
   Max drawdown: -84.6% on 2018-12-15
-  BTC price at worst drawdown: $3,153
+  BTC price at worst drawdown: $3,180
 
 Cycle 3:
   Max drawdown: -80.3% on 2022-11-22
-  BTC price at worst drawdown: $16,124
+  BTC price at worst drawdown: $16,197
 
 Cycle 4:
   Max drawdown: -57.2% on 2026-06-05
@@ -98,90 +98,90 @@ Cycle 4:
   2013-01-09 Death cross: C1 · MVRV 1.783 · $14
   2013-01-15 Golden cross: C1 · MVRV 1.828 · $14
   2013-04-22 Death cross: C1 · MVRV 2.868 · $124
-  2013-08-01 Golden cross: C1 · MVRV 2.048 · $96
+  2013-08-01 Golden cross: C1 · MVRV 2.048 · $97
   2013-10-06 Death cross: C1 · MVRV 2.054 · $122
-  2013-10-20 Golden cross: C1 · MVRV 2.940 · $165
-  2013-12-17 Death cross: C1 · MVRV 2.689 · $714
-  2014-05-26 Golden cross: C1 · MVRV 1.758 · $583
-  2014-07-04 Death cross: C1 · MVRV 1.849 · $634
-  2014-11-19 Golden cross: C1 · MVRV 1.115 · $378
-  2014-12-20 Death cross: C1 · MVRV 0.981 · $325
-  2015-02-26 Golden cross: C1 · MVRV 0.793 · $238
-  2015-04-05 Death cross: C1 · MVRV 0.858 · $257
-  2015-05-17 Golden cross: C1 · MVRV 0.817 · $237
-  2015-06-08 Death cross: C1 · MVRV 0.777 · $229
+  2013-10-20 Golden cross: C1 · MVRV 2.940 · $167
+  2013-12-17 Death cross: C1 · MVRV 2.689 · $674
+  2014-05-26 Golden cross: C1 · MVRV 1.758 · $582
+  2014-07-04 Death cross: C1 · MVRV 1.849 · $629
+  2014-11-19 Golden cross: C1 · MVRV 1.115 · $379
+  2014-12-20 Death cross: C1 · MVRV 0.981 · $332
+  2015-02-26 Golden cross: C1 · MVRV 0.793 · $237
+  2015-04-05 Death cross: C1 · MVRV 0.858 · $261
+  2015-05-17 Golden cross: C1 · MVRV 0.817 · $236
+  2015-06-08 Death cross: C1 · MVRV 0.777 · $228
   2015-06-22 Golden cross: C1 · MVRV 0.853 · $246
-  2015-08-17 Death cross: C1 · MVRV 0.906 · $258
+  2015-08-17 Death cross: C1 · MVRV 0.906 · $256
   2015-10-03 Golden cross: C1 · MVRV 0.867 · $239
-  2016-01-17 Death cross: C1 · MVRV 1.269 · $386
-  2016-02-25 Golden cross: C1 · MVRV 1.391 · $422
-  2016-03-23 Death cross: C1 · MVRV 1.353 · $419
+  2016-01-17 Death cross: C1 · MVRV 1.269 · $380
+  2016-02-25 Golden cross: C1 · MVRV 1.391 · $424
+  2016-03-23 Death cross: C1 · MVRV 1.353 · $418
   2016-04-17 Golden cross: C1 · MVRV 1.374 · $427
-  2016-07-16 Death cross: C2 · MVRV 1.830 · $664
-  2016-09-15 Golden cross: C2 · MVRV 1.638 · $606
-  2017-01-22 Death cross: C2 · MVRV 2.039 · $913
-  2017-02-08 Golden cross: C2 · MVRV 2.262 · $1,059
-  2017-03-24 Death cross: C2 · MVRV 1.893 · $976
-  2017-04-21 Golden cross: C2 · MVRV 2.276 · $1,239
-  2017-06-27 Death cross: C2 · MVRV 2.698 · $2,413
-  2017-08-09 Golden cross: C2 · MVRV 2.731 · $3,331
-  2017-09-14 Death cross: C2 · MVRV 2.200 · $3,359
-  2017-10-15 Golden cross: C2 · MVRV 3.018 · $5,493
-  2018-01-01 Death cross: C2 · MVRV 2.705 · $13,189
-  2018-03-04 Golden cross: C2 · MVRV 2.089 · $11,350
-  2018-03-19 Death cross: C2 · MVRV 1.572 · $8,395
-  2018-04-26 Golden cross: C2 · MVRV 1.690 · $8,873
-  2018-05-25 Death cross: C2 · MVRV 1.403 · $7,427
-  2018-07-20 Golden cross: C2 · MVRV 1.457 · $7,345
-  2018-08-17 Death cross: C2 · MVRV 1.277 · $6,502
-  2018-10-25 Golden cross: C2 · MVRV 1.292 · $6,410
-  2018-10-26 Death cross: C2 · MVRV 1.293 · $6,404
-  2018-11-12 Golden cross: C2 · MVRV 1.286 · $6,319
-  2018-11-13 Death cross: C2 · MVRV 1.276 · $6,262
-  2019-01-06 Golden cross: C2 · MVRV 0.856 · $4,050
-  2019-01-29 Death cross: C2 · MVRV 0.768 · $3,401
-  2019-02-21 Golden cross: C2 · MVRV 0.897 · $3,880
-  2019-07-27 Death cross: C2 · MVRV 1.830 · $9,400
-  2019-11-06 Golden cross: C2 · MVRV 1.642 · $9,307
-  2019-11-24 Death cross: C2 · MVRV 1.267 · $7,085
-  2020-01-07 Golden cross: C2 · MVRV 1.429 · $8,050
-  2020-03-04 Death cross: C2 · MVRV 1.512 · $8,726
-  2020-04-18 Golden cross: C2 · MVRV 1.303 · $7,218
-  2020-06-25 Death cross: C3 · MVRV 1.596 · $9,284
-  2020-07-28 Golden cross: C3 · MVRV 1.869 · $11,008
-  2020-09-07 Death cross: C3 · MVRV 1.634 · $10,149
-  2020-10-15 Golden cross: C3 · MVRV 1.813 · $11,533
-  2021-01-30 Death cross: C3 · MVRV 2.874 · $34,363
-  2021-02-15 Golden cross: C3 · MVRV 3.572 · $48,347
-  2021-03-16 Death cross: C3 · MVRV 3.397 · $55,772
-  2021-03-20 Golden cross: C3 · MVRV 3.553 · $59,265
-  2021-03-24 Death cross: C3 · MVRV 3.282 · $54,704
-  2021-08-01 Golden cross: C3 · MVRV 2.089 · $41,260
-  2021-09-22 Death cross: C3 · MVRV 2.019 · $43,451
-  2021-10-13 Golden cross: C3 · MVRV 2.571 · $57,271
-  2021-11-21 Death cross: C3 · MVRV 2.436 · $59,514
-  2022-02-18 Golden cross: C3 · MVRV 1.674 · $40,165
-  2022-03-08 Death cross: C3 · MVRV 1.605 · $38,741
-  2022-03-28 Golden cross: C3 · MVRV 1.939 · $47,989
-  2022-04-21 Death cross: C3 · MVRV 1.695 · $41,226
-  2022-07-27 Golden cross: C3 · MVRV 0.989 · $22,781
-  2022-08-30 Death cross: C3 · MVRV 0.932 · $19,955
-  2022-10-30 Golden cross: C3 · MVRV 0.983 · $20,655
-  2022-11-16 Death cross: C3 · MVRV 0.807 · $16,534
-  2022-12-21 Golden cross: C3 · MVRV 0.845 · $16,791
-  2023-03-11 Death cross: C3 · MVRV 1.027 · $20,459
-  2023-03-19 Golden cross: C3 · MVRV 1.380 · $28,347
-  2023-05-08 Death cross: C3 · MVRV 1.393 · $27,363
-  2023-06-26 Golden cross: C3 · MVRV 1.495 · $30,254
-  2023-08-03 Death cross: C3 · MVRV 1.435 · $29,260
-  2023-10-01 Golden cross: C3 · MVRV 1.338 · $27,109
-  2024-01-19 Death cross: C3 · MVRV 1.831 · $41,761
-  2024-02-14 Golden cross: C3 · MVRV 2.198 · $51,475
-  2024-04-05 Death cross: C3 · MVRV 2.390 · $67,422
-  2024-05-28 Golden cross: C4 · MVRV 2.286 · $68,348
-  2024-06-21 Death cross: C4 · MVRV 2.107 · $64,203
-  2024-07-29 Golden cross: C4 · MVRV 2.190 · $67,279
-  2024-08-13 Death cross: C4 · MVRV 1.907 · $60,851
+  2016-07-16 Death cross: C2 · MVRV 1.830 · $662
+  2016-09-15 Golden cross: C2 · MVRV 1.638 · $607
+  2017-01-22 Death cross: C2 · MVRV 2.039 · $924
+  2017-02-08 Golden cross: C2 · MVRV 2.262 · $1,050
+  2017-03-24 Death cross: C2 · MVRV 1.893 · $929
+  2017-04-21 Golden cross: C2 · MVRV 2.276 · $1,244
+  2017-06-27 Death cross: C2 · MVRV 2.698 · $2,565
+  2017-08-09 Golden cross: C2 · MVRV 2.731 · $3,343
+  2017-09-14 Death cross: C2 · MVRV 2.200 · $3,228
+  2017-10-15 Golden cross: C2 · MVRV 3.018 · $5,680
+  2018-01-01 Death cross: C2 · MVRV 2.705 · $13,443
+  2018-03-04 Golden cross: C2 · MVRV 2.089 · $11,463
+  2018-03-19 Death cross: C2 · MVRV 1.572 · $8,597
+  2018-04-26 Golden cross: C2 · MVRV 1.690 · $9,274
+  2018-05-25 Death cross: C2 · MVRV 1.403 · $7,471
+  2018-07-20 Golden cross: C2 · MVRV 1.457 · $7,331
+  2018-08-17 Death cross: C2 · MVRV 1.277 · $6,580
+  2018-10-25 Golden cross: C2 · MVRV 1.292 · $6,394
+  2018-10-26 Death cross: C2 · MVRV 1.293 · $6,406
+  2018-11-12 Golden cross: C2 · MVRV 1.286 · $6,318
+  2018-11-13 Death cross: C2 · MVRV 1.276 · $6,261
+  2019-01-06 Golden cross: C2 · MVRV 0.856 · $4,041
+  2019-01-29 Death cross: C2 · MVRV 0.768 · $3,390
+  2019-02-21 Golden cross: C2 · MVRV 0.897 · $3,900
+  2019-07-27 Death cross: C2 · MVRV 1.830 · $9,481
+  2019-11-06 Golden cross: C2 · MVRV 1.642 · $9,345
+  2019-11-24 Death cross: C2 · MVRV 1.267 · $6,908
+  2020-01-07 Golden cross: C2 · MVRV 1.429 · $8,159
+  2020-03-04 Death cross: C2 · MVRV 1.512 · $8,753
+  2020-04-18 Golden cross: C2 · MVRV 1.303 · $7,262
+  2020-06-25 Death cross: C3 · MVRV 1.596 · $9,239
+  2020-07-28 Golden cross: C3 · MVRV 1.869 · $10,939
+  2020-09-07 Death cross: C3 · MVRV 1.634 · $10,377
+  2020-10-15 Golden cross: C3 · MVRV 1.813 · $11,511
+  2021-01-30 Death cross: C3 · MVRV 2.874 · $34,323
+  2021-02-15 Golden cross: C3 · MVRV 3.572 · $47,943
+  2021-03-16 Death cross: C3 · MVRV 3.397 · $56,908
+  2021-03-20 Golden cross: C3 · MVRV 3.553 · $58,138
+  2021-03-24 Death cross: C3 · MVRV 3.282 · $52,288
+  2021-08-01 Golden cross: C3 · MVRV 2.089 · $39,839
+  2021-09-22 Death cross: C3 · MVRV 2.019 · $43,590
+  2021-10-13 Golden cross: C3 · MVRV 2.571 · $57,375
+  2021-11-21 Death cross: C3 · MVRV 2.436 · $58,678
+  2022-02-18 Golden cross: C3 · MVRV 1.674 · $39,997
+  2022-03-08 Death cross: C3 · MVRV 1.605 · $38,754
+  2022-03-28 Golden cross: C3 · MVRV 1.939 · $47,152
+  2022-04-21 Death cross: C3 · MVRV 1.695 · $40,471
+  2022-07-27 Golden cross: C3 · MVRV 0.989 · $22,969
+  2022-08-30 Death cross: C3 · MVRV 0.932 · $19,819
+  2022-10-30 Golden cross: C3 · MVRV 0.983 · $20,628
+  2022-11-16 Death cross: C3 · MVRV 0.807 · $16,654
+  2022-12-21 Golden cross: C3 · MVRV 0.845 · $16,824
+  2023-03-11 Death cross: C3 · MVRV 1.027 · $20,618
+  2023-03-19 Golden cross: C3 · MVRV 1.380 · $28,054
+  2023-05-08 Death cross: C3 · MVRV 1.393 · $27,690
+  2023-06-26 Golden cross: C3 · MVRV 1.495 · $30,274
+  2023-08-03 Death cross: C3 · MVRV 1.435 · $29,176
+  2023-10-01 Golden cross: C3 · MVRV 1.338 · $27,995
+  2024-01-19 Death cross: C3 · MVRV 1.831 · $41,628
+  2024-02-14 Golden cross: C3 · MVRV 2.198 · $51,844
+  2024-04-05 Death cross: C3 · MVRV 2.390 · $67,857
+  2024-05-28 Golden cross: C4 · MVRV 2.286 · $68,327
+  2024-06-21 Death cross: C4 · MVRV 2.107 · $64,102
+  2024-07-29 Golden cross: C4 · MVRV 2.190 · $66,780
+  2024-08-13 Death cross: C4 · MVRV 1.907 · $60,620
   2024-09-27 Golden cross: C4 · MVRV 2.062 · $65,781
   2024-12-25 Death cross: C4 · MVRV 2.424 · $99,374
   2025-01-31 Golden cross: C4 · MVRV 2.438 · $102,412
@@ -213,7 +213,7 @@ Cycle 1:
   Avg BTC price in 1.0-1.5: $403
   Avg BTC price in 1.5-2.0: $384
   Avg BTC price in 2.0-3.0: $280
-  Avg BTC price in Above 3.0: $410
+  Avg BTC price in Above 3.0: $413
 
 Cycle 2:
   Below 1.0: 139d (10%)
@@ -221,11 +221,11 @@ Cycle 2:
   1.5-2.0: 464d (33%)
   2.0-3.0: 324d (23%)
   Above 3.0: 103d (7%)
-  Avg BTC price in Below 1.0: $3,833
-  Avg BTC price in 1.0-1.5: $6,837
-  Avg BTC price in 1.5-2.0: $5,760
-  Avg BTC price in 2.0-3.0: $4,673
-  Avg BTC price in Above 3.0: $7,634
+  Avg BTC price in Below 1.0: $3,828
+  Avg BTC price in 1.0-1.5: $6,835
+  Avg BTC price in 1.5-2.0: $5,772
+  Avg BTC price in 2.0-3.0: $4,685
+  Avg BTC price in Above 3.0: $7,679
 
 Cycle 3:
   Below 1.0: 180d (12%)
@@ -233,11 +233,11 @@ Cycle 3:
   1.5-2.0: 491d (34%)
   2.0-3.0: 329d (23%)
   Above 3.0: 99d (7%)
-  Avg BTC price in Below 1.0: $18,930
-  Avg BTC price in 1.0-1.5: $26,752
-  Avg BTC price in 1.5-2.0: $29,617
-  Avg BTC price in 2.0-3.0: $46,731
-  Avg BTC price in Above 3.0: $48,566
+  Avg BTC price in Below 1.0: $18,948
+  Avg BTC price in 1.0-1.5: $26,763
+  Avg BTC price in 1.5-2.0: $29,655
+  Avg BTC price in 2.0-3.0: $46,728
+  Avg BTC price in Above 3.0: $48,656
 
 Cycle 4:
   Below 1.0: 0d (0%)
@@ -246,38 +246,38 @@ Cycle 4:
   2.0-3.0: 428d (55%)
   Above 3.0: 0d (0%)
   Avg BTC price in 1.0-1.5: $72,280
-  Avg BTC price in 1.5-2.0: $80,111
-  Avg BTC price in 2.0-3.0: $93,350
+  Avg BTC price in 1.5-2.0: $80,099
+  Avg BTC price in 2.0-3.0: $93,370
 
 Current MVRV zone: 1.0-1.5 (MVRV 1.167)
 
 === PRICE PEAK DIVERGENCE — MVRV lead/lag vs BTC price ATH ===
 
 Cycle 1:
-  BTC ATH: $1,143 on 2013-12-04
+  BTC ATH: $1,132 on 2013-12-04
   MVRV at price ATH: 4.603
   MVRV own peak: 5.880 on 2013-11-19
   MVRV drawdown at price ATH: -21.7%
-  Price at MVRV peak: $608
-  Remaining upside after MVRV peaked: +88%
+  Price at MVRV peak: $536
+  Remaining upside after MVRV peaked: +111%
   Lead/lag: Price peaked 15d AFTER MVRV
 
 Cycle 2:
-  BTC ATH: $18,727 on 2017-12-16
+  BTC ATH: $19,188 on 2017-12-16
   MVRV at price ATH: 4.293
   MVRV own peak: 4.472 on 2017-12-07
   MVRV drawdown at price ATH: -4.0%
-  Price at MVRV peak: $15,715
-  Remaining upside after MVRV peaked: +19%
+  Price at MVRV peak: $16,600
+  Remaining upside after MVRV peaked: +16%
   Lead/lag: Price peaked 9d AFTER MVRV
 
 Cycle 3:
-  BTC ATH: $73,468 on 2024-03-13
+  BTC ATH: $73,121 on 2024-03-13
   MVRV at price ATH: 2.774
   MVRV own peak: 3.977 on 2021-02-21
   MVRV drawdown at price ATH: -30.3%
-  Price at MVRV peak: $58,193
-  Remaining upside after MVRV peaked: +26%
+  Price at MVRV peak: $57,493
+  Remaining upside after MVRV peaked: +27%
   Lead/lag: Price peaked 1116d AFTER MVRV
 
 Cycle 4:
@@ -290,7 +290,7 @@ Cycle 4:
   Lead/lag: Price peaked 318d AFTER MVRV
 
   Median lead-lag (all cycles): 166.5d
-  Median remaining upside after MVRV peaked: +26%
+  Median remaining upside after MVRV peaked: +27%
 
 === PRICE BOTTOM DIVERGENCE — MVRV lead/lag vs BTC price low ===
 
@@ -299,39 +299,39 @@ Cycle 1:
   MVRV at price low: 1.718
   MVRV own trough: 0.553 on 2015-01-15
   MVRV recovery at price low: +210.6%
-  Price at MVRV trough: $219
+  Price at MVRV trough: $211
   Further downside after MVRV troughed: -94%
   Lead/lag: Price bottomed 778d BEFORE MVRV
 
 Cycle 2:
-  BTC price low: $562 on 2016-08-04
-  MVRV at price low: 1.554
+  BTC price low: $540 on 2016-08-02
+  MVRV at price low: 1.624
   MVRV own trough: 0.690 on 2018-12-15
-  MVRV recovery at price low: +125.3%
-  Price at MVRV trough: $3,153
-  Further downside after MVRV troughed: -82%
-  Lead/lag: Price bottomed 863d BEFORE MVRV
+  MVRV recovery at price low: +135.5%
+  Price at MVRV trough: $3,180
+  Further downside after MVRV troughed: -83%
+  Lead/lag: Price bottomed 865d BEFORE MVRV
 
 Cycle 3:
-  BTC price low: $8,759 on 2020-05-11
+  BTC price low: $8,572 on 2020-05-11
   MVRV at price low: 1.554
   MVRV own trough: 0.784 on 2022-11-22
   MVRV recovery at price low: +98.1%
-  Price at MVRV trough: $16,124
-  Further downside after MVRV troughed: -46%
+  Price at MVRV trough: $16,197
+  Further downside after MVRV troughed: -47%
   Lead/lag: Price bottomed 925d BEFORE MVRV
 
 Cycle 4:
-  BTC price low: $53,483 on 2024-08-05
-  MVRV at price low: 1.700
+  BTC price low: $53,955 on 2024-09-06
+  MVRV at price low: 1.761
   MVRV own trough: 1.167 on 2026-06-05
-  MVRV recovery at price low: +45.7%
+  MVRV recovery at price low: +50.9%
   Price at MVRV trough: $61,042
   Further downside after MVRV troughed: -12%
-  Lead/lag: Price bottomed 669d BEFORE MVRV
+  Lead/lag: Price bottomed 637d BEFORE MVRV
 
-  Median lead-lag (all cycles): -820.5d
-  Median further downside after MVRV troughed: -64%
+  Median lead-lag (all cycles): -821.5d
+  Median further downside after MVRV troughed: -65%
 
 === REGRESSION PROJECTIONS — Cycle peak & trough MVRV ===
   C1 peak (log/linear): 5.830 / 5.728
@@ -350,20 +350,20 @@ Cycle 4:
 === PRICE PROJECTIONS — Ceiling & Floor consensus (current cycle) ===
 
   --- CEILING MODELS ---
-  MVRV Upside: $125,003 [included]
-  MVRV x Realized Cap: $97,574 [included]
+  MVRV Upside: $125,927 [included]
+  MVRV x Realized Cap: $97,717 [included]
 
-  Ceiling consensus midpoint: $111,289
-  Ceiling consensus range: $97,574 – $125,003
+  Ceiling consensus midpoint: $111,822
+  Ceiling consensus range: $97,717 – $125,927
 
   --- FLOOR MODELS ---
-  MVRV Downside: $10,881 [included]
-  Halving Floor Ratio: $61,209 [included]
+  MVRV Downside: $10,367 [included]
+  Halving Floor Ratio: $60,060 [included]
 
-  Floor consensus midpoint: $36,045
-  Floor consensus range: $10,881 – $61,209
+  Floor consensus midpoint: $35,214
+  Floor consensus range: $10,367 – $60,060
 
-  BTC price at current cycle halving: $64,895
+  BTC price at current cycle halving: $64,990
   * Outliers excluded via IQR. Not financial advice.
 
 === BACKTEST — Ceiling & Floor model accuracy on past cycles ===
@@ -373,25 +373,25 @@ Error = (predicted − actual) / actual × 100.
 
 --- CEILING model accuracy (completed cycles only) ---
 
-  MVRV Upside: +21.6% avg error · 21.6% avg absolute · ok
+  MVRV Upside: +28.5% avg error · 28.5% avg absolute · ok
 
   Halving Multiplier: not enough data
 
   ATH Multiplier: not enough data
 
-  MVRV x Realized Cap: -72.0% avg error · 72.0% avg absolute · poor
+  MVRV x Realized Cap: -72.5% avg error · 72.5% avg absolute · poor
 
-  Ceiling Consensus: -25.2% avg error · 25.2% avg absolute · ok
+  Ceiling Consensus: -22.0% avg error · 22.0% avg absolute · ok
 
 --- FLOOR model accuracy (completed cycles only) ---
 
   MVRV Downside: -78.5% avg error · 78.5% avg absolute · poor
 
-  Halving Floor Ratio: -19.7% avg error · 19.7% avg absolute · good
+  Halving Floor Ratio: -26.4% avg error · 26.4% avg absolute · ok
 
   Bottom Multiplier: not enough data
 
-  Floor Consensus: -49.1% avg error · 49.1% avg absolute · poor
+  Floor Consensus: -52.4% avg error · 52.4% avg absolute · poor
 
 --- Per-cycle breakdown ---
 
@@ -399,7 +399,7 @@ Error = (predicted − actual) / actual × 100.
     Price at halving: $12
 
     CEILING:
-      Actual ATH: $1,143
+      Actual ATH: $1,132
       MVRV Upside: — (insufficient prior data)
       Halving Multiplier: — (insufficient prior data)
       ATH Multiplier: — (insufficient prior data)
@@ -412,51 +412,51 @@ Error = (predicted − actual) / actual × 100.
       Bottom Multiplier: — (insufficient prior data)
 
   C2:
-    Price at halving: $642
+    Price at halving: $648
 
     CEILING:
-      Actual ATH: $18,727
+      Actual ATH: $19,188
       MVRV Upside: — (insufficient prior data)
       Halving Multiplier: — (insufficient prior data)
       ATH Multiplier: — (insufficient prior data)
       MVRV x Realized Cap: — (insufficient prior data)
 
     FLOOR:
-      Actual low: $562
+      Actual low: $540
       MVRV Downside: — (insufficient prior data)
       Halving Floor Ratio: — (insufficient prior data)
       Bottom Multiplier: — (insufficient prior data)
 
   C3:
-    Price at halving: $8,759
+    Price at halving: $8,572
 
     CEILING:
-      Actual ATH: $73,468
-      MVRV Upside: $89,373 · +21.6% ~
+      Actual ATH: $73,121
+      MVRV Upside: $93,938 · +28.5% ~
       Halving Multiplier: — (insufficient prior data)
       ATH Multiplier: — (insufficient prior data)
-      MVRV x Realized Cap: $20,557 · -72.0% x
+      MVRV x Realized Cap: $20,117 · -72.5% x
 
     FLOOR:
-      Actual low: $8,759
-      MVRV Downside: $1,887 · -78.5% x
-      Halving Floor Ratio: $7,030 · -19.7% v
+      Actual low: $8,572
+      MVRV Downside: $1,844 · -78.5% x
+      Halving Floor Ratio: $6,311 · -26.4% ~
       Bottom Multiplier: — (insufficient prior data)
 
   C4 (current — open):
-    Price at halving: $64,895
+    Price at halving: $64,990
 
     CEILING:
       ATH so far: $124,728
-      MVRV Upside: $125,003 · +0.2% v (live)
+      MVRV Upside: $125,927 · +1.0% v (live)
       Halving Multiplier: — (insufficient prior data)
       ATH Multiplier: — (insufficient prior data)
-      MVRV x Realized Cap: $97,574 · -21.8% ~ (live)
+      MVRV x Realized Cap: $97,717 · -21.7% ~ (live)
 
     FLOOR:
-      Low so far: $53,483
-      MVRV Downside: $10,881 · -79.7% x (live)
-      Halving Floor Ratio: $61,209 · +14.4% v (live)
+      Low so far: $53,955
+      MVRV Downside: $10,367 · -80.8% x (live)
+      Halving Floor Ratio: $60,060 · +11.3% v (live)
       Bottom Multiplier: — (insufficient prior data)
 
   * No lookahead — only prior cycle data used per projection.
