@@ -1,0 +1,45 @@
+name: Auto-Export MVRV Summary
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # every hour, on the hour (UTC)
+  workflow_dispatch:        # manual trigger from the Actions tab
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # No extra pip installs needed — generate_summary.py uses stdlib only
+
+      - name: Generate summary export
+        run: python generate_summary.py
+        env:
+          MVRV_PATH:  mvrv.json
+          PRICE_PATH: btc_daily_price.json
+          OUT_DIR:    exports
+
+      - name: Commit and push (new file only, never overwrites)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage only the exports/ folder — everything else is untouched
+          git add exports/
+
+          if git diff --cached --quiet; then
+            echo "Export for today already committed — nothing to do."
+          else
+            TODAY=$(date -u +%Y-%m-%d)
+            git commit -m "chore: auto-export mvrv_summary_${TODAY}.txt"
+            git push
+          fi
