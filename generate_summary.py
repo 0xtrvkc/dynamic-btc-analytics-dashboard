@@ -709,6 +709,13 @@ def main():
         f.write(text)
     print(f"✓ Written: {out_path}  ({len(text):,} chars)")
 
+    # Remove any older mvrv_summary_*.txt files, keeping only today's
+    for fname in os.listdir(out_dir):
+        if fname.startswith("mvrv_summary_") and fname.endswith(".txt") and fname != os.path.basename(out_path):
+            old = os.path.join(out_dir, fname)
+            os.remove(old)
+            print(f"  Removed old export: {old}")
+
 
 if __name__ == "__main__":
     main()
