@@ -467,9 +467,9 @@ Error = (predicted − actual) / actual × 100.
   C2 halving: 2016-07-09 [completed]
   C3 halving: 2020-05-11 [completed]
   C4 halving: 2024-04-20 [current cycle · 55% elapsed]
-  C5 halving: 2028-03-26 [upcoming · 646d away]
-  C6 halving: 2032-02-15 [upcoming · 2,067d away]
-  C7 halving: 2036-01-10 [upcoming · 3,492d away]
+  C5 halving: 2028-03-26 [upcoming · 645d away]
+  C6 halving: 2032-02-15 [upcoming · 2,066d away]
+  C7 halving: 2036-01-10 [upcoming · 3,491d away]
 
 ============================================================
 Built by Sirapob Dangpad — a numbers-obsessed nerd who finds
@@ -479,6 +479,6 @@ professional financial analysis.
 
 NOT FINANCIAL ADVICE. Do your own research.
 ============================================================
-Generated: 2026-06-18
+Generated: 2026-06-19
 Tip: paste this file into any AI assistant to ask questions
 about Bitcoin MVRV cycles and what the data might mean.
