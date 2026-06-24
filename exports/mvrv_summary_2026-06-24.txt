@@ -10,6 +10,7 @@ MA200: 1.392
 MA stack: Bearish (MA20<MA50<MA200)
 ROC 30d: -17.5%
 ROC 90d: -8.6%
+BTC Price: $62,899
 All-time MVRV peak: 8.046 on 2010-11-08
 All-time MVRV bottom: 0.404 on 2011-10-21
 Historical mean MVRV: 1.860
@@ -244,7 +245,7 @@ Cycle 4:
   1.5-2.0: 223d (28%)
   2.0-3.0: 428d (54%)
   Above 3.0: 0d (0%)
-  Avg BTC price in 1.0-1.5: $71,193
+  Avg BTC price in 1.0-1.5: $71,127
   Avg BTC price in 1.5-2.0: $80,099
   Avg BTC price in 2.0-3.0: $93,370
 
