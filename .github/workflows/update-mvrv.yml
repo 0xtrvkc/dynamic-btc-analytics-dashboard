@@ -83,13 +83,29 @@ jobs:
 
               // The api.blockchain.info endpoint returns seconds-based x values
               // Your mvrv.json uses millisecond x values — convert
+              const msPoints = capturedAllTimeData.values.map(p => ({
+                x: p.x * 1000,  // seconds -> milliseconds
+                y: p.y,
+              }));
+
+              // The "unsampled/all" export returns 800k+ irregular intraday
+              // points (minutes apart). This is a daily dashboard, so shipping
+              // that raw resolution just makes every visitor download and
+              // parse a ~35MB file for no analytical benefit. Collapse to one
+              // (the last) sample per UTC day before writing the file.
+              const byDay = new Map();
+              for (const p of msPoints) {
+                const d = new Date(p.x);
+                const key = d.getUTCFullYear() + '-' + d.getUTCMonth() + '-' + d.getUTCDate();
+                byDay.set(key, p); // points are already chronological, so last write wins
+              }
+              const dailyPoints = Array.from(byDay.values()).sort((a, b) => a.x - b.x);
+              console.log('Downsampled ' + msPoints.length + ' intraday points to ' + dailyPoints.length + ' daily points.');
+
               const reformatted = {
                 metric1: 'mvrv',
                 metric2: 'market-price',
-                mvrv: capturedAllTimeData.values.map(p => ({
-                  x: p.x * 1000,  // seconds -> milliseconds
-                  y: p.y,
-                })),
+                mvrv: dailyPoints,
               };
 
               fs.writeFileSync('mvrv.json', JSON.stringify(reformatted));
