@@ -687,6 +687,7 @@ function autoLoadMVRV(){
         if(!ts||isNaN(v)||v<=0)return null;
         return{date:new Date(ts>1e10?ts:ts*1000),mvrv:v};
       }).filter(Boolean).sort(function(a,b){return a.date-b.date});
+      rows=downsampleToDaily(rows);
       if(rows.length<10)throw new Error("Not enough valid data points.");
       if(priceFetchDone){loadData(rows);}else{pendingRows=rows;}
     })
@@ -698,6 +699,23 @@ function autoLoadMVRV(){
 
 var pendingRows=null;
 var priceFetchDone=false;
+
+// The blockchain.com "unsampled/all" export can contain 800k+ irregular
+// intraday points (minutes apart) for what is fundamentally a daily metric.
+// Every downstream step (moving averages, z-scores, Chart.js rendering)
+// runs per-row, so shipping raw intraday data makes parsing/rendering take
+// seconds. Collapsing to one (the last) observation per calendar day cuts
+// row count by ~100-150x with no loss of information for daily analysis,
+// and is the single biggest lever for load time.
+function downsampleToDaily(rows){
+  var byDay=new Map();
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];
+    var key=r.date.getUTCFullYear()+"-"+r.date.getUTCMonth()+"-"+r.date.getUTCDate();
+    byDay.set(key,r); // rows are sorted ascending, so last write per key = latest sample that day
+  }
+  return Array.from(byDay.values()).sort(function(a,b){return a.date-b.date});
+}
 
 // Drop zone
 var dz=document.getElementById("drop-zone");
@@ -720,6 +738,7 @@ function handleFile(file){
         if(!ts||isNaN(v)||v<=0)return null;
         return{date:new Date(ts>1e10?ts:ts*1000),mvrv:v};
       }).filter(Boolean).sort(function(a,b){return a.date-b.date});
+      rows=downsampleToDaily(rows);
       if(rows.length<10){errEl.textContent="Not enough valid data points.";errEl.style.display="block";return;}
       if(priceFetchDone){loadData(rows);}else{pendingRows=rows;}
     }catch(err){errEl.textContent="Failed to parse JSON: "+err.message;errEl.style.display="block";}
