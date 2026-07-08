@@ -669,16 +669,43 @@ function statCard(label, val, sub, color) {
   </div>`;
 }
 
-var PRICE_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/btc_daily_price.json";
-var MVRV_JSON_URL="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/mvrv.json";
+// jsDelivr's GitHub CDN is built for serving repo files to production sites
+// (raw.githubusercontent.com explicitly asks you not to use it that way and
+// will intermittently 429/5xx under load). Falls back to raw.githubusercontent.com
+// automatically if jsDelivr itself has a bad moment.
+var PRICE_JSON_URL="https://cdn.jsdelivr.net/gh/0xtrvkc/dynamic-btc-analytics-dashboard@main/btc_daily_price.json";
+var MVRV_JSON_URL="https://cdn.jsdelivr.net/gh/0xtrvkc/dynamic-btc-analytics-dashboard@main/mvrv.json";
+var PRICE_JSON_URL_FALLBACK="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/btc_daily_price.json";
+var MVRV_JSON_URL_FALLBACK="https://raw.githubusercontent.com/0xtrvkc/dynamic-btc-analytics-dashboard/main/mvrv.json";
+
+// Fetch with retries + exponential backoff, then one fallback URL if all retries fail.
+function fetchWithRetry(url, fallbackUrl, retries, delayMs){
+  retries = retries==null ? 2 : retries;
+  delayMs = delayMs==null ? 600 : delayMs;
+  function attempt(triesLeft, wait){
+    return fetch(url).then(function(res){
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      return res.json();
+    }).catch(function(err){
+      if(triesLeft>0){
+        return new Promise(function(resolve){setTimeout(resolve, wait);})
+          .then(function(){return attempt(triesLeft-1, wait*2);});
+      }
+      if(fallbackUrl && url!==fallbackUrl){
+        return fetch(fallbackUrl).then(function(res){
+          if(!res.ok) throw new Error("HTTP "+res.status);
+          return res.json();
+        });
+      }
+      throw err;
+    });
+  }
+  return attempt(retries, delayMs);
+}
 
 function autoLoadMVRV(){
   var errEl=document.getElementById("upload-error");
-  fetch(MVRV_JSON_URL+"?t="+Date.now())
-    .then(function(res){
-      if(!res.ok)throw new Error("HTTP "+res.status);
-      return res.json();
-    })
+  fetchWithRetry(MVRV_JSON_URL, MVRV_JSON_URL_FALLBACK)
     .then(function(json){
       var arr=json.mvrv||json.values||null;
       if(!arr||!arr.length)throw new Error("Couldn't find mvrv data array in JSON.");
@@ -761,13 +788,9 @@ function setPriceProgress(pct){
 function fetchPriceData(){
   setPriceStatus("⏳ Fetching BTC price data…","var(--muted)");
   setPriceProgress(15);
-  fetch(PRICE_JSON_URL)
-    .then(function(res){
-      if(!res.ok)throw new Error("HTTP "+res.status);
-      setPriceProgress(60);
-      return res.json();
-    })
+  fetchWithRetry(PRICE_JSON_URL, PRICE_JSON_URL_FALLBACK)
     .then(function(json){
+      setPriceProgress(60);
       PRICE_MAP=json;
       hasPriceData=true;
       var count=Object.keys(json).length;
