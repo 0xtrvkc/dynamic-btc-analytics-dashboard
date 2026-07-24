@@ -1,29 +1,28 @@
 
 === CURRENT STATUS ===
-Date: 2026-07-23
-MVRV: 1.251
-Z-score: -0.971
+Date: 2026-07-24
+MVRV: 1.236
+Z-score: -1.007
 Signal: Accumulate
-MA20: 1.208
+MA20: 1.210
 MA50: 1.184
-MA200: 1.334
+MA200: 1.332
 MA stack: Mixed
-ROC 30d: 6.1%
-ROC 90d: -13.0%
-BTC Price: $65,774
+ROC 30d: 6.6%
+ROC 90d: -13.7%
 All-time MVRV peak: 8.046 on 2010-11-08
 All-time MVRV bottom: 0.404 on 2011-10-21
 Historical mean MVRV: 1.857
-Data range: 2010-10-09 to 2026-07-23
-Total data points: 5,767
+Data range: 2010-10-09 to 2026-07-24
+Total data points: 5,768
 
 === CURRENT CYCLE POSITION ===
 Current cycle: C4 (2024-27)
-Cycle position: 57.4%
+Cycle position: 57.5%
 Cycle peak so far: 2.730 on 2024-11-22
-Current MVRV vs cycle peak: 46% of cycle peak
-Days in current cycle: 824
-Current drawdown from cycle peak: -54.2%
+Current MVRV vs cycle peak: 45% of cycle peak
+Days in current cycle: 825
+Current drawdown from cycle peak: -54.7%
 
 === CYCLE SUMMARY ===
 
@@ -55,7 +54,7 @@ Cycle 4 (2024-27):
   Peak MVRV: 2.730 on 2024-11-22
   Trough MVRV: 1.116 on 2026-07-01
   Peak-to-trough range: 59% compression
-  Duration: 824 days
+  Duration: 825 days
   BTC price at MVRV peak: $99,013
   BTC price at MVRV trough: $59,963
 
@@ -242,7 +241,7 @@ Cycle 3:
 
 Cycle 4:
   Below 1.0: 0d (0%)
-  1.0-1.5: 173d (21%)
+  1.0-1.5: 174d (21%)
   1.5-2.0: 223d (27%)
   2.0-3.0: 428d (52%)
   Above 3.0: 0d (0%)
@@ -250,7 +249,7 @@ Cycle 4:
   Avg BTC price in 1.5-2.0: $80,099
   Avg BTC price in 2.0-3.0: $93,370
 
-Current MVRV zone: 1.0-1.5 (MVRV 1.251)
+Current MVRV zone: 1.0-1.5 (MVRV 1.236)
 
 === PRICE PEAK DIVERGENCE — MVRV lead/lag vs BTC price ATH ===
 
