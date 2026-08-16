@@ -10,7 +10,7 @@ MA200: 1.286
 MA stack: Mixed
 ROC 30d: -2.1%
 ROC 90d: -16.9%
-BTC Price: $62,954
+BTC Price: $63,026
 All-time MVRV peak: 8.046 on 2010-11-08
 All-time MVRV bottom: 0.404 on 2011-10-21
 Historical mean MVRV: 1.854
