@@ -199,7 +199,7 @@ Cycle 4:
   2026-04-11 Golden cross: C4 · MVRV 1.345 · $73,071
   2026-05-31 Death cross: C4 · MVRV 1.367 · $73,568
   2026-07-20 Golden cross: C4 · MVRV 1.223 · $65,213
-Last crossover: Golden cross on 2026-07-20 (32d ago)
+Last crossover: Golden cross on 2026-07-20 (33d ago)
 Current MA20 vs MA50: MA20 above MA50 (bullish bias)
 
 === ZONE ANALYSIS — Days in each MVRV zone per cycle ===
@@ -467,10 +467,10 @@ Error = (predicted − actual) / actual × 100.
   C1 halving: 2012-11-28 [completed]
   C2 halving: 2016-07-09 [completed]
   C3 halving: 2020-05-11 [completed]
-  C4 halving: 2024-04-20 [current cycle · 59% elapsed]
-  C5 halving: 2028-03-26 [upcoming · 581d away]
-  C6 halving: 2032-02-15 [upcoming · 2,002d away]
-  C7 halving: 2036-01-10 [upcoming · 3,427d away]
+  C4 halving: 2024-04-20 [current cycle · 60% elapsed]
+  C5 halving: 2028-03-26 [upcoming · 580d away]
+  C6 halving: 2032-02-15 [upcoming · 2,001d away]
+  C7 halving: 2036-01-10 [upcoming · 3,426d away]
 
 ============================================================
 Built by Sirapob Dangpad — a numbers-obsessed nerd who finds
@@ -480,6 +480,6 @@ professional financial analysis.
 
 NOT FINANCIAL ADVICE. Do your own research.
 ============================================================
-Generated: 2026-08-22
+Generated: 2026-08-23
 Tip: paste this file into any AI assistant to ask questions
 about Bitcoin MVRV cycles and what the data might mean.
