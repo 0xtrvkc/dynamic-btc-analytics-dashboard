@@ -3,7 +3,7 @@ name: Update Dashboard Data
 on:
   workflow_dispatch:  # Manual trigger — "Run workflow" button in GitHub Actions
   schedule:
-    - cron: "0 6 * * *"  # Auto-run daily at 06:00 UTC
+    - cron: "0 0 * * *"  
 
 jobs:
   update:
