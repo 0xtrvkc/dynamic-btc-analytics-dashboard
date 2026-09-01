@@ -1,4 +1,4 @@
-name: Update Dashboard Data
+name: Update BTC price
 
 on:
   workflow_dispatch:  # Manual trigger — "Run workflow" button in GitHub Actions
