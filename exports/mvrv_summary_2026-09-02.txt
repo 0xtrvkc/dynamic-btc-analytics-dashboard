@@ -10,6 +10,7 @@ MA200: 1.291
 MA stack: Mixed
 ROC 30d: 23.7%
 ROC 90d: 19.0%
+BTC Price: $77,397
 All-time MVRV peak: 8.046 on 2010-11-08
 All-time MVRV bottom: 0.404 on 2011-10-21
 Historical mean MVRV: 1.853
@@ -198,7 +199,7 @@ Cycle 4:
   2026-04-11 Golden cross: C4 · MVRV 1.345 · $73,071
   2026-05-31 Death cross: C4 · MVRV 1.367 · $73,568
   2026-07-20 Golden cross: C4 · MVRV 1.223 · $65,213
-Last crossover: Golden cross on 2026-07-20 (42d ago)
+Last crossover: Golden cross on 2026-07-20 (43d ago)
 Current MA20 vs MA50: MA20 above MA50 (bullish bias)
 
 === ZONE ANALYSIS — Days in each MVRV zone per cycle ===
@@ -245,7 +246,7 @@ Cycle 4:
   1.5-2.0: 223d (26%)
   2.0-3.0: 428d (50%)
   Above 3.0: 0d (0%)
-  Avg BTC price in 1.0-1.5: $69,488
+  Avg BTC price in 1.0-1.5: $69,528
   Avg BTC price in 1.5-2.0: $80,099
   Avg BTC price in 2.0-3.0: $93,370
 
@@ -467,9 +468,9 @@ Error = (predicted − actual) / actual × 100.
   C2 halving: 2016-07-09 [completed]
   C3 halving: 2020-05-11 [completed]
   C4 halving: 2024-04-20 [current cycle · 60% elapsed]
-  C5 halving: 2028-03-26 [upcoming · 571d away]
-  C6 halving: 2032-02-15 [upcoming · 1,992d away]
-  C7 halving: 2036-01-10 [upcoming · 3,417d away]
+  C5 halving: 2028-03-26 [upcoming · 570d away]
+  C6 halving: 2032-02-15 [upcoming · 1,991d away]
+  C7 halving: 2036-01-10 [upcoming · 3,416d away]
 
 ============================================================
 Built by Sirapob Dangpad — a numbers-obsessed nerd who finds
@@ -479,6 +480,6 @@ professional financial analysis.
 
 NOT FINANCIAL ADVICE. Do your own research.
 ============================================================
-Generated: 2026-09-01
+Generated: 2026-09-02
 Tip: paste this file into any AI assistant to ask questions
 about Bitcoin MVRV cycles and what the data might mean.
