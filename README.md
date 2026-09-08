@@ -58,6 +58,21 @@ Price data:
   you just lose the price overlay.
 
 
+DATA FLOW
+---------
+  Kaggle CSV ------> update_price_json.yml -----> btc_daily_price.json --\
+                      (daily, needs secrets)                              \
+                                                                            +--> auto_export_summary.yml --> exports/*.txt
+  blockchain.com --> update-mvrv.yml ------------> mvrv.json -------------/       (hourly)
+                      (daily, Playwright scrape)
+
+  btc_daily_price.json + mvrv.json --> index.html (fetched in-browser via GitHub Pages)
+                                        --> charts, z-score, projections, backtest
+
+  Note: the in-page Export button writes a local .txt download. That's separate
+  from the exports/*.txt files committed by auto_export_summary.yml above.
+
+
 AUTO-EXPORT
 -----------
 generate_summary.py runs every hour via GitHub Actions.
