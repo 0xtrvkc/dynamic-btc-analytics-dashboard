@@ -3,7 +3,8 @@ name: Update BTC price
 on:
   workflow_dispatch:  # Manual trigger — "Run workflow" button in GitHub Actions
   schedule:
-    - cron: "0 0 * * *"  
+    - cron: "17 7 * * *"
+      timezone: "Asia/Bangkok"  # Daily refresh at 07:17 BKK
 
 jobs:
   update:
