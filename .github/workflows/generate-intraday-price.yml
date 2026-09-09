@@ -2,7 +2,10 @@ name: Update Intraday Dashboard Data
 on:
   workflow_dispatch:  # Manual trigger — "Run workflow" button in GitHub Actions
   schedule:
-    - cron: "15 6 * * *"  # Auto-run daily at 06:15 UTC (15 min after the daily job)
+    - cron: "37 6 * * *"
+      timezone: "Asia/Bangkok"  # Pre-session refresh at 06:37 BKK
+    - cron: "37 15 * * *"
+      timezone: "Asia/Bangkok"  # Post-expiry refresh at 15:37 BKK (08:37 UTC)
 jobs:
   update:
     runs-on: ubuntu-latest
