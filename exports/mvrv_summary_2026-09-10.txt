@@ -199,7 +199,7 @@ Cycle 4:
   2026-04-11 Golden cross: C4 · MVRV 1.345 · $73,071
   2026-05-31 Death cross: C4 · MVRV 1.367 · $73,568
   2026-07-20 Golden cross: C4 · MVRV 1.223 · $65,213
-Last crossover: Golden cross on 2026-07-20 (51d ago)
+Last crossover: Golden cross on 2026-07-20 (52d ago)
 Current MA20 vs MA50: MA20 above MA50 (bullish bias)
 
 === ZONE ANALYSIS — Days in each MVRV zone per cycle ===
