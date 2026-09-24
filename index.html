@@ -19,6 +19,7 @@
 
 .nav-group{display:flex;flex-direction:column;gap:3px;margin-bottom:16px}.nav-group-label{font:600 12px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 12px}.muted{color:var(--muted)}.tone-good{color:var(--green)}.tone-warn{color:var(--amber)}.tone-bad{color:var(--red)}.content>div{min-width:0}.stat-val{font-size:clamp(20px,1.65vw,28px)}.tbl-wrap{max-width:100%}.tbl-wrap table td{min-width:110px}.tbl-wrap table th{white-space:normal;min-width:110px}#mobile-navigation{display:none}.stat-sub{font-size:14px}.quality-note{font-size:14px}.header-meta{font-size:13px}#data-status{font-size:13px;color:var(--muted)}.nav-collapsed .tabs{display:none!important}.nav-collapsed #app{grid-template-columns:minmax(0,1fr)}@media(max-width:800px){.tabs{display:none}#mobile-navigation{display:block;position:sticky;top:0;z-index:40;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border)}#mobile-navigation label{font-size:14px;display:flex;align-items:center;gap:12px}#mobile-view{flex:1;width:0;min-height:44px;background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:8px}.header-meta{overflow-wrap:anywhere}}@media(max-width:390px){.g3,.g4{grid-template-columns:minmax(0,1fr)}}
 dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:24px}dialog::backdrop{background:#0009}dialog h2{font-size:20px;margin:0}.dialog-heading,.dialog-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}dialog p{font-size:14px;color:var(--muted)}dialog input[type=date]{color:var(--text);background:var(--surface2);border:1px solid var(--border);padding:8px;min-height:42px;max-width:100%}dialog label{white-space:nowrap;font-size:14px}#cycle-date-error{color:var(--red);font-size:14px;margin-bottom:12px}.header-right{justify-content:flex-end}@media(max-width:800px){.header-right .btn{flex:1 1 140px}.header-right{justify-content:flex-start}}
+#cycle-insights{min-width:0}#cycle-insights .cycle-heat{min-width:790px;text-align:center;font-variant-numeric:tabular-nums}#cycle-insights .cycle-heat th:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--surface2)}#cycle-insights .cycle-heat td{min-width:88px;font-weight:600}#cycle-insights .chart-card>.quality-note{margin:12px 0 0}#cycle-insights .chart-card .chart-wrap+.chart-wrap{margin-top:12px}
 </style>
 </head>
 <body>
@@ -791,7 +792,7 @@ function buildMomentum(){
 function buildCycleOverlay(){
   var priceNote=hasPriceData?" Hover a point to see MVRV and BTC price for that date.":"";
   var priceChartHtml2=hasPriceData?'<div class="chart-card"><div class="chart-title">BTC Price — all cycles overlaid · indexed to halving = 100 · log scale</div>'+makeCanvas("c3b",380)+'</div>':"";
-  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">MVRV — all cycles overlaid · cycle position vs MVRV · vertical lines = equal cycle fractions</div>'+makeCanvas("c3",420)+'</div><div class="info">Aligns all cycles on a 0–100% time axis. Dashed lines mark equal fractions of each halving interval; calendar durations differ between cycles.'+priceNote+'</div>'+priceChartHtml2;
+  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">MVRV — all cycles overlaid · cycle position vs MVRV · vertical lines = equal cycle fractions</div>'+makeCanvas("c3",420)+'</div><div class="info">Aligns all cycles on a 0–100% time axis. Dashed lines mark equal fractions of each halving interval; calendar durations differ between cycles.'+priceNote+'</div>'+priceChartHtml2+'<div id="cycle-insights"></div>';
   destroyChart("c3");destroyChart("c3b");
 
   var monthPct = 100/48;
@@ -997,6 +998,133 @@ function buildCycleOverlay(){
 
     CHARTS.c3b=new Chart(document.getElementById("c3b"),{type:"scatter",data:{datasets:priceMonthDatasets.concat(priceCycleDatasets)},options:priceOpts,plugins:[priceMonthLabelPlugin]});
   }
+  buildCycleInsights();
+}
+
+// Cycle comparisons use UTC days since halving; only confirmed, completed
+// cycles supply historical benchmarks. The live cycle is observed data only.
+function cycleInsightSeries(){
+  return STATS.availCycles.map(c=>{
+    const start=HALVINGS[c-1],event=HALVING_EVENTS[c-1],end=HALVING_EVENTS[c];
+    if(!start||!event||!event.confirmed)return null;
+    const base=priceAtHalving(start);
+    if(!(base>0))return null;
+    const rows=(BY_CYCLE[c]||[]).filter(d=>d.date>=start&&(!end||d.date<new Date(end.date))&&d.price>0);
+    if(!rows.length)return null;
+    const daily=new Map(rows.map(d=>[Math.round((d.date-start)/DAY_MS),d]));
+    return {c,start,base,rows,daily,complete:!!end?.confirmed, color:CYCLE_COLORS[c]||CC.muted,label:CYCLE_LABELS[c]||'C'+c};
+  }).filter(Boolean);
+}
+function cycleInsightOptions(xTitle,yTitle){
+  const o=chartDefs();o.parsing=false;
+  o.scales.x.type='linear';o.scales.x.title={display:true,text:xTitle,color:CC.text};
+  o.scales.y.title={display:true,text:yTitle,color:CC.text};
+  o.plugins.tooltip.callbacks={label:ctx=>ctx.dataset.label+': '+numText(ctx.parsed.y,2)};
+  return o;
+}
+function buildCycleInsights(){
+  const host=document.getElementById('cycle-insights');
+  if(!host)return;
+  if(STATS.last?.cycle>0&&!HALVING_EVENTS[STATS.last.cycle-1]?.confirmed){
+    host.innerHTML='<div class="info">The latest cycle starts at an estimated halving date. Confirm its start in Cycle dates before comparing price insights for this cycle.</div>';
+    return;
+  }
+  const all=cycleInsightSeries(),live=all.at(-1),past=all.filter(s=>s.complete&&s.c!==live?.c);
+  if(!live||!past.length){host.innerHTML='<div class="info">Cycle price insights need BTC prices and at least one confirmed, completed cycle.</div>';return;}
+  const liveDay=Math.round((live.rows.at(-1).date-live.start)/DAY_MS);
+  const peers=past;
+  const compare=peers.map(s=>({s,row:s.daily.get(liveDay)})).filter(v=>v.row);
+  const liveIndex=live.rows.at(-1).price/live.base*100;
+  const peerIndices=compare.map(v=>v.row.price/v.s.base*100);
+  // Ties count as half a comparison. Three historical cycles give a coarse rank.
+  const percentile=peerIndices.length?100*(peerIndices.filter(v=>v<liveIndex).length+peerIndices.filter(v=>v===liveIndex).length*.5)/peerIndices.length:null;
+  const rangeDays=Math.max(liveDay,...past.map(s=>Math.round((s.rows.at(-1).date-s.start)/DAY_MS)));
+  const band=[];
+  for(let day=0;day<=rangeDays;day++){
+    const values=past.map(s=>s.daily.get(day)?.price/s.base*100).filter(Number.isFinite);
+    if(values.length>=2)band.push({day,low:Math.min(...values),high:Math.max(...values),med:medianOf(values)});
+  }
+  const rangeData=[
+    {label:'Historical low',data:band.map(p=>({x:p.day,y:p.low})),borderColor:'transparent',pointRadius:0,showLine:true},
+    {label:'Historical range',data:band.map(p=>({x:p.day,y:p.high})),borderColor:'#62718b',borderWidth:1,backgroundColor:'#7c6af72b',fill:'-1',pointRadius:0,showLine:true},
+    {label:'Historical median',data:band.map(p=>({x:p.day,y:p.med})),borderColor:CC.amber,borderWidth:2,pointRadius:0,showLine:true},
+    {label:'Current cycle',data:live.rows.map(d=>({x:Math.round((d.date-live.start)/DAY_MS),y:d.price/live.base*100})),borderColor:CC.accent,borderWidth:2.5,pointRadius:0,showLine:true,spanGaps:false}
+  ];
+  const pointRows=compare.map(v=>({label:'C'+v.s.c+' · '+v.s.label,y:v.row.price/v.s.base*100,color:v.s.color}));
+  pointRows.push({label:'C'+live.c+' · current',y:liveIndex,color:CC.accent});
+  const heatMonths=[0,6,12,18,24,30,36,42,48];
+  const monthDate=(date,months)=>{const d=new Date(date);d.setUTCMonth(d.getUTCMonth()+months);return d;};
+  // Select only prices within three days of a segment boundary; no extrapolation.
+  const nearPrice=(s,target)=>{
+    let best=null,dist=Infinity;
+    for(const row of s.rows){const delta=Math.abs(row.date-target);if(delta<=3*DAY_MS&&delta<dist){best=row;dist=delta;}}
+    return best?.price||null;
+  };
+  const heat=all.map(s=>({s,cells:heatMonths.slice(0,-1).map((m,i)=>{
+    const from=monthDate(s.start,m),to=monthDate(s.start,heatMonths[i+1]);
+    if(to>s.rows.at(-1).date||s.complete&&to>=HALVINGS[s.c])return null;
+    const a=m===0?s.base:nearPrice(s,from),b=nearPrice(s,to);
+    return a&&b?(b/a-1)*100:null;
+  })}));
+  const peaks=all.map(s=>{
+    const peak=s.rows.reduce((a,b)=>a.price>=b.price?a:b);
+    return {s,day:Math.round((peak.date-s.start)/DAY_MS),multiple:peak.price/s.base,observed:!s.complete};
+  });
+  const summary='<div class="g3">'+statCard('Current cycle position','Day '+liveDay,'Since '+fmtDate(live.start))+
+    statCard('Price since halving',numText(liveIndex/100,2)+'×','Baseline '+moneyText(live.base))+
+    statCard('Historical rank',percentile===null?'—':numText(percentile,0)+'th percentile',peerIndices.length+' prior cycles at day '+liveDay)+'</div>';
+  const heatHead=heatMonths.slice(0,-1).map(m=>'<th scope="col">M'+m+'–'+(m+6)+'</th>').join('');
+  const heatBody=heat.map(({s,cells})=>'<tr><th scope="row">C'+s.c+(s.complete?'':' · live')+'</th>'+cells.map(v=>{
+    const bg=v===null?'transparent':v>0?'rgba(34,197,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')':'rgba(244,63,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')';
+    return '<td class="cycle-heat-cell" style="background:'+bg+'">'+(v===null?'—':(v>0?'+':'')+v.toFixed(0)+'%')+'</td>';
+  }).join('')+'</tr>').join('');
+  host.innerHTML='<div class="chart-card"><div class="chart-title">Current price vs historical range · aligned by days since halving</div>'+makeCanvas('c3range',300)+'<div class="quality-note">The shaded range and median use only prior completed cycles. A day needs at least two historical prices; gaps are left out.</div></div>'+
+    '<div class="chart-card"><div class="chart-title">Same-day price performance · day '+liveDay+'</div>'+makeCanvas('c3bars',220)+'<div class="quality-note">Each bar compares its price with that cycle’s halving price. A prior cycle appears only if it has a price on the exact matching day.</div></div>'+
+    '<div class="chart-card"><div class="chart-title">Six-month return heatmap · measured from segment start to end</div><div class="tbl-wrap"><table class="cycle-heat"><thead><tr><th scope="col">Cycle</th>'+heatHead+'</tr></thead><tbody>'+heatBody+'</tbody></table></div><div class="quality-note">— means the segment is incomplete or a price near an endpoint is unavailable. Colors encode gains and losses within each segment.</div></div>'+
+    '<div class="chart-card"><div class="chart-title">Cycle price peaks · timing and gain since halving</div>'+makeCanvas('c3peaks',290)+'<div class="quality-note">The live cycle marker is its highest price observed so far; its final peak is unknown.</div></div>'+
+    '<div class="chart-card"><div class="chart-title">Price and MVRV · aligned daily observations</div><div class="quality-note">Hover either chart to align the same day on both. The current cycle ends at its latest matched daily observation.</div>'+makeCanvas('c3alignedprice',180)+makeCanvas('c3alignedmvrv',180)+'</div>'+
+    '<div class="info">Cycle comparisons use elapsed UTC days from each confirmed halving. Historical benchmarks exclude cycles with estimated end dates. The current cycle uses observed data only; these charts describe history, not a price forecast.</div>';
+  host.insertAdjacentHTML('afterbegin',summary);
+  ['c3range','c3bars','c3peaks','c3alignedprice','c3alignedmvrv'].forEach(destroyChart);
+  const rOpts=cycleInsightOptions('Days since halving','Indexed BTC price (halving = 100)');
+  rOpts.plugins.legend={display:true,labels:{color:CC.text,filter:item=>item.text!=='Historical low'}};
+  rOpts.plugins.tooltip.callbacks.label=ctx=>ctx.dataset.label+': '+numText(ctx.parsed.y,1);
+  CHARTS.c3range=new Chart(document.getElementById('c3range'),{type:'scatter',data:{datasets:rangeData},options:rOpts});
+  const bOpts=chartDefs();bOpts.indexAxis='y';bOpts.scales.x.title={display:true,text:'Indexed BTC price (halving = 100)',color:CC.text};
+  bOpts.scales.y.grid.display=false;bOpts.plugins.tooltip.callbacks={label:ctx=>numText(ctx.parsed.x/100,2)+'× since halving'};
+  CHARTS.c3bars=new Chart(document.getElementById('c3bars'),{type:'bar',data:{labels:pointRows.map(p=>p.label),datasets:[{data:pointRows.map(p=>p.y),backgroundColor:pointRows.map(p=>p.color)}]},options:bOpts});
+  const pOpts=cycleInsightOptions('Months since halving (days / 30.44)','Peak / halving price (×)');
+  pOpts.plugins.legend={display:true,labels:{color:CC.text}};
+  pOpts.plugins.tooltip.callbacks.label=ctx=>ctx.dataset.label+': '+numText(ctx.parsed.y,2)+'× at day '+Math.round(ctx.parsed.x*30.44);
+  CHARTS.c3peaks=new Chart(document.getElementById('c3peaks'),{type:'scatter',data:{datasets:peaks.map(p=>({label:'C'+p.s.c+(p.observed?' · observed high':' · completed'),data:[{x:p.day/30.44,y:p.multiple}],backgroundColor:p.s.color,borderColor:p.s.color,pointStyle:p.observed?'triangle':'circle',pointRadius:7,pointHoverRadius:9}))},options:pOpts});
+  let hoverDay=null;
+  const syncPlugin={id:'cycleSharedDay',afterDatasetsDraw(chart){
+    if(hoverDay===null)return;
+    const x=chart.scales.x.getPixelForValue(hoverDay);
+    if(x<chart.chartArea.left||x>chart.chartArea.right)return;
+    const ctx=chart.ctx;ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle=CC.accent;ctx.beginPath();ctx.moveTo(x,chart.chartArea.top);ctx.lineTo(x,chart.chartArea.bottom);ctx.stroke();ctx.restore();
+  }};
+  const aligned=s=>s.rows.map(d=>({x:Math.round((d.date-s.start)/DAY_MS),y:d.price}));
+  const alignedRows=live.rows.filter(d=>Number.isFinite(d.mvrv));
+  const syncOpts=(title,log)=>{
+    const o=cycleInsightOptions('Days since halving',title);
+    if(log)o.scales.y.type='logarithmic';
+    o.onHover=(event)=>{
+      const x=event?.x;
+      const day=Number.isFinite(x)&&x>=0?Math.round(o._chart.scales.x.getValueForPixel(x)):null;
+      if(day!==hoverDay){hoverDay=day;['c3alignedprice','c3alignedmvrv'].forEach(id=>CHARTS[id]?.update('none'));}
+    };
+    o.plugins.tooltip.callbacks.label=ctx=>ctx.dataset.label+': '+numText(ctx.parsed.y,2);
+    return o;
+  };
+  const aPrice=syncOpts('BTC price (USD)',true),aMvrv=syncOpts('MVRV',false);
+  const common={borderColor:CC.accent,borderWidth:2,pointRadius:0,showLine:true,spanGaps:false};
+  CHARTS.c3alignedprice=new Chart(document.getElementById('c3alignedprice'),{type:'scatter',data:{datasets:[{...common,label:'BTC price',data:aligned(live)}]},options:aPrice,plugins:[syncPlugin]});
+  CHARTS.c3alignedmvrv=new Chart(document.getElementById('c3alignedmvrv'),{type:'scatter',data:{datasets:[{...common,label:'MVRV',data:alignedRows.map(d=>({x:Math.round((d.date-live.start)/DAY_MS),y:d.mvrv}))}]},options:aMvrv,plugins:[syncPlugin]});
+  aPrice._chart=CHARTS.c3alignedprice;aMvrv._chart=CHARTS.c3alignedmvrv;
+  const maxDay=liveDay;
+  [CHARTS.c3alignedprice,CHARTS.c3alignedmvrv].forEach(ch=>{ch.options.scales.x.min=0;ch.options.scales.x.max=maxDay;ch.update('none');});
+  ['c3alignedprice','c3alignedmvrv'].forEach(id=>document.getElementById(id).addEventListener('mouseleave',()=>{hoverDay=null;CHARTS.c3alignedprice?.update('none');CHARTS.c3alignedmvrv?.update('none');}));
 }
 
 function buildDrawdown(){
