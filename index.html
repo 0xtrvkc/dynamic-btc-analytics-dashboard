@@ -1078,18 +1078,32 @@ function buildCycleInsights(){
     const bg=v===null?'transparent':v>0?'rgba(34,197,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')':'rgba(244,63,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')';
     return '<td class="cycle-heat-cell" style="background:'+bg+'">'+(v===null?'—':(v>0?'+':'')+v.toFixed(0)+'%')+'</td>';
   }).join('')+'</tr>').join('');
-  host.innerHTML='<div class="chart-card"><div class="chart-title">Current price vs historical range · aligned by days since halving</div>'+makeCanvas('c3range',300)+'<div class="quality-note">The shaded range and median use only prior completed cycles. A day needs at least two historical prices; gaps are left out.</div></div>'+
+  host.innerHTML='<div class="chart-card"><div class="chart-title">Current price vs historical range · aligned by days since halving</div>'+makeCanvas('c3range',300)+'<div class="quality-note">The full historical scale compresses the current cycle because early cycles gained much more. The chart below shows current-cycle movement on its own scale.</div></div>'+
+    '<div class="chart-card"><div class="chart-title">Current cycle detail · halving = 100</div>'+makeCanvas('c3current',210)+'<div class="quality-note">The dashed line marks the halving price. This axis is fitted to observed current-cycle prices; compare magnitudes in the full chart above.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Same-day price performance · day '+liveDay+'</div>'+makeCanvas('c3bars',220)+'<div class="quality-note">Each bar compares its price with that cycle’s halving price. A prior cycle appears only if it has a price on the exact matching day.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Six-month return heatmap · measured from segment start to end</div><div class="tbl-wrap"><table class="cycle-heat"><thead><tr><th scope="col">Cycle</th>'+heatHead+'</tr></thead><tbody>'+heatBody+'</tbody></table></div><div class="quality-note">— means the segment is incomplete or a price near an endpoint is unavailable. Colors encode gains and losses within each segment.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Cycle price peaks · timing and gain since halving</div>'+makeCanvas('c3peaks',290)+'<div class="quality-note">The live cycle marker is its highest price observed so far; its final peak is unknown.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Price and MVRV · aligned daily observations</div><div class="quality-note">Hover either chart to align the same day on both. The current cycle ends at its latest matched daily observation.</div>'+makeCanvas('c3alignedprice',180)+makeCanvas('c3alignedmvrv',180)+'</div>'+
     '<div class="info">Cycle comparisons use elapsed UTC days from each confirmed halving. Historical benchmarks exclude cycles with estimated end dates. The current cycle uses observed data only; these charts describe history, not a price forecast.</div>';
   host.insertAdjacentHTML('afterbegin',summary);
-  ['c3range','c3bars','c3peaks','c3alignedprice','c3alignedmvrv'].forEach(destroyChart);
+  ['c3range','c3current','c3bars','c3peaks','c3alignedprice','c3alignedmvrv'].forEach(destroyChart);
   const rOpts=cycleInsightOptions('Days since halving','Indexed BTC price (halving = 100)');
   rOpts.plugins.legend={display:true,labels:{color:CC.text,filter:item=>item.text!=='Historical low'}};
   rOpts.plugins.tooltip.callbacks.label=ctx=>ctx.dataset.label+': '+numText(ctx.parsed.y,1);
   CHARTS.c3range=new Chart(document.getElementById('c3range'),{type:'scatter',data:{datasets:rangeData},options:rOpts});
+  const currentPoints=rangeData.at(-1).data;
+  const currentValues=currentPoints.map(p=>p.y).concat(100);
+  const currentMin=Math.min(...currentValues),currentMax=Math.max(...currentValues);
+  const currentPad=Math.max(8,(currentMax-currentMin)*.12);
+  const detailOpts=cycleInsightOptions('Days since halving','Indexed BTC price (halving = 100)');
+  detailOpts.scales.y.min=Math.max(0,Math.floor((currentMin-currentPad)/10)*10);
+  detailOpts.scales.y.max=Math.ceil((currentMax+currentPad)/10)*10;
+  detailOpts.plugins.legend={display:true,labels:{color:CC.text}};
+  detailOpts.plugins.tooltip.callbacks.label=ctx=>ctx.dataset.label+': '+numText(ctx.parsed.y,1)+' ('+numText(ctx.parsed.y/100,2)+'×)';
+  CHARTS.c3current=new Chart(document.getElementById('c3current'),{type:'scatter',data:{datasets:[
+    {label:'Halving = 100',data:[{x:0,y:100},{x:liveDay,y:100}],borderColor:CC.muted,borderDash:[5,4],borderWidth:1,pointRadius:0,showLine:true},
+    {label:'Current cycle',data:currentPoints,borderColor:CC.accent,backgroundColor:CC.accent,borderWidth:2.5,pointRadius:0,showLine:true,spanGaps:false}
+  ]},options:detailOpts});
   const bOpts=chartDefs();bOpts.indexAxis='y';bOpts.scales.x.title={display:true,text:'Indexed BTC price (halving = 100)',color:CC.text};
   bOpts.scales.y.grid.display=false;bOpts.plugins.tooltip.callbacks={label:ctx=>numText(ctx.parsed.x/100,2)+'× since halving'};
   CHARTS.c3bars=new Chart(document.getElementById('c3bars'),{type:'bar',data:{labels:pointRows.map(p=>p.label),datasets:[{data:pointRows.map(p=>p.y),backgroundColor:pointRows.map(p=>p.color)}]},options:bOpts});
