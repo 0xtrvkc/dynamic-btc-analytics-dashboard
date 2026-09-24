@@ -116,11 +116,11 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
 
 <dialog id="cycle-dates-dialog" aria-labelledby="cycle-dates-title">
   <form method="dialog"><div class="dialog-heading"><h2 id="cycle-dates-title">Halving dates</h2><button aria-label="Close halving dates">Close</button></div></form>
-  <p>Cycles follow halving dates. Future dates are estimates: daily MVRV data cannot tell the app when a halving actually occurred. Update the date and mark it confirmed after the event.</p>
-  <p>Cycles with unconfirmed boundaries stay outside model training and accuracy scores. Your dates are saved in this browser.</p>
+  <p>Cycle starts are the UTC dates of Bitcoin halving blocks (210,000, 420,000, 630,000, 840,000…). Future dates are estimates until the block exists and two explorers agree on its hash and timestamp.</p>
+  <p>Verification runs on page load and can be retried here. Estimated boundaries stay outside model training and accuracy scores. Your dates are saved in this browser.</p>
   <div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>UTC start date</th><th>Status</th></tr></thead><tbody id="cycle-date-rows"></tbody></table></div>
   <div id="cycle-date-error" role="alert"></div>
-  <div class="dialog-actions"><button onclick="addCycleDateDraft()">Add future estimate</button><button onclick="saveCycleDates()">Save dates</button></div>
+  <div class="dialog-actions"><button onclick="addCycleDateDraft()">Add future estimate</button><button onclick="verifyHalvingsFromChain(true)">Verify on-chain</button><button onclick="saveCycleDates()">Save dates</button></div>
 </dialog>
 
 <script>
@@ -142,7 +142,8 @@ function validateHalvingEvents(events,now=Date.now()){
     const t=Date.parse(e.date);if(t<=previous)throw new Error('Halving dates must be in increasing order.');previous=t;
     if(i<4&&(e.date!==DEFAULT_HALVING_EVENTS[i].date||e.confirmed!==true))throw new Error('The four known historical dates are fixed.');
     if(e.confirmed===true&&t>now)throw new Error('A future date must remain an estimate until the halving occurs.');
-    return {date:e.date,confirmed:e.confirmed===true};
+    if(i>=4&&e.confirmed===true&&!/^[0-9a-f]{64}$/.test(e.blockHash||''))throw new Error('Future halvings require a verified block hash before confirmation.');
+    return {date:e.date,confirmed:e.confirmed===true,...(i>=4&&e.confirmed?{blockHash:e.blockHash}:{})};
   });
 }
 function refreshCycleMetadata(){
@@ -160,8 +161,78 @@ function ensureCycleCoverage(date){
 try{const saved=localStorage.getItem('mvrv-halving-events-v1');if(saved)HALVING_EVENTS=validateHalvingEvents(JSON.parse(saved));}catch(e){/* Use known defaults if stored preferences are invalid. */}
 refreshCycleMetadata();
 let cycleDateDraft=[];
+const HALVING_INTERVAL=210000;
+const HALVING_SOURCES=[
+  {name:'mempool.space',base:'https://mempool.space/api'},
+  {name:'Blockstream',base:'https://blockstream.info/api'}
+];
+let halvingVerificationStatus='Checking block explorers…';
+let halvingVerificationRunning=false;
+function halvingBlockHeight(c){return c*HALVING_INTERVAL;}
+function halvingSourceLink(c){
+  const e=HALVING_EVENTS[c-1],height=halvingBlockHeight(c);
+  if(!e?.confirmed)return 'Block '+height.toLocaleString()+' · awaiting confirmation';
+  const block=e.blockHash||String(height);
+  return '<a href="https://mempool.space/block/'+block+'" target="_blank" rel="noopener noreferrer">Block '+height.toLocaleString()+' ↗</a>';
+}
+async function halvingFetch(source,path,json=false){
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),8000);
+  try{
+    const res=await fetch(source.base+path,{signal:ctrl.signal,cache:'no-store'});
+    if(!res.ok)throw new Error(source.name+' HTTP '+res.status);
+    return json?res.json():res.text();
+  }finally{clearTimeout(timer);}
+}
+async function verifiedHalvingBlock(height){
+  const tips=await Promise.all(HALVING_SOURCES.map(async s=>Number(await halvingFetch(s,'/blocks/tip/height'))));
+  if(!tips.every(t=>Number.isInteger(t)&&t>=height+6))return null; // six subsequent blocks
+  const blocks=await Promise.all(HALVING_SOURCES.map(async s=>{
+    const hash=(await halvingFetch(s,'/block-height/'+height)).trim();
+    if(!/^[0-9a-f]{64}$/.test(hash))throw new Error(s.name+' returned an invalid block hash');
+    const b=await halvingFetch(s,'/block/'+hash,true);
+    if(b.id!==hash||b.height!==height||!Number.isInteger(b.timestamp))throw new Error(s.name+' returned inconsistent block details');
+    return b;
+  }));
+  if(blocks[0].id!==blocks[1].id||blocks[0].timestamp!==blocks[1].timestamp)throw new Error('Block explorers disagree; no date was changed.');
+  if(blocks[0].timestamp*1000>Date.now())throw new Error('Block timestamp is in the future.');
+  return {date:new Date(blocks[0].timestamp*1000).toISOString().slice(0,10),blockHash:blocks[0].id};
+}
+async function verifyHalvingsFromChain(showStatus=false){
+  if(halvingVerificationRunning)return;
+  halvingVerificationRunning=true;
+  if(showStatus)halvingVerificationStatus='Checking two block explorers…';
+  try{
+    let changed=0;
+    for(let i=4;i<HALVING_EVENTS.length&&i<128;i++){
+      if(HALVING_EVENTS[i].confirmed)continue;
+      const evidence=await verifiedHalvingBlock(halvingBlockHeight(i+1));
+      if(!evidence)break;
+      const next=HALVING_EVENTS.map(e=>({...e}));
+      const oldTime=Date.parse(next[i].date),newTime=Date.parse(evidence.date);
+      next[i]={...evidence,confirmed:true};
+      // Keep later estimates in chronological order if the actual date shifted.
+      for(let j=i+1;j<next.length;j++)if(!next[j].confirmed)next[j].date=new Date(Date.parse(next[j].date)+newTime-oldTime).toISOString().slice(0,10);
+      HALVING_EVENTS=validateHalvingEvents(next);
+      localStorage.setItem('mvrv-halving-events-v1',JSON.stringify(HALVING_EVENTS));
+      refreshCycleMetadata();changed++;
+    }
+    halvingVerificationStatus=changed?changed+' new halving'+(changed===1?'':'s')+' verified from both explorers.':'Next halving has not reached six confirmations.';
+    if(changed&&DATA.length){
+      DATA=enrichData(DATA.map(d=>({date:d.date,mvrv:d.mvrv})));
+      if(hasPriceData)joinPrice();
+      STATS=computeStats(DATA);BY_CYCLE={};DATA.forEach(d=>(BY_CYCLE[d.cycle]??=[]).push(d));
+      Object.keys(CHARTS).forEach(destroyChart);built.clear();switchTab(activeTab);updateDataStatus();
+    }
+  }catch(err){halvingVerificationStatus='Could not cross-check both explorers: '+err.message+'. Dates remain estimates.';}
+  finally{
+    halvingVerificationRunning=false;
+    const status=document.getElementById('halving-verification-status');
+    if(status)status.textContent=halvingVerificationStatus;
+    if(document.getElementById('cycle-dates-dialog').open){cycleDateDraft=HALVING_EVENTS.map(e=>({...e}));renderCycleDateEditor();document.getElementById('cycle-date-error').textContent=halvingVerificationStatus;}
+  }
+}
 function renderCycleDateEditor(){
-  document.getElementById('cycle-date-rows').innerHTML=cycleDateDraft.map((e,i)=>'<tr><th scope="row">C'+(i+1)+'</th><td><input type="date" aria-label="Cycle '+(i+1)+' halving date" value="'+e.date+'" '+(i<4?'disabled':'')+' onchange="cycleDateDraft['+i+'].date=this.value"></td><td><label><input type="checkbox" '+(e.confirmed?'checked ':'')+(i<4?'disabled ':'')+' onchange="cycleDateDraft['+i+'].confirmed=this.checked"> Confirmed</label></td></tr>').join('');
+  document.getElementById('cycle-date-rows').innerHTML=cycleDateDraft.map((e,i)=>'<tr><th scope="row">C'+(i+1)+'</th><td><input type="date" aria-label="Cycle '+(i+1)+' halving date" value="'+e.date+'" '+(e.confirmed?'disabled':'')+' onchange="cycleDateDraft['+i+'].date=this.value"></td><td>'+(e.confirmed?'Verified · ':'Estimate · ')+halvingSourceLink(i+1)+'</td></tr>').join('');
 }
 function openCycleDates(){cycleDateDraft=HALVING_EVENTS.map(e=>({...e}));renderCycleDateEditor();document.getElementById('cycle-date-error').textContent='';document.getElementById('cycle-dates-dialog').showModal();}
 function addCycleDateDraft(){const d=new Date(cycleDateDraft.at(-1).date);if(!Number.isFinite(+d))return;d.setUTCFullYear(d.getUTCFullYear()+4);cycleDateDraft.push({date:d.toISOString().slice(0,10),confirmed:false});renderCycleDateEditor();}
@@ -438,6 +509,7 @@ function joinPrice(){
 
 fetchPriceData();
 autoLoadMVRV();
+verifyHalvingsFromChain();
 
 const DAY_MS=86400000;
 function numText(v,digits=2){return Number.isFinite(v)?v.toFixed(digits):'—';}
@@ -1074,18 +1146,20 @@ function buildCycleInsights(){
     statCard('Price since halving',numText(liveIndex/100,2)+'×','Baseline '+moneyText(live.base))+
     statCard('Historical rank',percentile===null?'—':numText(percentile,0)+'th percentile',peerIndices.length+' prior cycles at day '+liveDay)+'</div>';
   const heatHead=heatMonths.slice(0,-1).map(m=>'<th scope="col">M'+m+'–'+(m+6)+'</th>').join('');
-  const heatBody=heat.map(({s,cells})=>'<tr><th scope="row">C'+s.c+(s.complete?'':' · live')+'</th>'+cells.map(v=>{
+  const heatBody=heat.map(({s,cells})=>'<tr><th scope="row">C'+s.c+(s.complete?'':' · live')+'</th><td>'+fmtDate(s.start)+'</td><td>'+halvingSourceLink(s.c)+'</td>'+cells.map((v,i)=>{
     const bg=v===null?'transparent':v>0?'rgba(34,197,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')':'rgba(244,63,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')';
-    return '<td class="cycle-heat-cell" style="background:'+bg+'">'+(v===null?'—':(v>0?'+':'')+v.toFixed(0)+'%')+'</td>';
+    const from=fmtDate(monthDate(s.start,heatMonths[i])),to=fmtDate(monthDate(s.start,heatMonths[i+1]));
+    return '<td class="cycle-heat-cell" title="UTC '+from+' to '+to+'" style="background:'+bg+'">'+(v===null?'—':(v>0?'+':'')+v.toFixed(0)+'%')+'</td>';
   }).join('')+'</tr>').join('');
   host.innerHTML='<div class="chart-card"><div class="chart-title">Current price vs historical range · aligned by days since halving</div>'+makeCanvas('c3range',300)+'<div class="quality-note">The full historical scale compresses the current cycle because early cycles gained much more. The chart below shows current-cycle movement on its own scale.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Current cycle detail · halving = 100</div>'+makeCanvas('c3current',210)+'<div class="quality-note">The dashed line marks the halving price. This axis is fitted to observed current-cycle prices; compare magnitudes in the full chart above.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Same-day price performance · day '+liveDay+'</div>'+makeCanvas('c3bars',220)+'<div class="quality-note">Each bar compares its price with that cycle’s halving price. A prior cycle appears only if it has a price on the exact matching day.</div></div>'+
-    '<div class="chart-card"><div class="chart-title">Six-month return heatmap · measured from segment start to end</div><div class="tbl-wrap"><table class="cycle-heat"><thead><tr><th scope="col">Cycle</th>'+heatHead+'</tr></thead><tbody>'+heatBody+'</tbody></table></div><div class="quality-note">— means the segment is incomplete or a price near an endpoint is unavailable. Colors encode gains and losses within each segment.</div></div>'+
+    '<div class="chart-card"><div class="chart-title">Six-month return heatmap · each cycle starts at its halving block</div><div class="tbl-wrap"><table class="cycle-heat"><thead><tr><th scope="col">Cycle</th><th scope="col">Start · UTC</th><th scope="col">On-chain source</th>'+heatHead+'</tr></thead><tbody>'+heatBody+'</tbody></table></div><div class="quality-note">M0 begins on the UTC calendar date of the linked halving block. Hover a cell for its exact date window. Returns use daily BTC prices near each boundary (within three days). — means the segment is incomplete or a boundary price is unavailable. These are halving cycles, not dates inferred from price or MVRV. <a href="https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp" target="_blank" rel="noopener noreferrer">Bitcoin Core’s 210,000-block schedule ↗</a> · <a href="https://mempool.space/docs/api/rest" target="_blank" rel="noopener noreferrer">Block explorer API ↗</a> · <span id="halving-verification-status"></span></div></div>'+
     '<div class="chart-card"><div class="chart-title">Cycle price peaks · timing and gain since halving</div>'+makeCanvas('c3peaks',290)+'<div class="quality-note">The live cycle marker is its highest price observed so far; its final peak is unknown.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Price and MVRV · aligned daily observations</div><div class="quality-note">Hover either chart to align the same day on both. The current cycle ends at its latest matched daily observation.</div>'+makeCanvas('c3alignedprice',180)+makeCanvas('c3alignedmvrv',180)+'</div>'+
     '<div class="info">Cycle comparisons use elapsed UTC days from each confirmed halving. Historical benchmarks exclude cycles with estimated end dates. The current cycle uses observed data only; these charts describe history, not a price forecast.</div>';
   host.insertAdjacentHTML('afterbegin',summary);
+  document.getElementById('halving-verification-status').textContent=halvingVerificationStatus;
   ['c3range','c3current','c3bars','c3peaks','c3alignedprice','c3alignedmvrv'].forEach(destroyChart);
   const rOpts=cycleInsightOptions('Days since halving','Indexed BTC price (halving = 100)');
   rOpts.plugins.legend={display:true,labels:{color:CC.text,filter:item=>item.text!=='Historical low'}};
