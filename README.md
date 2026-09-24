@@ -92,10 +92,24 @@ All the tunable knobs are at the top of index.html:
   ZSCORE_CAUTION: 1.0         above this = caution signal
   ROC_SHORT: 30               short momentum window (days)
   ROC_LONG: 90                long momentum window (days)
-  AVG_CYCLE_DAYS: 1422        used to estimate % progress in current cycle
+  AVG_CYCLE_DAYS: 1422        fallback interval only when no next estimate exists
 
-HALVINGS array is also in index.html — update it if a new halving gets added
-or you want to adjust the estimated future dates.
+The first four cycle starts are fixed to the UTC dates of blocks 210,000,
+420,000, 630,000 and 840,000. Future dates shown in Cycle dates are estimates,
+not new-cycle boundaries. On page load, the browser checks mempool.space and
+Blockstream for the next 210,000-block boundary; both must report the same
+hash and timestamp with six later blocks before the new cycle begins.
+The scheduled Python export uses the same block rule independently. If the
+explorers are unavailable, the last confirmed cycle remains active and the
+next date remains an estimate. Browser-confirmed dates are saved locally;
+the scheduled export checks the chain again on each run.
+
+In Cycle Overlay, select a six-month heatmap cell to inspect its exact UTC
+window, price dates, daily path, running drawdown, volatility, MVRV change,
+data coverage, and return relative to completed historical cycles. The
+unfinished live window is labeled "so far" and compared at the same elapsed
+day, not against completed six-month returns. Historical ranks have only a
+few prior cycles and are descriptive, not predictive.
 
 
 STACK

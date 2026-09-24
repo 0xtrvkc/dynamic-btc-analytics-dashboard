@@ -6,20 +6,24 @@ computes the same stats, writes exports/mvrv_summary_YYYY-MM-DD.txt
 WITHOUT touching any other files.
 """
 
-import json, math, os, sys
-from datetime import datetime, timezone, date
+import json, math, os, sys, urllib.request
+from datetime import datetime, timezone, date, timedelta
 
 # ── constants (mirror index.html) ─────────────────────────────────────────────
-HALVINGS = [
-    "2012-11-28",  # C1
-    "2016-07-09",  # C2
-    "2020-05-11",  # C3
-    "2024-04-20",  # C4
-    "2028-03-26",  # C5 est.
-    "2032-02-15",  # C6 est.
-    "2036-01-10",  # C7 est.
+HALVING_EVENTS = [
+    {"date": "2012-11-28", "confirmed": True},
+    {"date": "2016-07-09", "confirmed": True},
+    {"date": "2020-05-11", "confirmed": True},
+    {"date": "2024-04-20", "confirmed": True},
+    {"date": "2028-03-26", "confirmed": False},
+    {"date": "2032-02-15", "confirmed": False},
+    {"date": "2036-01-10", "confirmed": False},
 ]
-CYCLE_LABELS = {1:"2012-15", 2:"2016-19", 3:"2020-23", 4:"2024-27", 5:"2028-31", 6:"2032-35"}
+HALVING_INTERVAL = 210000
+EXPLORER_APIS = ("https://mempool.space/api", "https://blockstream.info/api")
+HALVINGS = [e["date"] for e in HALVING_EVENTS]
+HALVING_DTS = []
+CYCLE_LABELS = {}
 
 AVG_CYCLE_DAYS   = 1422
 ZSCORE_WINDOW    = 365
@@ -33,15 +37,74 @@ HALVING_TOL_DAYS = 3
 def parse_date(s):
     return datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
-HALVING_DTS = [parse_date(h) for h in HALVINGS]
+def refresh_halving_dates():
+    HALVINGS[:] = [e["date"] for e in HALVING_EVENTS]
+    HALVING_DTS[:] = [parse_date(h) for h in HALVINGS]
+    CYCLE_LABELS.clear()
+    for i, e in enumerate(HALVING_EVENTS):
+        nxt = HALVING_EVENTS[i+1] if i+1 < len(HALVING_EVENTS) else None
+        CYCLE_LABELS[i+1] = f"{e['date'][:4]}–{nxt['date'][:4] if nxt else '?'}" + (
+            " (est.)" if not e["confirmed"] or not (nxt and nxt["confirmed"]) else ""
+        )
+
+def explorer_get(base, path):
+    req = urllib.request.Request(base + path, headers={"User-Agent": "BTC-Cycle-Analytics/1.0"})
+    with urllib.request.urlopen(req, timeout=6) as res:
+        return res.read().decode().strip()
+
+def extend_estimated_halvings(latest_date):
+    # Match the browser: keep two estimated boundaries beyond the latest data.
+    while latest_date >= HALVING_EVENTS[-2]["date"] and len(HALVING_EVENTS) < 128:
+        previous = parse_date(HALVING_EVENTS[-1]["date"])
+        try:
+            upcoming = previous.replace(year=previous.year + 4)
+        except ValueError:  # 29 February in a non-leap year
+            upcoming = previous.replace(year=previous.year + 4, month=3, day=1)
+        HALVING_EVENTS.append({"date": upcoming.date().isoformat(), "confirmed": False})
+    refresh_halving_dates()
+
+def verify_future_halvings():
+    """Confirm a new cycle only after two explorers agree and six later blocks exist."""
+    for i in range(4, len(HALVING_EVENTS)):
+        height = (i + 1) * HALVING_INTERVAL
+        try:
+            tips = [int(explorer_get(base, "/blocks/tip/height")) for base in EXPLORER_APIS]
+            if any(t < height + 6 for t in tips):
+                break
+            blocks = []
+            for base in EXPLORER_APIS:
+                block_hash = explorer_get(base, f"/block-height/{height}")
+                if len(block_hash) != 64 or any(x not in "0123456789abcdef" for x in block_hash):
+                    raise ValueError("invalid block hash")
+                block = json.loads(explorer_get(base, f"/block/{block_hash}"))
+                if block.get("id") != block_hash or block.get("height") != height:
+                    raise ValueError("block height/hash mismatch")
+                blocks.append(block)
+            if blocks[0]["id"] != blocks[1]["id"] or blocks[0]["timestamp"] != blocks[1]["timestamp"]:
+                raise ValueError("explorers disagree")
+            stamp = datetime.fromtimestamp(blocks[0]["timestamp"], tz=timezone.utc)
+            if stamp > datetime.now(timezone.utc):
+                raise ValueError("future block timestamp")
+            actual = stamp.date().isoformat()
+            old_date = parse_date(HALVING_EVENTS[i]["date"])
+            shift = (parse_date(actual) - old_date).days
+            HALVING_EVENTS[i] = {"date": actual, "confirmed": True, "blockHash": blocks[0]["id"]}
+            for later in HALVING_EVENTS[i+1:]:
+                if not later["confirmed"]:
+                    later["date"] = (parse_date(later["date"]) + timedelta(days=shift)).date().isoformat()
+            print(f"Verified C{i+1} at block {height:,} ({actual} UTC)")
+        except (OSError, ValueError, KeyError, TypeError, OverflowError, json.JSONDecodeError) as exc:
+            print(f"C{i+1} remains an estimate: {exc}")
+            break
+    refresh_halving_dates()
+
+refresh_halving_dates()
 
 def assign_cycle(dt):
     c = 0
-    for i, h in enumerate(HALVING_DTS[:-1]):
-        if h <= dt < HALVING_DTS[i+1]:
-            c = i + 1; break
-    if dt >= HALVING_DTS[-1]:
-        c = len(HALVING_DTS)
+    for i, h in enumerate(HALVING_DTS):
+        if HALVING_EVENTS[i]["confirmed"] and dt >= h:
+            c = i + 1
     return c
 
 def cycle_pct(dt, c):
@@ -50,10 +113,10 @@ def cycle_pct(dt, c):
     if c < len(HALVING_DTS):
         total = (HALVING_DTS[c] - HALVING_DTS[c-1]).days
         days_in = (dt - HALVING_DTS[c-1]).days
-        return min(100.0, days_in / total * 100)
+        return days_in / total * 100
     # open-ended last cycle
     days_in = (dt - HALVING_DTS[c-1]).days
-    return min(100.0, days_in / AVG_CYCLE_DAYS * 100)
+    return days_in / AVG_CYCLE_DAYS * 100
 
 def median(arr):
     if not arr: return None
@@ -166,7 +229,16 @@ def build_stats(data):
         if not pts: continue
         pk = max(pts, key=lambda d: d["mvrv"])
         tr = min(pts, key=lambda d: d["mvrv"])
-        days = (pts[-1]["dt"] - pts[0]["dt"]).days + 1
+        days = len(pts)
+        start = HALVING_DTS[c-1]
+        end = HALVING_DTS[c] if c < len(HALVING_DTS) else None
+        confirmed = HALVING_EVENTS[c-1]["confirmed"] and bool(c < len(HALVING_EVENTS) and HALVING_EVENTS[c]["confirmed"])
+        complete = bool(end and confirmed and last["dt"] >= end)
+        expected = (end-start).days if end else None
+        coverage = days/expected if expected else None
+        usable = bool(complete and coverage >= .95 and
+                      pts[0]["dt"]-start <= timedelta(days=3) and
+                      end-pts[-1]["dt"] <= timedelta(days=3))
         below1   = sum(1 for d in pts if d["mvrv"]<1)
         below1_5 = sum(1 for d in pts if d["mvrv"]<1.5)
         above2   = sum(1 for d in pts if d["mvrv"]>=2)
@@ -177,14 +249,12 @@ def build_stats(data):
             "trough": tr["mvrv"], "troughDate": tr["date"],
             "below1": below1, "below1_5": below1_5,
             "above2": above2, "above3": above3,
+            "complete": complete, "usable": usable, "boundariesConfirmed": confirmed,
             "pts": pts,
         })
 
     # regression
-    completed = [cd for cd in cycle_data
-                 if cd["cycle"] < last["cycle"] or
-                    (cd["cycle"] == last["cycle"] and HALVING_DTS[cd["cycle"]] < last["dt"]
-                     if cd["cycle"] < len(HALVING_DTS) else False)]
+    completed = [cd for cd in cycle_data if cd["usable"]]
     pk_cycles = [cd["cycle"] for cd in completed]
     pk_vals   = [cd["peak"]  for cd in completed]
     tr_cycles = [cd["cycle"] for cd in completed]
@@ -216,22 +286,21 @@ def run_backtest(data, stats, price_map):
     cur_cycle = stats["last"]["cycle"]
 
     def price_at_halving(hi):
-        if hi >= len(HALVINGS): return None
+        if hi < 0 or hi >= len(HALVINGS): return None
         hd = HALVINGS[hi]
         for delta in range(HALVING_TOL_DAYS+1):
-            for sign in ([0,1,-1] if delta else [0]):
-                d = (date.fromisoformat(hd) +
-                     __import__("datetime").timedelta(days=sign*delta)).isoformat()
-                if d in price_map: return float(price_map[d])
+            d = (date.fromisoformat(hd) - timedelta(days=delta)).isoformat()
+            p = price_map.get(d)
+            if p is not None and float(p) > 0: return float(p)
         return None
 
-    for c_idx, cd in enumerate(stats["cycleData"]):
+    for c_idx, cd in enumerate(cd for cd in stats["cycleData"] if cd["cycle"] >= 2):
         c = cd["cycle"]
         pts = cd["pts"]
         price_pts = [d for d in pts if d["price"]]
 
         # prior completed cycles for projection
-        prior = [cx for cx in stats["cycleData"] if cx["cycle"] < c]
+        prior = [cx for cx in stats["cycleData"] if cx["cycle"] < c and cx["usable"]]
 
         # price at halving for this cycle
         halving_price = price_at_halving(c-1)
@@ -260,9 +329,8 @@ def run_backtest(data, stats, price_map):
                 m1 = float(cur_mvrv_pk) * (1 + med_up/100)
 
             # M2: halving multiplier — log-decay fitted on prior
-            hm_pairs = [(px["cycle"], max((d["price"] for d in px["pts"] if d["price"]),
-                         default=None) / (price_at_halving(px["cycle"]-1) or 1))
-                        for px in prior if any(d["price"] for d in px["pts"])]
+            hm_pairs = [(px["cycle"], max(d["price"] for d in px["pts"] if d["price"]) / price_at_halving(px["cycle"]-1))
+                        for px in prior if any(d["price"] for d in px["pts"]) and price_at_halving(px["cycle"]-1)]
             hm_pairs = [(cc, mult) for cc, mult in hm_pairs if mult]
             if halving_price and len(hm_pairs) >= 2:
                 sl, ic = logreg([p[0] for p in hm_pairs], [p[1] for p in hm_pairs])
@@ -321,9 +389,8 @@ def run_backtest(data, stats, price_map):
 
             # BM2: halving floor ratio
             hf_pairs = [(px["cycle"],
-                         min((d["price"] for d in px["pts"] if d["price"]), default=None) /
-                         (price_at_halving(px["cycle"]-1) or 1))
-                        for px in prior if any(d["price"] for d in px["pts"])]
+                         min(d["price"] for d in px["pts"] if d["price"]) / price_at_halving(px["cycle"]-1))
+                        for px in prior if any(d["price"] for d in px["pts"]) and price_at_halving(px["cycle"]-1)]
             hf_pairs = [(cc, r) for cc, r in hf_pairs if r]
             if halving_price and len(hf_pairs) >= 2:
                 sl, ic = logreg([p[0] for p in hf_pairs], [p[1] for p in hf_pairs])
@@ -355,7 +422,8 @@ def run_backtest(data, stats, price_map):
             "bm1": bm1, "bm2": bm2, "bm3": bm3, "consensusBot": consensus_bot,
         })
 
-    completed_results = [r for r in all_results if not r["isCurrent"]]
+    completed_results = [r for r in all_results if not r["isCurrent"] and
+                         next(cd["usable"] for cd in stats["cycleData"] if cd["cycle"] == r["cycle"])]
     return all_results, completed_results
 
 # ── format helpers ────────────────────────────────────────────────────────────
@@ -646,22 +714,25 @@ def build_export(data, stats, price_map, all_results, completed_results):
         lines.append("  * Current cycle errors measured against ATH/low seen so far, not the final confirmed value.")
 
     hr("HALVING DATES")
-    now_dt = datetime.now(timezone.utc)
+    now_dt = l["dt"]
     for i, h in enumerate(HALVINGS):
         hdt = parse_date(h)
         next_h = parse_date(HALVINGS[i+1]) if i+1 < len(HALVINGS) else None
-        is_past    = hdt < now_dt and (not next_h or next_h < now_dt)
-        is_current = hdt <= now_dt and next_h and next_h > now_dt
-        status = "completed" if is_past else "current cycle" if is_current else "upcoming"
+        next_confirmed = i+1 < len(HALVING_EVENTS) and HALVING_EVENTS[i+1]["confirmed"]
+        is_past = bool(next_h and next_h <= now_dt and HALVING_EVENTS[i]["confirmed"] and next_confirmed)
+        is_current = HALVING_EVENTS[i]["confirmed"] and hdt <= now_dt and (not next_h or not next_confirmed or next_h > now_dt)
+        status = ("completed" if is_past else "latest observed cycle" if is_current else
+                  "confirmed boundary" if HALVING_EVENTS[i]["confirmed"] else "estimated boundary — unconfirmed")
         if is_current and next_h:
             pct = min(100, (now_dt-hdt).days / (next_h-hdt).days * 100)
-            extra = f" · {pct:.0f}% elapsed"
+            extra = f" · {pct:.0f}% of {'confirmed' if next_confirmed else 'estimated'} interval"
+            if now_dt > next_h: extra += " · estimate passed"
         elif not is_past:
             days_away = (hdt-now_dt).days
-            extra = f" · {days_away:,}d away"
+            extra = f" · {days_away:,}d from latest data" if days_away >= 0 else " · estimate passed"
         else:
             extra = ""
-        row(f"  C{i+1} halving", f"{h} [{status}{extra}]")
+        row(f"  C{i+1} halving", f"{h} · block {(i+1)*HALVING_INTERVAL:,} [{status}{extra}]")
 
     lines.append(""); lines.append("="*60)
     lines.append("Built by Sirapob Dangpad — a numbers-obsessed nerd who finds")
@@ -686,6 +757,8 @@ def main():
     print(f"Loading {mvrv_path}...")
     raw_rows = load_mvrv(mvrv_path)
     print(f"  {len(raw_rows):,} MVRV data points")
+    extend_estimated_halvings(raw_rows[-1]["date"])
+    verify_future_halvings()
 
     print(f"Loading {price_path}...")
     price_map = load_prices(price_path)

@@ -20,6 +20,7 @@
 .nav-group{display:flex;flex-direction:column;gap:3px;margin-bottom:16px}.nav-group-label{font:600 12px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 12px}.muted{color:var(--muted)}.tone-good{color:var(--green)}.tone-warn{color:var(--amber)}.tone-bad{color:var(--red)}.content>div{min-width:0}.stat-val{font-size:clamp(20px,1.65vw,28px)}.tbl-wrap{max-width:100%}.tbl-wrap table td{min-width:110px}.tbl-wrap table th{white-space:normal;min-width:110px}#mobile-navigation{display:none}.stat-sub{font-size:14px}.quality-note{font-size:14px}.header-meta{font-size:13px}#data-status{font-size:13px;color:var(--muted)}.nav-collapsed .tabs{display:none!important}.nav-collapsed #app{grid-template-columns:minmax(0,1fr)}@media(max-width:800px){.tabs{display:none}#mobile-navigation{display:block;position:sticky;top:0;z-index:40;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border)}#mobile-navigation label{font-size:14px;display:flex;align-items:center;gap:12px}#mobile-view{flex:1;width:0;min-height:44px;background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:8px}.header-meta{overflow-wrap:anywhere}}@media(max-width:390px){.g3,.g4{grid-template-columns:minmax(0,1fr)}}
 dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:24px}dialog::backdrop{background:#0009}dialog h2{font-size:20px;margin:0}.dialog-heading,.dialog-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}dialog p{font-size:14px;color:var(--muted)}dialog input[type=date]{color:var(--text);background:var(--surface2);border:1px solid var(--border);padding:8px;min-height:42px;max-width:100%}dialog label{white-space:nowrap;font-size:14px}#cycle-date-error{color:var(--red);font-size:14px;margin-bottom:12px}.header-right{justify-content:flex-end}@media(max-width:800px){.header-right .btn{flex:1 1 140px}.header-right{justify-content:flex-start}}
 #cycle-insights{min-width:0}#cycle-insights .cycle-heat{min-width:790px;text-align:center;font-variant-numeric:tabular-nums}#cycle-insights .cycle-heat th:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--surface2)}#cycle-insights .cycle-heat td{min-width:88px;font-weight:600}#cycle-insights .chart-card>.quality-note{margin:12px 0 0}#cycle-insights .chart-card .chart-wrap+.chart-wrap{margin-top:12px}
+#cycle-insights .heat-cell-button{display:block;width:100%;min-height:46px;padding:4px;border:2px solid transparent;background:transparent;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}#cycle-insights .heat-cell-button:hover,#cycle-insights .heat-cell-button[aria-pressed="true"]{border-color:var(--accent);background:var(--surface2);color:var(--accent)}#cycle-insights .heat-cell-button small{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}#cycle-insights .cycle-heat-cell{padding:0}#c3segment-inspector .g3{margin-top:14px}
 </style>
 </head>
 <body>
@@ -168,6 +169,7 @@ const HALVING_SOURCES=[
 ];
 let halvingVerificationStatus='Checking block explorers…';
 let halvingVerificationRunning=false;
+let halvingVerificationQueued=false;
 function halvingBlockHeight(c){return c*HALVING_INTERVAL;}
 function halvingSourceLink(c){
   const e=HALVING_EVENTS[c-1],height=halvingBlockHeight(c);
@@ -198,23 +200,23 @@ async function verifiedHalvingBlock(height){
   return {date:new Date(blocks[0].timestamp*1000).toISOString().slice(0,10),blockHash:blocks[0].id};
 }
 async function verifyHalvingsFromChain(showStatus=false){
-  if(halvingVerificationRunning)return;
+  if(halvingVerificationRunning){halvingVerificationQueued=true;return;}
   halvingVerificationRunning=true;
   if(showStatus)halvingVerificationStatus='Checking two block explorers…';
   try{
     let changed=0;
     for(let i=4;i<HALVING_EVENTS.length&&i<128;i++){
-      if(HALVING_EVENTS[i].confirmed)continue;
       const evidence=await verifiedHalvingBlock(halvingBlockHeight(i+1));
       if(!evidence)break;
+      if(HALVING_EVENTS[i].confirmed&&HALVING_EVENTS[i].date===evidence.date&&HALVING_EVENTS[i].blockHash===evidence.blockHash)continue;
       const next=HALVING_EVENTS.map(e=>({...e}));
       const oldTime=Date.parse(next[i].date),newTime=Date.parse(evidence.date);
       next[i]={...evidence,confirmed:true};
       // Keep later estimates in chronological order if the actual date shifted.
       for(let j=i+1;j<next.length;j++)if(!next[j].confirmed)next[j].date=new Date(Date.parse(next[j].date)+newTime-oldTime).toISOString().slice(0,10);
       HALVING_EVENTS=validateHalvingEvents(next);
-      localStorage.setItem('mvrv-halving-events-v1',JSON.stringify(HALVING_EVENTS));
       refreshCycleMetadata();changed++;
+      try{localStorage.setItem('mvrv-halving-events-v1',JSON.stringify(HALVING_EVENTS));}catch(e){/* Continue with verified dates for this session. */}
     }
     halvingVerificationStatus=changed?changed+' new halving'+(changed===1?'':'s')+' verified from both explorers.':'Next halving has not reached six confirmations.';
     if(changed&&DATA.length){
@@ -229,6 +231,7 @@ async function verifyHalvingsFromChain(showStatus=false){
     const status=document.getElementById('halving-verification-status');
     if(status)status.textContent=halvingVerificationStatus;
     if(document.getElementById('cycle-dates-dialog').open){cycleDateDraft=HALVING_EVENTS.map(e=>({...e}));renderCycleDateEditor();document.getElementById('cycle-date-error').textContent=halvingVerificationStatus;}
+    if(halvingVerificationQueued){halvingVerificationQueued=false;queueMicrotask(()=>verifyHalvingsFromChain());}
   }
 }
 function renderCycleDateEditor(){
@@ -251,7 +254,7 @@ const CONFIG = {
   ZSCORE_WINDOW: 365,      // rolling window (days) for z-score calculation
   ROC_SHORT: 30,
   ROC_LONG: 90,
-  HALVING_DATE_TOLERANCE_DAYS: 3, // ± days to search for price when exact date missing
+  HALVING_DATE_TOLERANCE_DAYS: 3, // prior days only when exact daily price is missing
 };
 
 let DATA=[], STATS={}, CHARTS={}, activeTab=0;
@@ -267,7 +270,6 @@ function parseDateFlexible(raw){
   const d=new Date(s);return isNaN(d)?null:d;
 }
 function fmtDate(d){return d?new Date(d).toISOString().slice(0,10):""}
-function assignCycle(y){return y<2012?0:Math.floor((y-2012)/4)+1}
 
 // O(n) running-sum moving average — replaces the O(n*w) slice version
 function movingAvg(arr,w){
@@ -281,21 +283,17 @@ function movingAvg(arr,w){
   return out;
 }
 
-// Price lookup with +-HALVING_DATE_TOLERANCE_DAYS fallback
-function priceAtHalving(halvingDate){
+// Use the same baseline everywhere. A post-halving price would leak future
+// information into a forecast presented as available at halving-day close.
+function priceAtHalvingPoint(halvingDate){
   if(!halvingDate||!hasPriceData)return null;
-  var exact=PRICE_MAP[halvingDate.toISOString().slice(0,10)];
-  if(exact)return exact;
-  var tol=CONFIG.HALVING_DATE_TOLERANCE_DAYS*86400000;
-  var best=null,bestDist=Infinity;
-  var t=halvingDate.getTime();
-  for(var dateStr in PRICE_MAP){
-    var dt=new Date(dateStr).getTime();
-    var dist=Math.abs(dt-t);
-    if(dist<=tol&&dist<bestDist){bestDist=dist;best=PRICE_MAP[dateStr];}
+  for(let days=0;days<=CONFIG.HALVING_DATE_TOLERANCE_DAYS;days++){
+    const dateStr=fmtDate(new Date(+halvingDate-days*DAY_MS)),p=PRICE_MAP[dateStr];
+    if(Number.isFinite(p)&&p>0)return {price:p,dateStr,date:new Date(dateStr)};
   }
-  return best;
+  return null;
 }
+function priceAtHalving(halvingDate){return priceAtHalvingPoint(halvingDate)?.price||null;}
 
 // Shared halving annotation builder — pass the sampled data array for any chart
 function buildHalvingAnnotations(sampledData){
@@ -303,6 +301,7 @@ function buildHalvingAnnotations(sampledData){
   if(!sampledData||!sampledData.length)return annotations;
   var first=new Date(sampledData[0].dateStr),last=new Date(sampledData[sampledData.length-1].dateStr);
   HALVINGS.forEach(function(h,i){
+    if(!HALVING_EVENTS[i]?.confirmed)return;
     if(h<first||h>last)return;
     var nearest=sampledData.reduce(function(a,b){
       return Math.abs(new Date(b.dateStr)-h)<Math.abs(new Date(a.dateStr)-h)?b:a;
@@ -509,7 +508,6 @@ function joinPrice(){
 
 fetchPriceData();
 autoLoadMVRV();
-verifyHalvingsFromChain();
 
 const DAY_MS=86400000;
 function numText(v,digits=2){return Number.isFinite(v)?v.toFixed(digits):'—';}
@@ -525,7 +523,7 @@ function enrichData(rows){
   if(rows.length)ensureCycleCoverage(rows.at(-1).date);
   const mvrvs=rows.map(r=>r.mvrv),avgs=[20,50,200].map(w=>movingAvg(mvrvs,w));
   const dayIndex=new Map(),cyclePeaks={},runningPeaks={};
-  const cycleOf=d=>{let c=0;HALVINGS.forEach((h,j)=>{if(d>=h)c=j+1;});return c;};
+  const cycleOf=d=>{let c=0;HALVINGS.forEach((h,j)=>{if(HALVING_EVENTS[j]?.confirmed&&d>=h)c=j+1;});return c;};
   rows.forEach(r=>{const c=cycleOf(r.date);cyclePeaks[c]=Math.max(cyclePeaks[c]||0,r.mvrv);});
   let left=0,count=0,mean=0,m2=0,lastGap=-1;
   return rows.map((row,i)=>{
@@ -568,14 +566,13 @@ function cycleModelData(beforeCycle){return STATS.cycleData.filter(c=>c.usable&&
   if(priced.length/rows.length<.95)return null;
   const high=priced.reduce((a,b)=>a.price>=b.price?a:b),low=priced.reduce((a,b)=>a.price<=b.price?a:b);
   const atPeak=PRICE_MAP[c.peakDate],atTrough=PRICE_MAP[c.troughDate],afterPeak=priced.filter(d=>d.dateStr>=c.peakDate),afterTrough=priced.filter(d=>d.dateStr>=c.troughDate);
-  return {...c,high:high.price,low:low.price,halving:priceOnOrBefore(HALVINGS[c.cycle-1]),
+  return {...c,high:high.price,low:low.price,halving:priceAtHalving(HALVINGS[c.cycle-1]),
     upside:atPeak&&afterPeak.length?Math.max(...afterPeak.map(d=>d.price))/atPeak-1:null,
     downside:atTrough&&afterTrough.length?Math.min(...afterTrough.map(d=>d.price))/atTrough-1:null};
 }).filter(Boolean);}
-function priceOnOrBefore(date){if(!date)return null;for(let j=0;j<=3;j++){const p=PRICE_MAP[fmtDate(new Date(+date-j*DAY_MS))];if(Number.isFinite(p)&&p>0)return p;}return null;}
 function powerEstimate(points,cycle){const a=points.filter(p=>p.value>0&&Number.isFinite(p.value));if(a.length<2)return {value:null,n:a.length};const r=linReg(a.map(p=>Math.log(p.cycle)),a.map(p=>Math.log(p.value)));return{value:r.valid?positive(Math.exp(r.slope*Math.log(cycle)+r.intercept)):null,n:a.length};}
 function modelSet(targetCycle,origin,live=false){
-  const prior=cycleModelData(targetCycle),hPrice=priceOnOrBefore(HALVINGS[targetCycle-1]);
+  const prior=cycleModelData(targetCycle),hPrice=priceAtHalving(HALVINGS[targetCycle-1]);
   const mult=powerEstimate(prior.map(c=>({cycle:c.cycle,value:c.high/c.halving})),targetCycle);
   const floor=powerEstimate(prior.map(c=>({cycle:c.cycle,value:c.low/c.halving})),targetCycle);
   const consecutive=prior.slice(1).map((c,i)=>({a:prior[i],b:c})).filter(p=>p.b.cycle===p.a.cycle+1);
@@ -625,6 +622,7 @@ function loadData(rows){
     Object.keys(CHARTS).forEach(destroyChart);built.clear();activeTab=0;buildTabs();
     document.getElementById('hdr-meta').textContent=DATA.length.toLocaleString()+' daily observations · '+DATA[0].dateStr+' → '+STATS.last.dateStr;
     document.getElementById('upload-screen').style.display='none';document.getElementById('app').style.display='flex';updateDataStatus();switchTab(0);
+    verifyHalvingsFromChain();
   }catch(error){const e=document.getElementById('upload-error');e.textContent='Unable to build the dashboard: '+error.message;e.style.display='block';document.getElementById('upload-screen').style.display='flex';document.getElementById('app').style.display='none';}finally{hideLoading();}},0);
 }
 
@@ -655,7 +653,7 @@ function statCard(label,val,sub,color){return '<div class="stat"><div class="sta
 
 function buildOverview(){
   var s=STATS,l=s.last;
-  var now=new Date();
+  var now=l.date; // cycle position follows the latest observation, not the viewer's wall clock
 
   // --- Stat cards ---
   var cards=[statCard('Current MVRV',l.mvrv.toFixed(3),l.dateStr),statCard('BTC price',moneyText(l.price),Number.isFinite(l.price)?'Matched to MVRV date':'Price unavailable for this date'),statCard('MVRV ROC · 30d',Number.isFinite(l.roc30)?numText(l.roc30,1)+'%':'—','Change in MVRV, not BTC return'),statCard('Rolling MVRV Z',numText(l.zscore,2),rollingStateLabel(l))];
@@ -678,8 +676,9 @@ function buildOverview(){
   var halvingRows=HALVINGS.map(function(h,i){
     var cycleNum=i+1;
     var nextH=HALVINGS[i+1];
-    var isPast=!!nextH&&nextH<now&&!!HALVING_EVENTS[i]?.confirmed&&!!HALVING_EVENTS[i+1]?.confirmed;
-    var isCurrent=h<=now&&nextH&&nextH>now;
+    var nextConfirmed=!!HALVING_EVENTS[i+1]?.confirmed;
+    var isPast=!!nextH&&nextH<=now&&!!HALVING_EVENTS[i]?.confirmed&&nextConfirmed;
+    var isCurrent=!!HALVING_EVENTS[i]?.confirmed&&h<=now&&(!nextH||!nextConfirmed||nextH>now);
     var dot=isPast?"●":isCurrent?"◉":"○";
     var dotColor=isPast?CC.muted:isCurrent?CC.accent:CC.faint;
     var dateStr=h.toISOString().slice(0,10);
@@ -691,20 +690,20 @@ function buildOverview(){
     } else if(isCurrent){
       var elapsed=now-h,total=nextH-h;
       var pct=Math.min(100,(elapsed/total)*100);
-      var daysLeft=Math.round((nextH-now)/(1000*60*60*24));
+      var daysLeft=Math.round((nextH-now)/DAY_MS);
       var barColor=pct<50?CC.green:pct<75?CC.amber:CC.red;
-      status='<span style="color:'+CC.accent+'">← you are here</span>';
+      status='<span style="color:'+CC.accent+'">← latest data'+(nextConfirmed?'':' · next date estimated')+'</span>';
       progressBar='<div style="margin-top:6px;display:flex;align-items:center;gap:10px">'
         +'<div style="flex:1;height:5px;background:var(--faint);border-radius:99px;overflow:hidden">'
         +'<div style="width:'+pct.toFixed(1)+'%;height:100%;background:'+barColor+';border-radius:99px"></div>'
         +'</div>'
-        +'<span style="font-size:0.8rem;color:'+barColor+';white-space:nowrap">'+pct.toFixed(0)+'% · '+daysLeft.toLocaleString()+'d to next</span>'
+        +'<span style="font-size:0.8rem;color:'+barColor+';white-space:nowrap">'+pct.toFixed(0)+'% · '+(daysLeft>=0?daysLeft.toLocaleString()+'d to '+(nextConfirmed?'next':'estimated next'):'estimate passed; awaiting block')+'</span>'
         +'</div>';
       var lp=s.logR?Math.max(0,s.logR.slope*Math.log(cycleNum)+s.logR.intercept):null;
       if(lp)projNote='<span style="color:'+CC.amber+'">proj. peak '+lp.toFixed(2)+'</span>';
     } else {
-      var daysAway=Math.round((h-now)/(1000*60*60*24));
-      status='<span style="color:#000000">upcoming · '+daysAway.toLocaleString()+'d away</span>';
+      var daysAway=Math.round((h-now)/DAY_MS);
+      status='<span style="color:var(--muted)">'+(HALVING_EVENTS[i]?.confirmed?'upcoming confirmed date':daysAway>=0?'estimated · '+daysAway.toLocaleString()+'d away':'estimate passed · unverified')+'</span>';
       var lp=s.logR?Math.max(0,s.logR.slope*Math.log(cycleNum)+s.logR.intercept):null;
       if(lp)projNote='<span style="color:#000000">proj. peak '+lp.toFixed(2)+'</span>';
     }
@@ -712,7 +711,7 @@ function buildOverview(){
       +'<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">'
       +'<span style="font-size:1.1rem;color:'+dotColor+'">'+dot+'</span>'
       +'<span style="font-weight:600;color:'+(isCurrent?CC.accent:isPast?CC.muted:"var(--faint)")+'">C'+cycleNum+' Halving</span>'
-      +'<span style="font-size:0.9rem;color:#000000">'+dateStr+'</span>'
+      +'<span style="font-size:0.9rem;color:var(--muted)">'+dateStr+(HALVING_EVENTS[i]?.confirmed?'':' (estimate)')+'</span>'
       +'<span style="font-size:0.85rem">'+status+'</span>'
       +(projNote?'<span style="font-size:0.82rem;margin-left:auto">'+projNote+'</span>':"")
       +'</div>'+progressBar+'</div>';
@@ -864,7 +863,7 @@ function buildMomentum(){
 function buildCycleOverlay(){
   var priceNote=hasPriceData?" Hover a point to see MVRV and BTC price for that date.":"";
   var priceChartHtml2=hasPriceData?'<div class="chart-card"><div class="chart-title">BTC Price — all cycles overlaid · indexed to halving = 100 · log scale</div>'+makeCanvas("c3b",380)+'</div>':"";
-  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">MVRV — all cycles overlaid · cycle position vs MVRV · vertical lines = equal cycle fractions</div>'+makeCanvas("c3",420)+'</div><div class="info">Aligns all cycles on a 0–100% time axis. Dashed lines mark equal fractions of each halving interval; calendar durations differ between cycles.'+priceNote+'</div>'+priceChartHtml2+'<div id="cycle-insights"></div>';
+  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">MVRV — all cycles overlaid · cycle position vs MVRV · vertical lines = equal cycle fractions</div>'+makeCanvas("c3",420)+'</div><div class="info">Aligns cycles by fraction of each halving interval. Dashed lines mark equal fractions; ≈M labels use a 48-month reference and are not the exact calendar months for every cycle. A current interval with an estimated end can extend past 100% while confirmation is pending.'+priceNote+'</div>'+priceChartHtml2+'<div id="cycle-insights"></div>';
   destroyChart("c3");destroyChart("c3b");
 
   var monthPct = 100/48;
@@ -907,6 +906,7 @@ function buildCycleOverlay(){
   if(!cycleDatasets.length){document.getElementById("p3").innerHTML='<div class="info">Cycle overlay requires data from the first halving onward (28 November 2012).</div>';return;}
   const currentCycle = cycleDatasets[cycleDatasets.length - 1];
   const lastPoint = currentCycle.data[currentCycle.data.length - 1];
+  const overlayMax=Math.max(100,Math.ceil(lastPoint.x/25)*25);
 
   var allDatasets = monthDatasets.concat(cycleDatasets);
 
@@ -935,7 +935,7 @@ function buildCycleOverlay(){
     scales:{
       x:Object.assign({},chartDefs().scales.x,{
         type:"linear",
-        min:0,max:100,
+        min:0,max:overlayMax,
         title:{display:true,text:"Cycle position (%)",color:CC.text,font:{size:13}},
         ticks:Object.assign({},chartDefs().scales.x.ticks,{
           callback:function(v){
@@ -1015,8 +1015,8 @@ function buildCycleOverlay(){
     var priceCycleDatasets=availableCycles.map(function(c){
       var sub=BY_CYCLE[c]?BY_CYCLE[c].filter(function(d){return d.cyclePct!=null&&d.price}):[];
       if(!sub.length)return null;
-      // Base price = first available price in the cycle (closest to halving)
-      var basePrice=sub[0].price;
+      // Match the baseline used by the heatmap, other price charts, and models.
+      var basePrice=priceAtHalving(HALVINGS[c-1]);
       if(!basePrice)return null;
       var pts=sample(sub,120);
       var label=(CYCLE_LABELS[c])||"Cycle "+c;
@@ -1036,7 +1036,7 @@ function buildCycleOverlay(){
         ctx.fillStyle=CC.text;ctx.textAlign="center";
         keyMonths.forEach(function(m){
           var xPos=+(m*monthPct).toFixed(2);
-          ctx.fillText("M"+m,xAxis.getPixelForValue(xPos),yAxis.bottom+14);
+          ctx.fillText("≈M"+m,xAxis.getPixelForValue(xPos),yAxis.bottom+14);
         });
         ctx.restore();
       }
@@ -1045,7 +1045,7 @@ function buildCycleOverlay(){
     var priceOpts=withLegend(Object.assign({},chartDefs(),{
       layout:{padding:{bottom:20}},
       scales:{
-        x:Object.assign({},chartDefs().scales.x,{type:"linear",min:0,max:100,title:{display:true,text:"Cycle position (%)",color:CC.text,font:{size:13}},ticks:Object.assign({},chartDefs().scales.x.ticks,{callback:function(v){return v%25===0?v+"%":""},maxTicksLimit:20})}),
+        x:Object.assign({},chartDefs().scales.x,{type:"linear",min:0,max:overlayMax,title:{display:true,text:"Cycle position (%)",color:CC.text,font:{size:13}},ticks:Object.assign({},chartDefs().scales.x.ticks,{callback:function(v){return v%25===0?v+"%":""},maxTicksLimit:20})}),
         y:Object.assign({},chartDefs().scales.y,{
           type:"logarithmic",
           title:{display:true,text:"Indexed price (halving = 100, log scale)",color:CC.text,font:{size:13}},
@@ -1079,13 +1079,87 @@ function cycleInsightSeries(){
   return STATS.availCycles.map(c=>{
     const start=HALVINGS[c-1],event=HALVING_EVENTS[c-1],end=HALVING_EVENTS[c];
     if(!start||!event||!event.confirmed)return null;
-    const base=priceAtHalving(start);
+    const basePoint=priceAtHalvingPoint(start),base=basePoint?.price;
     if(!(base>0))return null;
-    const rows=(BY_CYCLE[c]||[]).filter(d=>d.date>=start&&(!end||d.date<new Date(end.date))&&d.price>0);
+    const rows=(BY_CYCLE[c]||[]).filter(d=>d.date>=start&&(!end?.confirmed||d.date<new Date(end.date))&&d.price>0);
     if(!rows.length)return null;
     const daily=new Map(rows.map(d=>[Math.round((d.date-start)/DAY_MS),d]));
-    return {c,start,base,rows,daily,complete:!!end?.confirmed, color:CYCLE_COLORS[c]||CC.muted,label:CYCLE_LABELS[c]||'C'+c};
+    return {c,start,base,basePoint,rows,daily,complete:!!end?.confirmed, color:CYCLE_COLORS[c]||CC.muted,label:CYCLE_LABELS[c]||'C'+c};
   }).filter(Boolean);
+}
+function cycleMonthDate(date,months){const d=new Date(date);d.setUTCMonth(d.getUTCMonth()+months);return d;}
+function cycleNearestRow(s,target){
+  let best=null,dist=Infinity;
+  for(const row of s.rows){const delta=Math.abs(row.date-target);if(delta<=3*DAY_MS&&delta<dist){best=row;dist=delta;}}
+  return best;
+}
+function cycleSegment(s,i){
+  const from=cycleMonthDate(s.start,i*6),to=cycleMonthDate(s.start,(i+1)*6);
+  if(s.complete&&to>=HALVINGS[s.c])return {state:'truncated',from,to};
+  if(from>s.rows.at(-1).date)return {state:'future',from,to};
+  const first=i===0?s.basePoint:cycleNearestRow(s,from);
+  const complete=to<=s.rows.at(-1).date;
+  const last=complete?cycleNearestRow(s,to):s.rows.at(-1);
+  if(!first||!last||last.date<from)return {state:'unavailable',from,to};
+  return {state:complete?'complete':'partial',from,to,first,last,returnPct:(last.price/first.price-1)*100};
+}
+function renderCycleSegmentInspector(host,all,s,i){
+  const box=host.querySelector('#c3segment-inspector'),segment=cycleSegment(s,i);
+  if(!box)return;
+  host.querySelectorAll('.heat-cell-button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.cycle===s.c&&+b.dataset.window===i)));
+  destroyChart('c3segment');
+  const title='C'+s.c+' · '+fmtDate(segment.from)+' → '+fmtDate(segment.to)+' · '+(segment.state==='partial'?'live so far':segment.state==='complete'?'completed':'unavailable');
+  if(!['complete','partial'].includes(segment.state)){
+    box.innerHTML='<div class="chart-title">'+title+'</div><div class="quality-note">'+(segment.state==='truncated'?'The next verified halving occurred before this six-month window could finish.':'This window has no complete pair of boundary prices yet.')+'</div>';
+    return;
+  }
+  const span=Math.max(0,Math.round((segment.last.date-segment.from)/DAY_MS));
+  const prior=all.filter(p=>p.c!==s.c&&p.complete);
+  const reference=prior.map(p=>{
+    const start=cycleMonthDate(p.start,i*6),target=new Date(+start+span*DAY_MS);
+    if(target>=HALVINGS[p.c])return null;
+    const a=i===0?p.basePoint:cycleNearestRow(p,start),b=cycleNearestRow(p,target);
+    return a&&b?{p,a,b,value:(b.price/a.price-1)*100,start}:null;
+  }).filter(Boolean);
+  const peerValues=reference.map(p=>p.value),peerMedian=medianOf(peerValues);
+  const percentile=peerValues.length?100*(peerValues.filter(v=>v<segment.returnPct).length+peerValues.filter(v=>v===segment.returnPct).length*.5)/peerValues.length:null;
+  const path=s.rows.filter(d=>d.date>=segment.from&&d.date<=segment.last.date);
+  let peak=segment.first.price,maxDrawdown=0,high=segment.first,low=segment.first,above=0,returns=[];
+  for(let j=0;j<path.length;j++){
+    const d=path[j];if(d.price>high.price)high=d;if(d.price<low.price)low=d;
+    peak=Math.max(peak,d.price);maxDrawdown=Math.min(maxDrawdown,(d.price/peak-1)*100);
+    if(d.price>segment.first.price)above++;
+    if(j&&d.date-path[j-1].date===DAY_MS)returns.push(Math.log(d.price/path[j-1].price));
+  }
+  const returnMean=returns.length?returns.reduce((a,b)=>a+b,0)/returns.length:0;
+  const vol=returns.length>=20?Math.sqrt(returns.reduce((a,b)=>a+(b-returnMean)**2,0)/returns.length)*Math.sqrt(365)*100:null;
+  const mvrvPath=path.filter(d=>Number.isFinite(d.mvrv));
+  const mvrvMove=mvrvPath.length>1?(mvrvPath.at(-1).mvrv/mvrvPath[0].mvrv-1)*100:null;
+  const coverage=span>=0?path.length/(span+1)*100:null;
+  const periodLabel=segment.state==='partial'?'Elapsed '+span+' days · ongoing':'Full six-month window · '+span+' days';
+  const cards=[
+    statCard('BTC return '+(segment.state==='partial'?'so far':''),(segment.returnPct>=0?'+':'')+numText(segment.returnPct,1)+'%',moneyText(segment.first.price)+' → '+moneyText(segment.last.price)),
+    statCard('Vs prior median',peerMedian===null?'—':(segment.returnPct-peerMedian>=0?'+':'')+numText(segment.returnPct-peerMedian,1)+' pp',peerValues.length+' matched '+(segment.state==='partial'?'elapsed':'full')+' windows'),
+    statCard('Historical rank',percentile===null?'—':numText(percentile,0)+'th percentile','Coarse rank · '+peerValues.length+' prior cycles'),
+    statCard('Worst running drawdown',numText(maxDrawdown,1)+'%','Within selected window'),
+    statCard('Daily price volatility',vol===null?'—':numText(vol,1)+'% annualized',returns.length+' consecutive daily returns'),
+    statCard('MVRV change',mvrvMove===null?'—':(mvrvMove>=0?'+':'')+numText(mvrvMove,1)+'%',mvrvPath.length+' matched MVRV days')
+  ].join('');
+  box.innerHTML='<div class="chart-title">'+title+'</div><div class="quality-note">'+periodLabel+' · Prices used: '+segment.first.dateStr+' → '+segment.last.dateStr+'. '+(segment.state==='partial'?'Historical comparison stops at the same elapsed day; it does not compare against finished windows.':'')+'</div><div class="g3">'+cards+'</div>'+makeCanvas('c3segment',230)+
+    '<div class="quality-note">High '+moneyText(high.price)+' ('+high.dateStr+') · Low '+moneyText(low.price)+' ('+low.dateStr+') · '+numText(path.length?above/path.length*100:null,0)+'% of observed days above window start · '+numText(coverage,0)+'% daily coverage. Prior median is descriptive; only '+peerValues.length+' historical comparisons are available.</div>';
+  const selected=[{x:0,y:100},...path.map(d=>({x:Math.round((d.date-segment.from)/DAY_MS),y:d.price/segment.first.price*100}))];
+  const historic=[];
+  for(let day=0;day<=span;day++){
+    const values=reference.map(r=>r.p.daily.get(Math.round((r.start-r.p.start)/DAY_MS)+day)?.price/r.a.price*100).filter(Number.isFinite);
+    historic.push({x:day,y:values.length>=2?medianOf(values):null});
+  }
+  const opts=cycleInsightOptions('Days into selected window','Price index (window start = 100)');
+  opts.scales.x.min=0;opts.scales.x.max=Math.max(span,1);
+  opts.plugins.legend={display:true,labels:{color:CC.text}};
+  CHARTS.c3segment=new Chart(document.getElementById('c3segment'),{type:'scatter',data:{datasets:[
+    {label:'Prior-cycle median · same elapsed days',data:historic,borderColor:CC.amber,borderWidth:2,pointRadius:0,showLine:true,spanGaps:false},
+    {label:'C'+s.c+' selected window',data:selected,borderColor:s.color,borderWidth:2.5,pointRadius:0,showLine:true,spanGaps:false}
+  ]},options:opts});
 }
 function cycleInsightOptions(xTitle,yTitle){
   const o=chartDefs();o.parsing=false;
@@ -1098,7 +1172,7 @@ function buildCycleInsights(){
   const host=document.getElementById('cycle-insights');
   if(!host)return;
   if(STATS.last?.cycle>0&&!HALVING_EVENTS[STATS.last.cycle-1]?.confirmed){
-    host.innerHTML='<div class="info">The latest cycle starts at an estimated halving date. Confirm its start in Cycle dates before comparing price insights for this cycle.</div>';
+    host.innerHTML='<div class="info">The next halving date is still an estimate. Check Cycle dates and retry on-chain verification; a new cycle begins only after its block is confirmed.</div>';
     return;
   }
   const all=cycleInsightSeries(),live=all.at(-1),past=all.filter(s=>s.complete&&s.c!==live?.c);
@@ -1125,19 +1199,7 @@ function buildCycleInsights(){
   const pointRows=compare.map(v=>({label:'C'+v.s.c+' · '+v.s.label,y:v.row.price/v.s.base*100,color:v.s.color}));
   pointRows.push({label:'C'+live.c+' · current',y:liveIndex,color:CC.accent});
   const heatMonths=[0,6,12,18,24,30,36,42,48];
-  const monthDate=(date,months)=>{const d=new Date(date);d.setUTCMonth(d.getUTCMonth()+months);return d;};
-  // Select only prices within three days of a segment boundary; no extrapolation.
-  const nearPrice=(s,target)=>{
-    let best=null,dist=Infinity;
-    for(const row of s.rows){const delta=Math.abs(row.date-target);if(delta<=3*DAY_MS&&delta<dist){best=row;dist=delta;}}
-    return best?.price||null;
-  };
-  const heat=all.map(s=>({s,cells:heatMonths.slice(0,-1).map((m,i)=>{
-    const from=monthDate(s.start,m),to=monthDate(s.start,heatMonths[i+1]);
-    if(to>s.rows.at(-1).date||s.complete&&to>=HALVINGS[s.c])return null;
-    const a=m===0?s.base:nearPrice(s,from),b=nearPrice(s,to);
-    return a&&b?(b/a-1)*100:null;
-  })}));
+  const heat=all.map(s=>({s,segments:heatMonths.slice(0,-1).map((_,i)=>cycleSegment(s,i))}));
   const peaks=all.map(s=>{
     const peak=s.rows.reduce((a,b)=>a.price>=b.price?a:b);
     return {s,day:Math.round((peak.date-s.start)/DAY_MS),multiple:peak.price/s.base,observed:!s.complete};
@@ -1146,20 +1208,24 @@ function buildCycleInsights(){
     statCard('Price since halving',numText(liveIndex/100,2)+'×','Baseline '+moneyText(live.base))+
     statCard('Historical rank',percentile===null?'—':numText(percentile,0)+'th percentile',peerIndices.length+' prior cycles at day '+liveDay)+'</div>';
   const heatHead=heatMonths.slice(0,-1).map(m=>'<th scope="col">M'+m+'–'+(m+6)+'</th>').join('');
-  const heatBody=heat.map(({s,cells})=>'<tr><th scope="row">C'+s.c+(s.complete?'':' · live')+'</th><td>'+fmtDate(s.start)+'</td><td>'+halvingSourceLink(s.c)+'</td>'+cells.map((v,i)=>{
-    const bg=v===null?'transparent':v>0?'rgba(34,197,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')':'rgba(244,63,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')';
-    const from=fmtDate(monthDate(s.start,heatMonths[i])),to=fmtDate(monthDate(s.start,heatMonths[i+1]));
-    return '<td class="cycle-heat-cell" title="UTC '+from+' to '+to+'" style="background:'+bg+'">'+(v===null?'—':(v>0?'+':'')+v.toFixed(0)+'%')+'</td>';
+  const heatBody=heat.map(({s,segments})=>'<tr><th scope="row">C'+s.c+(s.complete?'':' · live')+'</th><td>'+fmtDate(s.start)+'</td><td>'+halvingSourceLink(s.c)+'</td>'+segments.map((seg,i)=>{
+    const v=seg.returnPct,available=Number.isFinite(v);
+    const bg=!available?'transparent':v>=0?'rgba(34,197,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')':'rgba(244,63,94,'+Math.min(.5,.08+Math.abs(v)/150).toFixed(2)+')';
+    const from=fmtDate(seg.from),to=fmtDate(seg.to);
+    return '<td class="cycle-heat-cell" title="UTC '+from+' to '+to+'" style="background:'+bg+'">'+(available?'<button type="button" class="heat-cell-button" data-cycle="'+s.c+'" data-window="'+i+'" aria-label="Inspect C'+s.c+' months '+heatMonths[i]+' to '+heatMonths[i+1]+' '+(seg.state==='partial'?'so far':'completed')+' return">'+(v>=0?'+':'')+v.toFixed(0)+'%'+(seg.state==='partial'?'<small>so far</small>':'')+'</button>':'—')+'</td>';
   }).join('')+'</tr>').join('');
   host.innerHTML='<div class="chart-card"><div class="chart-title">Current price vs historical range · aligned by days since halving</div>'+makeCanvas('c3range',300)+'<div class="quality-note">The full historical scale compresses the current cycle because early cycles gained much more. The chart below shows current-cycle movement on its own scale.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Current cycle detail · halving = 100</div>'+makeCanvas('c3current',210)+'<div class="quality-note">The dashed line marks the halving price. This axis is fitted to observed current-cycle prices; compare magnitudes in the full chart above.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Same-day price performance · day '+liveDay+'</div>'+makeCanvas('c3bars',220)+'<div class="quality-note">Each bar compares its price with that cycle’s halving price. A prior cycle appears only if it has a price on the exact matching day.</div></div>'+
-    '<div class="chart-card"><div class="chart-title">Six-month return heatmap · each cycle starts at its halving block</div><div class="tbl-wrap"><table class="cycle-heat"><thead><tr><th scope="col">Cycle</th><th scope="col">Start · UTC</th><th scope="col">On-chain source</th>'+heatHead+'</tr></thead><tbody>'+heatBody+'</tbody></table></div><div class="quality-note">M0 begins on the UTC calendar date of the linked halving block. Hover a cell for its exact date window. Returns use daily BTC prices near each boundary (within three days). — means the segment is incomplete or a boundary price is unavailable. These are halving cycles, not dates inferred from price or MVRV. <a href="https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp" target="_blank" rel="noopener noreferrer">Bitcoin Core’s 210,000-block schedule ↗</a> · <a href="https://mempool.space/docs/api/rest" target="_blank" rel="noopener noreferrer">Block explorer API ↗</a> · <span id="halving-verification-status"></span></div></div>'+
+    '<div class="chart-card"><div class="chart-title">Six-month return heatmap · select a cell to inspect its path</div><div class="tbl-wrap"><table class="cycle-heat"><thead><tr><th scope="col">Cycle</th><th scope="col">Start · UTC</th><th scope="col">On-chain source</th>'+heatHead+'</tr></thead><tbody>'+heatBody+'</tbody></table></div><div class="quality-note">M0 begins on the UTC calendar date of the linked halving block. “So far” is the unfinished live window, measured only to the latest matched daily price. — means the window is future, ended at the next halving, or lacks a boundary price. <a href="https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp" target="_blank" rel="noopener noreferrer">Bitcoin Core’s 210,000-block schedule ↗</a> · <a href="https://mempool.space/docs/api/rest" target="_blank" rel="noopener noreferrer">Block explorer API ↗</a> · <span id="halving-verification-status"></span></div></div><div id="c3segment-inspector" class="chart-card"></div>'+
     '<div class="chart-card"><div class="chart-title">Cycle price peaks · timing and gain since halving</div>'+makeCanvas('c3peaks',290)+'<div class="quality-note">The live cycle marker is its highest price observed so far; its final peak is unknown.</div></div>'+
     '<div class="chart-card"><div class="chart-title">Price and MVRV · aligned daily observations</div><div class="quality-note">Hover either chart to align the same day on both. The current cycle ends at its latest matched daily observation.</div>'+makeCanvas('c3alignedprice',180)+makeCanvas('c3alignedmvrv',180)+'</div>'+
     '<div class="info">Cycle comparisons use elapsed UTC days from each confirmed halving. Historical benchmarks exclude cycles with estimated end dates. The current cycle uses observed data only; these charts describe history, not a price forecast.</div>';
   host.insertAdjacentHTML('afterbegin',summary);
   document.getElementById('halving-verification-status').textContent=halvingVerificationStatus;
+  host.querySelectorAll('.heat-cell-button').forEach(b=>b.addEventListener('click',()=>renderCycleSegmentInspector(host,all,all.find(s=>s.c===+b.dataset.cycle),+b.dataset.window)));
+  const latest=heat.at(-1),latestWindow=latest.segments.findLastIndex(seg=>seg.state==='complete'||seg.state==='partial');
+  if(latestWindow>=0)renderCycleSegmentInspector(host,all,latest.s,latestWindow);
   ['c3range','c3current','c3bars','c3peaks','c3alignedprice','c3alignedmvrv'].forEach(destroyChart);
   const rOpts=cycleInsightOptions('Days since halving','Indexed BTC price (halving = 100)');
   rOpts.plugins.legend={display:true,labels:{color:CC.text,filter:item=>item.text!=='Historical low'}};
@@ -2104,16 +2170,17 @@ function exportSummary(){
     lines.push("  * Current cycle errors measured against ATH/low seen so far, not the final confirmed value.");
   }
   hr("HALVING DATES");
-  var now=new Date();
+  var now=l.date;
   HALVINGS.forEach(function(h,i){
     var nextH=HALVINGS[i+1];
-    var isPast=!!nextH&&nextH<now&&!!HALVING_EVENTS[i]?.confirmed&&!!HALVING_EVENTS[i+1]?.confirmed;
-    var isCurrent=h<=now&&nextH&&nextH>now;
-    var status=isPast?"completed":isCurrent?"current cycle":h<now?"estimated boundary — unconfirmed":"upcoming";
+    var nextConfirmed=!!HALVING_EVENTS[i+1]?.confirmed;
+    var isPast=!!nextH&&nextH<=now&&!!HALVING_EVENTS[i]?.confirmed&&nextConfirmed;
+    var isCurrent=!!HALVING_EVENTS[i]?.confirmed&&h<=now&&(!nextH||!nextConfirmed||nextH>now);
+    var status=isPast?"completed":isCurrent?"latest observed cycle":HALVING_EVENTS[i]?.confirmed?"confirmed boundary":"estimated boundary — unconfirmed";
     var extra="";
-    if(isCurrent){var pct=Math.min(100,((now-h)/(nextH-h))*100);extra=" · "+pct.toFixed(0)+"% elapsed";}
-    else if(!isPast){var daysAway=Math.round((h-now)/(1000*60*60*24));extra=" · "+daysAway.toLocaleString()+"d away";}
-    row("  C"+(i+1)+" halving",h.toISOString().slice(0,10)+" ["+status+extra+"]");
+    if(isCurrent&&nextH){var pct=Math.min(100,((now-h)/(nextH-h))*100);extra=" · "+pct.toFixed(0)+"% of "+(nextConfirmed?"confirmed":"estimated")+" interval"+(now>nextH?" · estimate passed":"");}
+    else if(!isPast){var daysAway=Math.round((h-now)/DAY_MS);extra=daysAway>=0?" · "+daysAway.toLocaleString()+"d from latest data":" · estimate passed";}
+    row("  C"+(i+1)+" halving",h.toISOString().slice(0,10)+" · block "+halvingBlockHeight(i+1).toLocaleString()+" ["+status+extra+"]");
   });
 
   lines.push("");lines.push("=".repeat(60));
@@ -2203,7 +2270,7 @@ function decoratePanel(i){
   note.textContent='AS OF '+STATS.last.dateStr+' · '+DATA.length.toLocaleString()+' daily observations · '+STATS.missingDays+' missing days'+(!STATS.last.zReady?' · Z-score uses a partial 365-day window.':'');panel.prepend(note);
   if(i===1){const n=document.createElement('div');n.className='info';n.textContent='Rolling Z = (MVRV − trailing mean) / population standard deviation. This differs from the conventional market-cap / realized-cap MVRV Z-Score. Flat windows have no defined Z-score. Use values as relative historical position, not an automatic buy/sell instruction.';panel.prepend(n);}
   if(i===4)addCausalDrawdown(panel);
-  if(STATS.last.cycle>0&&!HALVING_EVENTS[STATS.last.cycle-1]?.confirmed){const n=document.createElement('div');n.className='info';n.textContent='Cycle '+STATS.last.cycle+' starts at an estimated halving date. Use Cycle dates to enter and confirm the actual date when known.';panel.prepend(n);}
+  if(STATS.last.cycle>0&&!HALVING_EVENTS[STATS.last.cycle-1]?.confirmed){const n=document.createElement('div');n.className='info';n.textContent='The latest cycle boundary is unverified. Use Cycle dates to retry the on-chain check.';panel.prepend(n);}
   if(i>=7){const n=document.createElement('div');n.className='quality-note';n.textContent='Completed cycles available for fitting: '+(STATS.trainingCycles.map(c=>'C'+c).join(', ')||'none')+'. Current-cycle extrema are provisional. Future halving dates are estimates.';panel.prepend(n);}
   const walker=document.createTreeWalker(panel,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode()){if(node.parentElement?.tagName!=='SCRIPT'&&node.parentElement?.tagName!=='STYLE')node.textContent=node.textContent.replace(/\bNaN\b|\bInfinity\b/g,'—');}
 }
