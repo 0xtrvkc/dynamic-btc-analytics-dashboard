@@ -105,9 +105,9 @@ next date remains an estimate. Browser-confirmed dates are saved locally;
 the scheduled export checks the chain again on each run.
 
 In Cycle Overlay, the return heatmap defaults to calendar months since each
-confirmed halving, with a switch to six-month windows. On desktop, the compact
-monthly grid fits the available width; on mobile it scrolls horizontally.
-Monthly cells omit the percent sign and round values to save space; hover or
+confirmed halving; switch among 1, 2, 3, 4, 6, and 12-month windows. On desktop,
+the compact 1–4 month grids fit the available width; on mobile they scroll horizontally.
+Cells in those compact views omit the percent sign and round values to save space; hover or
 select one for its precise return. Select any cell to inspect its exact UTC window, price
 dates, daily path, running drawdown, volatility, MVRV change, data coverage,
 and return relative to completed historical cycles. The unfinished live window
