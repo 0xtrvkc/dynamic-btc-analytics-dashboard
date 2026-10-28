@@ -199,7 +199,7 @@ Cycle 4:
   2026-05-31 Death cross: C4 · MVRV 1.367 · $73,568
   2026-07-20 Golden cross: C4 · MVRV 1.223 · $65,213
   2026-10-26 Death cross: C4 · MVRV 1.483
-Last crossover: Death cross on 2026-10-26 (0d ago)
+Last crossover: Death cross on 2026-10-26 (1d ago)
 Current MA20 vs MA50: MA20 below MA50 (bearish bias)
 
 === ZONE ANALYSIS — Days in each MVRV zone per cycle ===
@@ -464,6 +464,6 @@ professional financial analysis.
 
 NOT FINANCIAL ADVICE. Do your own research.
 ============================================================
-Generated: 2026-10-27
+Generated: 2026-10-28
 Tip: paste this file into any AI assistant to ask questions
 about Bitcoin MVRV cycles and what the data might mean.
