@@ -16,6 +16,11 @@ cycle analysis at you:
   - MA20/50/200 with crossover events flagged
   - 30d and 90d rate-of-change momentum
   - Peak drawdown per cycle
+  - Bitcoin Spiral tab — every halving cycle as one clockwise turn
+    (angle = estimated block position in the 210k-block cycle, radius =
+    log10 price). Marks ATHs, cycle bottoms and halvings, compares every
+    cycle at the same day-since-halving, hover for date/price/block,
+    replay animation, SVG/PNG export. Uses btc_daily_price.json only.
   - Price projections via 4 independent models:
       - MVRV Upside        (price at MVRV peak × median remaining upside)
       - Halving Multiplier (halving price × log-decay fitted multiplier)
