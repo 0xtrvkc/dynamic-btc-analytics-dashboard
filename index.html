@@ -2289,7 +2289,7 @@ function toggleFocus(){document.body.classList.toggle('nav-collapsed');Object.va
    Each halving cycle is one full turn. Angle = position inside the 210,000-block cycle
    (0° at the top, clockwise); radius = log10(price). Block height is estimated by linear
    interpolation between halving dates, so no block data is needed beyond price + halving dates. */
-const SP={W:960,H:990,cx:480,cy:505,R:350,GENESIS:Date.UTC(2009,0,3),SEED_ATH:31,TOP_DRAWDOWN:0.5,MIN_BEAR_DAYS:365,BLOCKS:210000,FALLBACK_CYCLE_DAYS:1458};
+const SP={W:960,H:990,cx:480,cy:505,R:350,GENESIS:Date.UTC(2009,0,3),SEED_ATH:31,TOP_WINDOW_DAYS:730,BLOCKS:210000,FALLBACK_CYCLE_DAYS:1458};
 const SP_UI={color:'orig',halv:true,ath:true,bot:true,spokes:true,hidden:new Set()};
 // Text with a surface-colored halo, drawn as two layers so it also survives SVG/PNG export.
 function spText(x,y,anchor,txt,color,size,weight){
@@ -2330,24 +2330,20 @@ function spiralModel(){
     q.x=SP.cx+r*Math.sin(th);q.y=SP.cy-r*Math.cos(th);
     q.ath=q.p>mx;if(q.ath)mx=q.p;q.runMax=mx;
   });
-  // Cycle top = last all-time high before price fell >= TOP_DRAWDOWN from it (a bear market, not a pullback).
-  // A still-open top (no such drop yet) is kept as provisional. Bottom = lowest close between a confirmed
-  // top and the next all-time high; it stays provisional until a new ATH confirms the cycle is over.
-  const tops=[],bottoms=[];let cand=-1;
-  const closeCycle=(topI,confirmed)=>{
-    let nextAth=pts.length;for(let j=topI+1;j<pts.length;j++)if(pts[j].ath){nextAth=j;break;}
-    // A crash that recovers to a new ATH within MIN_BEAR_DAYS is an in-cycle correction, not a cycle top.
-    if(confirmed&&nextAth<pts.length&&pts[nextAth].t-pts[topI].t<SP.MIN_BEAR_DAYS*DAY_MS)return;
-    tops.push({i:topI,k:pts[topI].k,confirmed});
-    if(!confirmed)return;
-    let best=topI+1;for(let j=topI+1;j<nextAth;j++)if(pts[j].p<pts[best].p)best=j;
-    bottoms.push({i:best,k:pts[best].k,topIdx:topI,provisional:nextAth>=pts.length});
-  };
-  for(let i=0;i<pts.length;i++){
-    if(pts[i].ath)cand=i;
-    else if(cand>=0&&pts[i].p<=pts[cand].p*(1-SP.TOP_DRAWDOWN)){closeCycle(cand,true);cand=-1;}
-  }
-  if(cand>=0)closeCycle(cand,false);
+  // Halving-anchored extremes (no price thresholds): the cycle top is the highest close within TOP_WINDOW_DAYS
+  // after the halving; the bottom is the lowest close between that top and the next halving.
+  // Both stay provisional until the window / cycle has finished.
+  const tops=[],bottoms=[],lastI=pts.length-1;
+  ranges.filter(r=>r.k>0).forEach(r=>{
+    let top=-1;
+    for(let i=r.from;i<=r.to;i++){if(pts[i].dsh>SP.TOP_WINDOW_DAYS)break;if(top<0||pts[i].p>pts[top].p)top=i;}
+    if(top<0)return;
+    const live=r.to===lastI;
+    tops.push({i:top,k:r.k,confirmed:!(live&&pts[lastI].dsh<=SP.TOP_WINDOW_DAYS)});
+    if(top>=r.to)return;
+    let best=top+1;for(let i=top+1;i<=r.to;i++)if(pts[i].p<pts[best].p)best=i;
+    bottoms.push({i:best,k:r.k,topIdx:top,provisional:live});
+  });
   const halvPt={};pts.forEach(q=>{if(q.dsh===0)halvPt[q.k]=q;});
   let athIdx=0;pts.forEach(q=>{if(q.ath)athIdx=q.i;});
   return {pts,ranges,tops,bottoms,halvPt,exp,athPt:pts[athIdx],cur:pts.at(-1)};
@@ -2407,7 +2403,7 @@ function spPlotSVG(m,limit){
   };
   if(SP_UI.ath)m.tops.forEach(tp=>{
     if(tp.i>=n||hid.has(tp.k))return;const q=pts[tp.i];
-    s+='<circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="7" style="fill:var(--sp-ath);stroke:var(--surface);stroke-width:1.5"/>'+label(q,'ATH '+spMoney(q.p),'var(--sp-ath)');
+    s+='<circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="7" style="fill:var(--sp-ath);stroke:var(--surface);stroke-width:1.5"/>'+label(q,'Top '+spMoney(q.p),'var(--sp-ath)');
   });
   if(SP_UI.bot)m.bottoms.forEach(b=>{
     if(b.i>=n||hid.has(b.k))return;const q=pts[b.i];
@@ -2516,7 +2512,7 @@ function buildSpiral(){
     +'<div class="sp-tip" id="sp-tip" role="status"></div></div>'
     +'<div class="quality-note">Hover (or touch) the line to read a day. Replay redraws the path in time order. The live cycle ends at an estimated halving, so its angle is approximate until that block exists.</div></div>'
     +'<div class="chart-card"><div class="chart-title">Same cycle day, every cycle</div>'+spCycleTable(m)
-    +'<div class="quality-note">A cycle top is the last all-time high before price fell at least 50% and did not recover to a new high within a year (shorter crashes count as in-cycle corrections); bottoms are the lowest close between that top and the next all-time high, and stay provisional until a new ATH forms. The 2011 high of $31 seeds the running ATH because price data begins in 2012. “Same day” compares each cycle at the live cycle’s day count since halving.</div></div>';
+    +'<div class="quality-note">A cycle top is the highest close within two years after that cycle’s halving; its bottom is the lowest close between the top and the next halving (provisional until that halving). These rules use no price thresholds, so they keep working if bear markets get shallower, but they assume tops keep arriving within two years of a halving. The 2011 high of $31 seeds the running ATH line because price data begins in 2012. “Same day” compares each cycle at the live cycle’s day count since halving.</div></div>';
   drawSpiral();spWire(m);
 }
 
