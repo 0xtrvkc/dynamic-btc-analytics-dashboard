@@ -20,7 +20,13 @@ cycle analysis at you:
     (angle = estimated block position in the 210k-block cycle, radius =
     log10 price). Marks ATHs, cycle bottoms and halvings, compares every
     cycle at the same day-since-halving, hover for date/price/block,
-    replay animation, SVG/PNG export. Uses btc_daily_price.json only.
+    replay animation, SVG/PNG export, optional MVRV-zone coloring and MVRV
+    peak markers. Needs btc_daily_price.json (+ mvrv.json for the overlays).
+  - Cycle Timing tab — when tops and bottoms arrive (days since halving),
+    MVRV peak/trough lead/lag vs price, entry/exit return heatmap by day
+    since halving, calendar rules with a leave-one-cycle-out test, an MVRV
+    entry/exit sensitivity grid, and a same-cycle-day comparison for the
+    live cycle. Historical, descriptive, daily closes only — not advice.
   - Price projections via 4 independent models:
       - MVRV Upside        (price at MVRV peak × median remaining upside)
       - Halving Multiplier (halving price × log-decay fitted multiplier)
