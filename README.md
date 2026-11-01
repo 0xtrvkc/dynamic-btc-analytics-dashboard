@@ -22,8 +22,9 @@ cycle analysis at you:
     cycle at the same day-since-halving, hover for date/price/block,
     replay animation, SVG/PNG export, optional MVRV-zone coloring. Markers
     for price top/low (circles) and MVRV peak/low (diamonds); pick a cycle
-    under "Focus" to isolate it and see the gap between each MVRV event and
-    its price event. Needs btc_daily_price.json (+ mvrv.json for MVRV).
+    under "Focus" to isolate it. Flowchart-style links connect each MVRV
+    event to its price event (hover one: moving dotted line + the time gap).
+    Needs btc_daily_price.json (+ mvrv.json for MVRV).
   - Cycle Timing tab — when tops and bottoms arrive (days since halving),
     MVRV peak/trough lead/lag vs price, entry/exit return heatmap by day
     since halving, calendar rules with a leave-one-cycle-out test, an MVRV
