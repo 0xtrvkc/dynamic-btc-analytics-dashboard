@@ -23,7 +23,7 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
 #cycle-insights .heat-cell-button{display:block;width:100%;min-height:46px;padding:4px;border:2px solid transparent;background:transparent;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}#cycle-insights .heat-cell-button:hover,#cycle-insights .heat-cell-button[aria-pressed="true"]{border-color:var(--accent);background:var(--surface2);color:var(--accent)}#cycle-insights .heat-cell-button small{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}#cycle-insights .cycle-heat-cell{padding:0}#c3segment-inspector .g3{margin-top:14px}
 #cycle-insights .cycle-heat.compact{table-layout:fixed;width:100%;min-width:0;font-size:9px}#cycle-insights .cycle-heat.compact th,#cycle-insights .cycle-heat.compact td{min-width:0;padding:3px 0;text-align:center;overflow:hidden;white-space:nowrap}#cycle-insights .cycle-heat.compact th{font-size:8px;letter-spacing:0}#cycle-insights .cycle-heat.compact th:first-child{width:48px;text-align:center}#cycle-insights .cycle-heat.compact th:nth-child(2){width:75px}#cycle-insights .cycle-heat.compact th:nth-child(3){width:92px}#cycle-insights .cycle-heat.compact td a{font-size:9px}#cycle-insights .cycle-heat.compact .heat-cell-button{min-height:30px;padding:0;border-width:1px;border-radius:0;font-size:8px;line-height:1.1;letter-spacing:-.04em;white-space:nowrap}#cycle-insights .cycle-heat.compact .heat-cell-button small{font-size:7px;letter-spacing:0}#cycle-insights .heat-period-toggle{display:inline-flex;flex-wrap:wrap;gap:6px;margin:12px 0}#cycle-insights .heat-period-toggle button{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);cursor:pointer}#cycle-insights .heat-period-toggle button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:700}@media(max-width:800px){#cycle-insights .cycle-heat.compact{min-width:1100px}}
 #p12{--sp-btc:#f5a04a;--sp-ath:#5aa9ff;--sp-bot:#ef5350;--sp-halv:#64c990}:root[data-theme="light"] #p12{--sp-btc:#e8891c;--sp-ath:#0f3a6b;--sp-bot:#9b1c1c;--sp-halv:#157342}
-.sp-controls{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;align-items:flex-start}.sp-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}.sp-lab{min-width:82px;font:600 12px ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.sp-events{border:1px solid var(--border);border-radius:4px;background:var(--surface2);padding:12px 14px;margin-bottom:14px;font-size:14px}.sp-events-title{font:700 13px ui-monospace,SFMono-Regular,Consolas,monospace;margin-bottom:4px}.sp-hint{color:var(--muted);font-size:13px;line-height:1.6}.sp-pair{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 0}.sp-pair+.sp-pair{border-top:1px solid var(--border)}.sp-ev{display:flex;gap:8px;align-items:flex-start;min-width:170px}.sp-ev-k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.sp-ev-v{font-weight:700}.sp-ev-d{font-size:12px;color:var(--muted)}.sp-badge{margin-left:auto;padding:3px 10px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}.sp-seg{display:inline-flex;flex-wrap:wrap;gap:6px}.sp-seg button{padding:5px 12px;min-height:34px;font-size:13px}.sp-seg button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:700}.sp-seg button[aria-pressed="false"]{opacity:.65}.sp-sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:baseline}
+.sp-controls{display:flex;flex-wrap:wrap;gap:10px 18px;margin-bottom:14px;align-items:center}.sp-seg{display:inline-flex;flex-wrap:wrap;gap:6px}.sp-seg button{padding:5px 12px;min-height:34px;font-size:13px}.sp-seg button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:700}.sp-seg button[aria-pressed="false"]{opacity:.65}.sp-sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:baseline}
 .sp-stage{position:relative;max-width:860px;margin:auto}#sp-svg{width:100%;height:auto;display:block;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;touch-action:pan-y;border-radius:4px}.sp-tip{position:absolute;display:none;pointer-events:none;z-index:5;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;box-shadow:0 4px 14px #0006}.sp-pulse{animation:spPulse 1.8s ease-out infinite;transform-box:fill-box;transform-origin:center}@keyframes spPulse{from{transform:scale(1);opacity:.9}to{transform:scale(3.2);opacity:0}}
 </style>
 </head>
@@ -2291,7 +2291,7 @@ function toggleFocus(){document.body.classList.toggle('nav-collapsed');Object.va
    (0° at the top, clockwise); radius = log10(price). Block height is estimated by linear
    interpolation between halving dates, so no block data is needed beyond price + halving dates. */
 const SP={W:960,H:990,cx:480,cy:505,R:350,GENESIS:Date.UTC(2009,0,3),SEED_ATH:31,TOP_WINDOW_DAYS:730,BLOCKS:210000,FALLBACK_CYCLE_DAYS:1458};
-const SP_UI={color:'orig',pts:true,mvrv:true,halv:true,ath:true,spokes:true,focus:0};
+const SP_UI={color:'orig',mvrv:false,halv:true,ath:true,bot:true,spokes:true,hidden:new Set()};
 // Text with a surface-colored halo, drawn as two layers so it also survives SVG/PNG export.
 function spText(x,y,anchor,txt,color,size,weight){
   const at='x="'+(+x).toFixed(1)+'" y="'+(+y).toFixed(1)+'" text-anchor="'+anchor+'" ',f='font-size:'+size+'px;font-weight:'+(weight||400)+';';
@@ -2348,16 +2348,9 @@ function spiralModel(){
   const mvMap=typeof DATA!=='undefined'&&DATA.length?new Map(DATA.map(d=>[d.dateStr,d.mvrv])):null;
   if(mvMap)pts.forEach(q=>{const v=mvMap.get(q.ds);q.mv=Number.isFinite(v)?v:null;});
   const mvrvPeaks=[];((typeof STATS!=='undefined'&&STATS.cycleData)||[]).forEach(c=>{const q=pts.find(x=>x.ds===c.peakDate);if(q)mvrvPeaks.push({i:q.i,k:q.k,val:c.peak});});
-  const mvrvTroughs=[];((typeof STATS!=='undefined'&&STATS.cycleData)||[]).forEach(c=>{const q=pts.find(x=>x.ds===c.troughDate);if(q)mvrvTroughs.push({i:q.i,k:q.k,val:c.trough});});
-  const liveK=pts.at(-1).k,events={};
-  const put=(k,key,o)=>{(events[k]=events[k]||{})[key]=o;};
-  tops.forEach(t=>put(t.k,'top',{i:t.i,provisional:!t.confirmed}));
-  bottoms.forEach(b=>put(b.k,'bot',{i:b.i,provisional:b.provisional}));
-  mvrvPeaks.forEach(o=>put(o.k,'mpk',{i:o.i,val:o.val,provisional:o.k===liveK}));
-  mvrvTroughs.forEach(o=>put(o.k,'mtr',{i:o.i,val:o.val,provisional:o.k===liveK}));
   const halvPt={};pts.forEach(q=>{if(q.dsh===0)halvPt[q.k]=q;});
   let athIdx=0;pts.forEach(q=>{if(q.ath)athIdx=q.i;});
-  return {pts,ranges,tops,bottoms,halvPt,mvrvPeaks,mvrvTroughs,events,exp,athPt:pts[athIdx],cur:pts.at(-1)};
+  return {pts,ranges,tops,bottoms,halvPt,mvrvPeaks,exp,athPt:pts[athIdx],cur:pts.at(-1)};
 }
 
 function spGridSVG(m){
@@ -2385,101 +2378,55 @@ function spZone(v){return v===null||v===undefined?'var(--muted)':v<1?'#a78bfa':v
 function spPath(pts,from,to){
   let d='';for(let i=from;i<=to;i++)d+=(i===from?'M':'L')+pts[i].x.toFixed(1)+','+pts[i].y.toFixed(1);return d;
 }
-const SP_KINDS=[['mpk','MVRV peak'],['top','Price top'],['mtr','MVRV low'],['bot','Price low']];
-const spDim=k=>SP_UI.focus!==0&&k!==SP_UI.focus;
-// Markers currently switched on (price top/low, MVRV peak/low), across all cycles.
-function spMarkers(m){
-  const out=[];
-  Object.keys(m.events).forEach(k=>{k=+k;const e=m.events[k];
-    SP_KINDS.forEach(([key,name])=>{
-      const o=e[key];if(!o)return;
-      if((key==='top'||key==='bot')&&!SP_UI.pts)return;
-      if((key==='mpk'||key==='mtr')&&!SP_UI.mvrv)return;
-      out.push({key,name,k,i:o.i,val:o.val,provisional:o.provisional});
-    });
-  });
-  return out;
-}
-// Days from the MVRV event to the matching price event (positive: MVRV came first).
-function spGap(m,k){
-  const e=m.events[k]||{},pts=m.pts,r={};
-  if(e.mpk&&e.top)r.top=Math.round((pts[e.top.i].t-pts[e.mpk.i].t)/DAY_MS);
-  if(e.mtr&&e.bot)r.bot=Math.round((pts[e.bot.i].t-pts[e.mtr.i].t)/DAY_MS);
-  return r;
-}
-function spGapText(d,short){
-  if(d===undefined)return '—';
-  if(Math.abs(d)<=1)return short?'same day':'Same day (±1 day)';
-  return d>0?(short?'MVRV first '+d+'d':'MVRV came first by '+d+' days'):(short?'price first '+(-d)+'d':'Price came first by '+(-d)+' days');
-}
-function spDiamond(x,y,sz){return 'M'+x.toFixed(1)+','+(y-sz).toFixed(1)+'l'+sz+','+sz+'l-'+sz+','+sz+'l-'+sz+',-'+sz+'z';}
 function spPlotSVG(m,limit){
-  const pts=m.pts,n=Math.min(limit,pts.length),F=SP_UI.focus;let s='';
-  // 1. Gap bands: the stretch of price line between an MVRV event and the matching price event (focused cycle only).
-  if(F!==0&&SP_UI.mvrv&&SP_UI.pts){
-    const e=m.events[F]||{};
-    [['mpk','top'],['mtr','bot']].forEach(([a,b])=>{
-      if(!e[a]||!e[b])return;
-      const i0=Math.min(e[a].i,e[b].i),i1=Math.max(e[a].i,e[b].i);
-      if(i1>=n||i1-i0<2)return;
-      s+='<path d="'+spPath(pts,i0,i1)+'" style="fill:none;stroke:var(--amber);stroke-width:12;stroke-linecap:round;stroke-linejoin:round;opacity:.3"/>';
-    });
-  }
-  // 2. Price line, one path per cycle; non-focused cycles fade back.
+  const pts=m.pts,n=Math.min(limit,pts.length),hid=SP_UI.hidden;let s='';
+  // Price line, one path per cycle so cycles can be hidden / colored independently.
   m.ranges.forEach(r=>{
+    if(hid.has(r.k))return;
     const from=Math.max(0,r.from-1),to=Math.min(r.to,n-1);if(from>=to)return;
-    const w=F!==0&&r.k===F?3.4:2.6,op=spDim(r.k)?.16:.95;
-    const seg=(f,t,col)=>'<path d="'+spPath(pts,f,t)+'" style="fill:none;stroke:'+col+';stroke-width:'+w+';stroke-linejoin:round;stroke-linecap:round;opacity:'+op+'"/>';
+    const seg=(f,t,col)=>'<path d="'+spPath(pts,f,t)+'" style="fill:none;stroke:'+col+';stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round;opacity:.95"/>';
     if(SP_UI.color==='mvrv'){
       let rs=from,z=spZone(pts[from].mv);
       for(let i=from+1;i<=to;i++){const zi=spZone(pts[i].mv);if(zi!==z||i===to){s+=seg(rs,i,z);rs=i;z=zi;}}
     }else s+=seg(from,to,SP_UI.color==='cycle'?(r.k===0?'var(--muted)':(CYCLE_COLORS[r.k]||'var(--accent)')):'var(--sp-btc)');
   });
   if(SP_UI.color==='mvrv')s+=[['&lt; 1','#a78bfa'],['1–2','#64c990'],['2–3','#e9b452'],['3+','#ef5350']].map((z,j)=>'<line x1="'+(SP.W-190+j*44)+'" y1="'+(SP.H-48)+'" x2="'+(SP.W-170+j*44)+'" y2="'+(SP.H-48)+'" style="stroke:'+z[1]+';stroke-width:4;stroke-linecap:round"/><text x="'+(SP.W-190+j*44)+'" y="'+(SP.H-30)+'" style="fill:var(--muted);font-size:11px">'+z[0]+'</text>').join('')+'<text x="'+(SP.W-190)+'" y="'+(SP.H-62)+'" style="fill:var(--muted);font-size:11px">MVRV zone</text>';
-  // 3. All-time-high streaks.
   if(SP_UI.ath){
-    const d=['',''];let start=-1;
-    const flush=end=>{if(start<0)return;const b=spDim(pts[start].k)?1:0;d[b]+=start===end?'M'+pts[start].x.toFixed(1)+','+pts[start].y.toFixed(1)+'h0.01':spPath(pts,start,end);start=-1;};
+    let d='',start=-1;
+    const flush=end=>{if(start<0)return;d+=start===end?'M'+pts[start].x.toFixed(1)+','+pts[start].y.toFixed(1)+'h0.01':spPath(pts,start,end);start=-1;};
     for(let i=0;i<n;i++){
-      const q=pts[i];
-      if(q.ath){if(start>=0&&pts[i-1].k!==q.k)flush(i-1);if(start<0)start=i;}
+      const q=pts[i],on=q.ath&&!hid.has(q.k);
+      if(on){if(start>=0&&pts[i-1].k!==q.k)flush(i-1);if(start<0)start=i;}
       else flush(i-1);
     }
     flush(n-1);
-    [[d[0],1],[d[1],.16]].forEach(x=>{if(x[0])s+='<path d="'+x[0]+'" style="fill:none;stroke:var(--sp-ath);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;opacity:'+x[1]+'"/>';});
+    if(d)s+='<path d="'+d+'" style="fill:none;stroke:var(--sp-ath);stroke-width:4;stroke-linecap:round;stroke-linejoin:round"/>';
   }
   const placed=[];
   const label=(q,txt,color,dy,size)=>{
     size=size||11;dy=dy===undefined?-9:dy;
-    const right=q.x>=SP.cx,w=txt.length*size*0.62,x=q.x+(right?12:-12);let x0=right?x:x-w,y=q.y+dy;
+    const right=q.x>=SP.cx,w=txt.length*size*0.62,x=q.x+(right?11:-11);let x0=right?x:x-w,y=q.y+dy;
     for(let t=0;t<8&&placed.some(b=>x0<b.x+b.w&&x0+w>b.x&&y-size<b.y&&b.y-size<y);t++)y+=size+2;
     placed.push({x:x0,y,w});
     return spText(x,y,right?'start':'end',txt,color,size,700);
   };
-  const base=F===0?1:1.3,mk=spMarkers(m).filter(o=>o.i<n);
-  // 4. Halvings: small dots; the focused cycle's halving also shows its price.
+  if(SP_UI.ath)m.tops.forEach(tp=>{
+    if(tp.i>=n||hid.has(tp.k))return;const q=pts[tp.i];
+    s+='<circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="7" style="fill:var(--sp-ath);stroke:var(--surface);stroke-width:1.5"/>'+label(q,'Top '+spMoney(q.p),'var(--sp-ath)');
+  });
+  if(SP_UI.mvrv)m.mvrvPeaks.forEach(pk=>{
+    if(pk.i>=n||hid.has(pk.k))return;const q=pts[pk.i],tp=m.tops.find(t=>t.k===pk.k);
+    if(tp&&tp.i<n&&tp.i!==pk.i)s+='<line x1="'+q.x.toFixed(1)+'" y1="'+q.y.toFixed(1)+'" x2="'+pts[tp.i].x.toFixed(1)+'" y2="'+pts[tp.i].y.toFixed(1)+'" style="stroke:var(--amber);stroke-width:1.4;stroke-dasharray:4 4;opacity:.8"/>';
+    s+='<path d="M'+q.x.toFixed(1)+','+(q.y-8).toFixed(1)+'l7,8l-7,8l-7,-8z" style="fill:var(--amber);stroke:var(--surface);stroke-width:1.5"/>'+label(q,'MVRV pk '+numText(pk.val,1),'var(--amber)',-12);
+  });
+  if(SP_UI.bot)m.bottoms.forEach(b=>{
+    if(b.i>=n||hid.has(b.k))return;const q=pts[b.i];
+    s+='<circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="6.5" style="fill:'+(b.provisional?'var(--surface)':'var(--sp-bot)')+';stroke:var(--sp-bot);stroke-width:2.5"/>'+label(q,(b.provisional?'low ':'')+spMoney(q.p),'var(--sp-bot)');
+  });
   if(SP_UI.halv)Object.keys(m.halvPt).forEach(k=>{
-    const q=m.halvPt[k];if(q.i>=n)return;const dim=spDim(+k);
-    s+='<circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="'+(4.5*base).toFixed(1)+'" style="fill:var(--sp-halv);stroke:var(--surface);stroke-width:1.5;opacity:'+(dim?.25:1)+'"/>';
-    if(!dim)s+=label(q,F===+k?'Halving '+spMoney(q.p):'H'+k,'var(--sp-halv)',4,F===+k?11:10);
+    const q=m.halvPt[k];if(q.i>=n||hid.has(+k))return;
+    s+='<circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="6" style="fill:var(--sp-halv);stroke:var(--surface);stroke-width:1.5"/>'+label(q,'H'+k+' '+spMoney(q.p),'var(--sp-halv)',4);
   });
-  // 5. MVRV events (diamonds, drawn first so a coincident price marker sits inside), then price events (circles).
-  mk.filter(o=>o.key==='mpk'||o.key==='mtr').forEach(o=>{
-    const q=pts[o.i],sz=8*base,hollow=o.key==='mtr';
-    s+='<path d="'+spDiamond(q.x,q.y,sz)+'" style="fill:'+(hollow?'var(--surface)':'var(--amber)')+';stroke:var(--amber);stroke-width:2.2;opacity:'+(spDim(o.k)?.25:1)+'"/>';
-  });
-  mk.filter(o=>o.key==='top'||o.key==='bot').forEach(o=>{
-    const q=pts[o.i],top=o.key==='top',col=top?'var(--sp-ath)':'var(--sp-bot)';
-    s+='<circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="'+(5.2*base).toFixed(1)+'" style="fill:'+(o.provisional&&!top?'var(--surface)':col)+';stroke:'+(top?'var(--surface)':col)+';stroke-width:'+(top?1.5:2.2)+';opacity:'+(spDim(o.k)?.25:1)+'"/>';
-  });
-  // 6. Text only for the focused cycle, so the default view stays quiet.
-  if(F!==0){
-    mk.filter(o=>o.k===F).forEach(o=>{
-      const q=pts[o.i],isM=o.key==='mpk'||o.key==='mtr';
-      const txt=o.name+' '+(isM?numText(o.val,2):spMoney(q.p));
-      s+=label(q,txt,isM?'var(--amber)':(o.key==='top'?'var(--sp-ath)':'var(--sp-bot)'),isM?-14:-9);
-    });
-  }
   if(n>=pts.length){
     const q=m.cur;
     s+='<circle class="sp-pulse" cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="6" style="fill:none;stroke:var(--text);stroke-width:2"/><circle cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="5" style="fill:var(--text);stroke:var(--surface);stroke-width:1.5"/>'
@@ -2489,17 +2436,9 @@ function spPlotSVG(m,limit){
 }
 
 function spLegendSVG(){
-  const rows=[];
-  const line=(col,txt)=>({g:y=>'<line x1="22" y1="'+y+'" x2="52" y2="'+y+'" style="stroke:'+col+';stroke-width:4;stroke-linecap:round"/>',txt});
-  const dot=(col,hollow,txt)=>({g:y=>'<circle cx="37" cy="'+y+'" r="5.2" style="fill:'+(hollow?'var(--surface)':col)+';stroke:'+col+';stroke-width:2.2"/>',txt});
-  const dia=(hollow,txt)=>({g:y=>'<path d="'+spDiamond(37,y,7.5)+'" style="fill:'+(hollow?'var(--surface)':'var(--amber)')+';stroke:var(--amber);stroke-width:2"/>',txt});
-  rows.push(line(SP_UI.color==='orig'?'var(--sp-btc)':'var(--muted)',SP_UI.color==='orig'?'Bitcoin price':SP_UI.color==='cycle'?'Bitcoin · color = halving cycle':'Bitcoin · color = MVRV zone'));
-  if(SP_UI.pts){rows.push(dot('var(--sp-ath)',false,'Price top'));rows.push(dot('var(--sp-bot)',false,'Price low'));rows.push(dot('var(--sp-bot)',true,'Price low, still open'));}
-  if(SP_UI.mvrv){rows.push(dia(false,'MVRV peak'));rows.push(dia(true,'MVRV low'));}
-  if(SP_UI.halv)rows.push(dot('var(--sp-halv)',false,'Halving'));
-  if(SP_UI.ath)rows.push(line('var(--sp-ath)','All-time-high streak'));
+  const row=(y,col,txt,hollow)=>'<line x1="22" y1="'+y+'" x2="52" y2="'+y+'" style="stroke:'+col+';stroke-width:4;stroke-linecap:round"/><text x="62" y="'+(y+4)+'" style="fill:var(--text);font-size:12px">'+txt+'</text>';
   return '<text x="22" y="30" style="fill:var(--text);font-size:18px;font-weight:700">Bitcoin spiral</text>'
-    +rows.map((r,j)=>{const y=56+j*20;return r.g(y)+'<text x="62" y="'+(y+4)+'" style="fill:var(--text);font-size:12px">'+r.txt+'</text>';}).join('');
+    +row(56,SP_UI.color==='orig'?'var(--sp-btc)':'var(--muted)',SP_UI.color==='orig'?'Bitcoin':SP_UI.color==='cycle'?'Bitcoin · color = halving cycle':'Bitcoin · color = MVRV zone')+row(76,'var(--sp-ath)','All-time highs')+row(96,'var(--sp-bot)','Cycle bottoms (hollow = provisional)')+row(116,'var(--sp-halv)','Halvings');
 }
 function spFooterSVG(){
   return '<text x="22" y="'+(SP.H-34)+'" style="fill:var(--muted);font-size:11px">Angle = estimated block position in the 210k-block halving cycle (clockwise from the top).</text>'
@@ -2517,27 +2456,16 @@ function spReplay(){
   tick();
 }
 function spControlsHTML(m){
-  const F=SP_UI.focus;
-  const b=(a,v,label,on,pre)=>'<button type="button" data-sp="'+a+'"'+(v!==undefined?' data-v="'+v+'"':'')+(on!==undefined?' aria-pressed="'+on+'"':'')+'>'+(pre||'')+label+'</button>';
-  const row=(lab,inner)=>'<div class="sp-row"><span class="sp-lab">'+lab+'</span>'+inner+'</div>';
-  const cyc=m.ranges.filter(r=>r.k>0).map(r=>b('focus',r.k,'C'+r.k+' · '+(CYCLE_LABELS[r.k]||''),F===r.k,'<span class="sp-sw" style="background:'+(CYCLE_COLORS[r.k]||'var(--accent)')+'"></span>')).join('');
-  return row('Line color','<div class="sp-seg" role="group" aria-label="Line color">'+b('color','orig','Classic',SP_UI.color==='orig')+b('color','cycle','By cycle',SP_UI.color==='cycle')+b('color','mvrv','By MVRV zone',SP_UI.color==='mvrv')+'</div>')
-    +row('Focus','<div class="sp-seg" role="group" aria-label="Focus on one cycle">'+b('focus','0','All cycles',F===0)+cyc+'</div>')
-    +row('Show','<div class="sp-seg" role="group" aria-label="Markers">'+b('pts','','Price top / low',SP_UI.pts)+b('mvrv','','MVRV peak / low',SP_UI.mvrv)+b('halv','','Halvings',SP_UI.halv)+b('ath','','ATH streaks',SP_UI.ath)+b('spokes','','Spokes',SP_UI.spokes)+'</div>')
-    +row('Export','<div class="sp-seg"><button type="button" data-sp="replay">▶ Replay</button><button type="button" data-sp="svg">↓ SVG</button><button type="button" data-sp="png">↓ PNG</button></div>');
-}
-function spEventsHTML(m){
-  const F=SP_UI.focus;
-  if(!F)return '<div class="sp-hint"><b>Tip</b> · choose a cycle under “Focus” (or click a line) to isolate it and see how its MVRV peak and low line up with the price top and low. Hover any marker for details.</div>';
-  const e=m.events[F]||{},g=spGap(m,F),pts=m.pts;
-  const item=(glyph,col,name,o,val)=>o?'<div class="sp-ev"><span style="color:'+col+';font-size:15px">'+glyph+'</span><div><div class="sp-ev-k">'+name+'</div><div class="sp-ev-v">'+val+'</div><div class="sp-ev-d">'+pts[o.i].ds+(o.provisional?' · so far':'')+'</div></div></div>':'<div class="sp-ev muted">'+name+' — n/a</div>';
-  const pair=(a,b,gap,glyphA,glyphB,colB)=>'<div class="sp-pair">'
-    +item(glyphA,'var(--amber)',a[0],e[a[1]],e[a[1]]?numText(e[a[1]].val,2):'')+'<span class="muted">→</span>'
-    +item(glyphB,colB,b[0],e[b[1]],e[b[1]]?moneyText(pts[e[b[1]].i].p):'')
-    +'<span class="sp-badge">'+spGapText(gap)+(e[b[1]]&&e[b[1]].provisional?' · so far':'')+'</span></div>';
-  return '<div class="sp-events-title">C'+F+' · '+(CYCLE_LABELS[F]||'')+'</div>'
-    +pair(['MVRV peak','mpk'],['Price top','top'],g.top,'◆','●','var(--sp-ath)')
-    +pair(['MVRV low','mtr'],['Price low','bot'],g.bot,'◇',e.bot&&e.bot.provisional?'○':'●','var(--sp-bot)');
+  const tog=(act,label,on)=>'<button type="button" data-sp="'+act+'" aria-pressed="'+on+'">'+label+'</button>';
+  const chips=m.ranges.map(r=>{
+    const col=SP_UI.color==='cycle'?(r.k===0?'var(--muted)':(CYCLE_COLORS[r.k]||'var(--accent)')):'var(--sp-btc)';
+    const on=!SP_UI.hidden.has(r.k);
+    return '<button type="button" data-sp="cycle" data-k="'+r.k+'" aria-pressed="'+on+'"><span class="sp-sw" style="background:'+col+'"></span>'+(r.k===0?'Pre-halving':'C'+r.k+' · '+(CYCLE_LABELS[r.k]||''))+'</button>';
+  }).join('');
+  return '<div class="sp-seg" role="group" aria-label="Line color">'+'<button type="button" data-sp="color" data-v="orig" aria-pressed="'+(SP_UI.color==='orig')+'">Classic</button><button type="button" data-sp="color" data-v="cycle" aria-pressed="'+(SP_UI.color==='cycle')+'">Color by cycle</button><button type="button" data-sp="color" data-v="mvrv" aria-pressed="'+(SP_UI.color==='mvrv')+'">Color by MVRV</button></div>'
+    +'<div class="sp-seg" role="group" aria-label="Markers">'+tog('ath','ATHs',SP_UI.ath)+tog('bot','Bottoms',SP_UI.bot)+tog('halv','Halvings',SP_UI.halv)+tog('mvrv','MVRV peaks',SP_UI.mvrv)+tog('spokes','Spokes',SP_UI.spokes)+'</div>'
+    +'<div class="sp-seg" role="group" aria-label="Cycles shown">'+chips+'</div>'
+    +'<div class="sp-seg"><button type="button" data-sp="replay">▶ Replay</button><button type="button" data-sp="svg">↓ SVG</button><button type="button" data-sp="png">↓ PNG</button></div>';
 }
 
 function spSerialize(){
@@ -2591,13 +2519,12 @@ function buildSpiral(){
   root.innerHTML=cards
     +'<div class="chart-card"><div class="chart-title">Bitcoin spiral · one turn per halving cycle, radius = log price</div>'
     +'<div class="sp-controls" id="sp-controls">'+spControlsHTML(m)+'</div>'
-    +'<div class="sp-events" id="sp-events">'+spEventsHTML(m)+'</div>'
     +'<div class="sp-stage"><svg id="sp-svg" viewBox="0 0 '+SP.W+' '+SP.H+'" role="img" aria-label="Polar chart of Bitcoin price. Each halving cycle is one clockwise turn from the top; distance from the center is log price. The cycle table below lists the same figures.">'
     +'<rect width="'+SP.W+'" height="'+SP.H+'" style="fill:var(--surface)"/>'
     +'<g id="sp-grid">'+spGridSVG(m)+spLegendSVG()+'</g>'+spFooterSVG()
     +'<g id="sp-plot"></g><circle id="sp-hover" r="6" display="none" style="fill:none;stroke:var(--text);stroke-width:2"/></svg>'
     +'<div class="sp-tip" id="sp-tip" role="status"></div></div>'
-    +'<div class="quality-note">Hover (or touch) a marker or the line for details; click a line to focus that cycle. Diamonds are MVRV events, circles are price events, and the amber band shows how far apart they were. Replay redraws the path in time order. The live cycle ends at an estimated halving, so its angle is approximate until that block exists.</div></div>'
+    +'<div class="quality-note">Hover (or touch) the line to read a day. Replay redraws the path in time order. The live cycle ends at an estimated halving, so its angle is approximate until that block exists.</div></div>'
     +'<div class="chart-card"><div class="chart-title">Same cycle day, every cycle</div>'+spCycleTable(m)
     +'<div class="quality-note">A cycle top is the highest close within two years after that cycle’s halving; its bottom is the lowest close between the top and the next halving (provisional until that halving). These rules use no price thresholds, so they keep working if bear markets get shallower, but they assume tops keep arriving within two years of a halving. The 2011 high of $31 seeds the running ATH line because price data begins in 2012. “Same day” compares each cycle at the live cycle’s day count since halving.</div></div>';
   drawSpiral();spWire(m);
@@ -2605,55 +2532,33 @@ function buildSpiral(){
 
 function spWire(m){
   const root=document.getElementById('p12'),svg=document.getElementById('sp-svg'),tip=document.getElementById('sp-tip'),hov=document.getElementById('sp-hover');
-  const refresh=()=>{
-    document.getElementById('sp-controls').innerHTML=spControlsHTML(m);
-    document.getElementById('sp-grid').innerHTML=spGridSVG(m)+spLegendSVG();
-    document.getElementById('sp-events').innerHTML=spEventsHTML(m);
-    drawSpiral();
-  };
   root.onclick=e=>{
     const b=e.target.closest('[data-sp]');if(!b||!root.contains(b))return;
     const a=b.dataset.sp;
     if(a==='color')SP_UI.color=b.dataset.v;
-    else if(a==='focus')SP_UI.focus=+b.dataset.v;
+    else if(a==='cycle'){const k=+b.dataset.k;SP_UI.hidden.has(k)?SP_UI.hidden.delete(k):SP_UI.hidden.add(k);}
     else if(a==='replay'){spReplay();return;}
     else if(a==='svg'||a==='png'){spDownload(a);return;}
-    else if(a in SP_UI)SP_UI[a]=!SP_UI[a];
-    else return;
-    refresh();
+    else SP_UI[a]=!SP_UI[a];
+    document.getElementById('sp-controls').innerHTML=spControlsHTML(m);
+    document.getElementById('sp-grid').innerHTML=spGridSVG(m)+spLegendSVG();
+    drawSpiral();
   };
   const hide=()=>{tip.style.display='none';hov.setAttribute('display','none');};
-  const locate=e=>{
-    const r=svg.getBoundingClientRect(),sc=SP.W/r.width,x=(e.clientX-r.left)*sc,y=(e.clientY-r.top)*sc;
-    let mk=null,md=18*18;
-    spMarkers(m).forEach(o=>{if(spDim(o.k))return;const q=m.pts[o.i],dx=q.x-x,dy=q.y-y,d=dx*dx+dy*dy;if(d<md){md=d;mk=o;}});
-    let best=null,bd=26*26;
-    if(!mk)for(const q of m.pts){if(spDim(q.k))continue;const dx=q.x-x,dy=q.y-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=q;}}
-    return {mk,best};
-  };
   svg.addEventListener('pointerleave',hide);
   svg.addEventListener('pointermove',e=>{
     if(SP_REPLAY)return;
-    const {mk,best}=locate(e);let q=null,lines;
-    if(mk){
-      q=m.pts[mk.i];const isM=mk.key==='mpk'||mk.key==='mtr',g=spGap(m,mk.k),gap=(mk.key==='mpk'||mk.key==='top')?g.top:g.bot;
-      lines=[mk.name+(mk.provisional?' (so far)':''),q.ds+' · '+(isM?'MVRV '+numText(mk.val,2):moneyText(q.p)),isM?'BTC '+moneyText(q.p):(q.mv!==null&&q.mv!==undefined?'MVRV '+q.mv.toFixed(2):''),'C'+mk.k+' · day '+q.dsh+' since halving',gap!==undefined?spGapText(gap):''].filter(Boolean);
-    }else if(best){
-      q=best;const hp=m.halvPt[q.k];
-      lines=[q.ds,moneyText(q.p),q.k>0?'C'+q.k+' · day '+q.dsh+' since halving':'Pre-halving cycle','≈ block '+(q.k*SP.BLOCKS+q.blocks).toLocaleString()+(hp&&q.k>0?'\n×'+(q.p/hp.p).toFixed(2)+' vs halving price':'')+(q.mv!==null&&q.mv!==undefined?'\nMVRV '+q.mv.toFixed(2):'')+(q.ath?'\nNew all-time high':'')];
-    }
-    if(!q){hide();return;}
-    tip.textContent=lines.join('\n');
-    hov.setAttribute('r',mk?'13':'6');hov.setAttribute('cx',q.x.toFixed(1));hov.setAttribute('cy',q.y.toFixed(1));hov.removeAttribute('display');
+    const r=svg.getBoundingClientRect(),sc=SP.W/r.width,x=(e.clientX-r.left)*sc,y=(e.clientY-r.top)*sc;
+    let best=null,bd=26*26;
+    for(const q of m.pts){if(SP_UI.hidden.has(q.k))continue;const dx=q.x-x,dy=q.y-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=q;}}
+    if(!best){hide();return;}
+    const hp=m.halvPt[best.k];
+    tip.textContent=[best.ds,moneyText(best.p),best.k>0?'C'+best.k+' · day '+best.dsh+' since halving':'Pre-halving cycle','≈ block '+(best.k*SP.BLOCKS+best.blocks).toLocaleString()+(hp&&best.k>0?'\n×'+(best.p/hp.p).toFixed(2)+' vs halving price':'')+(best.mv!==null&&best.mv!==undefined?'\nMVRV '+best.mv.toFixed(2):'')+(best.ath?'\nNew all-time high':'')].join('\n');
+    hov.setAttribute('cx',best.x.toFixed(1));hov.setAttribute('cy',best.y.toFixed(1));hov.removeAttribute('display');
     tip.style.display='block';
     const sr=svg.parentElement.getBoundingClientRect(),tx=e.clientX-sr.left,ty=e.clientY-sr.top;
     tip.style.left=Math.min(Math.max(tx+14,0),sr.width-tip.offsetWidth)+'px';
     tip.style.top=Math.max(ty-tip.offsetHeight-10,0)+'px';
-  });
-  svg.addEventListener('click',e=>{
-    if(SP_REPLAY)return;
-    const {mk,best}=locate(e),k=mk?mk.k:best?best.k:0;
-    if(k>0){SP_UI.focus=SP_UI.focus===k?0:k;refresh();}
   });
 }
 
