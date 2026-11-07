@@ -866,14 +866,25 @@ function buildMomentum(){
   CHARTS.c2=new Chart(document.getElementById("c2"),{type:"line",data:{labels:cd.map(function(d){return d.dateStr}),datasets:datasets},options:opts});
 }
 
-// Overlay toggles survive theme switches (which rebuild every chart) and reloads.
+// Overlay state survives theme switches (which rebuild every chart) and reloads.
 var OVERLAY_PRICE_ON=true,OVERLAY_EXT_ON=true;
 try{
   if(localStorage.getItem('mvrv-overlay-price')==='off')OVERLAY_PRICE_ON=false;
   if(localStorage.getItem('mvrv-overlay-ext')==='off')OVERLAY_EXT_ON=false;
 }catch(e){}
+// Shared by the two linked panels: hover position (cycle %), and the highlighted cycle.
+var OV_STATE={x:null,active:null,pin:null,hover:null};
 
-function overlayUsd(p){return p>=1000?'$'+(p/1000).toFixed(p>=10000?0:1)+'k':'$'+(p>=10?p.toFixed(0):p.toFixed(2));}
+function overlayAlpha(hex,a){
+  return /^#[0-9a-f]{6}$/i.test(hex)?hex+Math.round(a*255).toString(16).padStart(2,'0'):hex;
+}
+// Index of the point whose x is closest to `x` (data is sorted by x).
+function overlayNearestIndex(data,x){
+  var lo=0,hi=data.length-1;
+  if(hi<0)return -1;
+  while(hi-lo>1){var mid=(lo+hi)>>1;if(data[mid].x<x)lo=mid;else hi=mid;}
+  return Math.abs(data[lo].x-x)<=Math.abs(data[hi].x-x)?lo:hi;
+}
 
 // Highest/lowest daily MVRV and BTC price inside each halving cycle, taken from the
 // full (unsampled) rows so they match the Cycle Extremes / Price Peaks tabs.
@@ -894,6 +905,9 @@ function overlayCycleExtremes(c){
   };
 }
 
+function overlayRedrawPeers(chart){
+  ['c3','c3b'].forEach(function(id){var c=CHARTS[id];if(c&&c!==chart)c.draw();});
+}
 function toggleOverlayPrice(){
   OVERLAY_PRICE_ON=!OVERLAY_PRICE_ON;
   try{localStorage.setItem('mvrv-overlay-price',OVERLAY_PRICE_ON?'on':'off');}catch(e){}
@@ -904,336 +918,328 @@ function toggleOverlayExtremes(){
   try{localStorage.setItem('mvrv-overlay-ext',OVERLAY_EXT_ON?'on':'off');}catch(e){}
   applyOverlayToggles();
 }
+function ovHover(c){OV_STATE.hover=c;applyOverlayFocus();}
+function ovPin(c){OV_STATE.pin=OV_STATE.pin===c?null:c;applyOverlayFocus();}
+
+// Fade every cycle except the highlighted one, in both panels at once.
+function applyOverlayFocus(){
+  var f=OV_STATE.hover!=null?OV_STATE.hover:OV_STATE.pin;
+  ['c3','c3b'].forEach(function(id){
+    var chart=CHARTS[id];if(!chart)return;
+    chart.data.datasets.forEach(function(ds){
+      if(!ds._line)return;
+      ds.borderColor=(f==null||ds._cycle===f)?ds._color:overlayAlpha(ds._color,0.16);
+      ds.borderWidth=f===ds._cycle?3.2:(f==null?(ds._current?2.6:1.8):1.3);
+      ds.order=f===ds._cycle?1:2+ds._cycle;
+    });
+    chart.update('none');
+  });
+  document.querySelectorAll('#ov-chips .ov-chip').forEach(function(b){
+    var c=+b.dataset.cycle;
+    b.setAttribute('aria-pressed',String(OV_STATE.pin===c));
+    b.style.opacity=(f==null||f===c)?'1':'.55';
+  });
+}
+
 function applyOverlayToggles(){
   var pb=document.getElementById('ov-toggle-price'),eb=document.getElementById('ov-toggle-ext');
   if(pb){pb.textContent='BTC price: '+(OVERLAY_PRICE_ON?'on':'off');pb.setAttribute('aria-pressed',String(OVERLAY_PRICE_ON));}
   if(eb){eb.textContent='Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off');eb.setAttribute('aria-pressed',String(OVERLAY_EXT_ON));}
-  var chart=CHARTS.c3;if(!chart)return;
-  chart.data.datasets.forEach(function(ds,i){
-    if(!ds._kind)return;
-    var visible=(ds._axis!=='y2'||OVERLAY_PRICE_ON)&&(!ds._ext||OVERLAY_EXT_ON);
-    chart.setDatasetVisibility(i,visible);
+  var top=CHARTS.c3,bot=CHARTS.c3b,panel=document.getElementById('ov-price-panel');
+  if(panel)panel.style.display=OVERLAY_PRICE_ON?'':'none';
+  [top,bot].forEach(function(chart){
+    if(!chart)return;
+    chart.data.datasets.forEach(function(ds,i){if(ds._ext)chart.setDatasetVisibility(i,OVERLAY_EXT_ON);});
   });
-  if(chart.options.scales.y2)chart.options.scales.y2.display=OVERLAY_PRICE_ON;
-  chart.update();
+  if(!top)return;
+  // The x-axis labels live on whichever panel is lowest.
+  var priceShown=!!bot&&OVERLAY_PRICE_ON,tx=top.options.scales.x;
+  tx.ticks.display=!priceShown;tx.title.display=!priceShown;
+  top.options.layout.padding.bottom=priceShown?4:20;
+  top.update('none');
+  if(priceShown){bot.resize();bot.update('none');}
 }
 
 function buildCycleOverlay(){
-  var btnStyle='width:auto;min-height:34px;padding:6px 12px;font-size:13px';
-  var toolbar='<div role="group" aria-label="Chart overlays" style="display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 14px">'
-    +(hasPriceData?'<button type="button" class="btn" id="ov-toggle-price" onclick="toggleOverlayPrice()" aria-pressed="'+OVERLAY_PRICE_ON+'" style="'+btnStyle+'">BTC price: '+(OVERLAY_PRICE_ON?'on':'off')+'</button>':'')
-    +'<button type="button" class="btn" id="ov-toggle-ext" onclick="toggleOverlayExtremes()" aria-pressed="'+OVERLAY_EXT_ON+'" style="'+btnStyle+'">Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off')+'</button></div>';
-  var priceNote=hasPriceData?" Solid lines are MVRV (left axis); dashed lines are BTC price indexed to the halving-day close = 100 on a log scale (right axis). Hover a point to see MVRV and BTC price for that date.":"";
-  var extNote=" ▲ marks a cycle peak and ▼ a cycle bottom"+(hasPriceData?" (filled = MVRV, hollow = BTC price)":"")+". The current cycle’s markers are the highest/lowest so far and can still move.";
-  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">'+(hasPriceData?'MVRV &amp; BTC price':'MVRV')+' — all cycles overlaid · cycle position · vertical lines = equal cycle fractions</div>'+toolbar+makeCanvas("c3",460)+'</div><div class="info">Aligns cycles by fraction of each halving interval. Dashed vertical lines mark equal fractions; ≈M labels use a 48-month reference and are not the exact calendar months for every cycle. A current interval with an estimated end can extend past 100% while confirmation is pending.'+priceNote+extNote+'</div><div id="cycle-insights"></div>';
+  var availableCycles=[...new Set(DATA.map(d=>d.cycle))].filter(c=>c>0).sort((a,b)=>a-b);
+  if(!availableCycles.length){document.getElementById("p3").innerHTML='<div class="info">Cycle overlay requires data from the first halving onward (28 November 2012).</div>';return;}
   destroyChart("c3");destroyChart("c3b");
 
-  var monthPct = 100/48;
-  var monthDatasets = [];
-  var keyMonths = [6,12,18,24,30,36,42];
-  keyMonths.forEach(function(m){
-    var xPos = +(m * monthPct).toFixed(2);
-    monthDatasets.push({
-      label: "M"+m,
-      data: [{x:xPos,y:0},{x:xPos,y:Math.max(...DATA.map(d=>d.mvrv))*1.05}],
-      borderColor: CC.text,
-      borderWidth: 1,
-      borderDash: [4,4],
-      pointRadius: 0,
-      showLine: true,
-      tension: 0,
-      fill: false,
-      order: 10,
-      yAxisID: "y",
-      _guide: true,
-    });
-  });
- var availableCycles = [...new Set(DATA.map(d => d.cycle))].filter(c => c > 0).sort((a,b) => a-b);
-  var cycleLabel = function(c){return (typeof CYCLE_LABELS !== 'undefined' && CYCLE_LABELS[c]) ? CYCLE_LABELS[c] : "Cycle " + c;};
-  var cycleColor = function(c){return (typeof CYCLE_COLORS !== 'undefined' && CYCLE_COLORS[c]) ? CYCLE_COLORS[c] : "#6b6880";};
-  var cycleDatasets = availableCycles.map(function(c) {
-    var sub = BY_CYCLE[c] ? BY_CYCLE[c].filter(function(d){return d.cyclePct!=null}) : [];
-    var pts = sample(sub, 120);
-    return {
-      label: cycleLabel(c),
-      data: pts.map(function(d) { return { x: d.cyclePct, y: d.mvrv } }),
-      borderColor: cycleColor(c),
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      pointRadius: 0,
-      showLine: true,
-      tension: .3,
-      order: c,
-      yAxisID: "y",
-      _kind: "mvrv",
-      _axis: "y",
-      _cycle: c
+  var cycleLabel=function(c){return (typeof CYCLE_LABELS!=='undefined'&&CYCLE_LABELS[c])?CYCLE_LABELS[c]:"Cycle "+c;};
+  var cycleColor=function(c){return (typeof CYCLE_COLORS!=='undefined'&&CYCLE_COLORS[c])?CYCLE_COLORS[c]:"#6b6880";};
+  var currentCycleNo=availableCycles[availableCycles.length-1];
+  var baseOf={};availableCycles.forEach(function(c){baseOf[c]=hasPriceData?priceAtHalving(HALVINGS[c-1]):null;});
+
+  var lineDataset=function(c,rows,yOf,kind){
+    return{
+      label:cycleLabel(c),
+      data:rows.map(function(d){return{x:d.cyclePct,y:yOf(d)};}),_rows:rows,
+      borderColor:cycleColor(c),backgroundColor:"transparent",
+      borderWidth:c===currentCycleNo?2.6:1.8,pointRadius:0,showLine:true,tension:.3,order:2+c,
+      _line:true,_kind:kind,_cycle:c,_color:cycleColor(c),_current:c===currentCycleNo,_basePrice:baseOf[c]
     };
+  };
+  var mvrvDatasets=availableCycles.map(function(c){
+    var sub=BY_CYCLE[c]?BY_CYCLE[c].filter(function(d){return d.cyclePct!=null;}):[];
+    return lineDataset(c,sample(sub,120),function(d){return d.mvrv;},"mvrv");
   });
-
-  // Calculate "You are here" position
-  if(!cycleDatasets.length){document.getElementById("p3").innerHTML='<div class="info">Cycle overlay requires data from the first halving onward (28 November 2012).</div>';return;}
-  const currentCycle = cycleDatasets[cycleDatasets.length - 1];
-  const lastPoint = currentCycle.data[currentCycle.data.length - 1];
-  const overlayMax=Math.max(100,Math.ceil(lastPoint.x/25)*25);
-
-  // BTC price, indexed to the halving-day close = 100, drawn on a second (log) axis.
-  var priceCycleDatasets=[];
+  // BTC price indexed to the halving-day close (= 100) so cycles are comparable.
+  var priceDatasets=[];
   if(hasPriceData){
-    priceCycleDatasets=availableCycles.map(function(c){
-      var sub=BY_CYCLE[c]?BY_CYCLE[c].filter(function(d){return d.cyclePct!=null&&d.price}):[];
-      if(!sub.length)return null;
-      // Match the baseline used by the heatmap, other price charts, and models.
-      var basePrice=priceAtHalving(HALVINGS[c-1]);
-      if(!basePrice)return null;
-      var pts=sample(sub,120);
-      return{
-        label:cycleLabel(c)+" BTC price",
-        data:pts.map(function(d){return{x:d.cyclePct,y:+(d.price/basePrice*100).toFixed(1)}}),
-        borderColor:cycleColor(c),backgroundColor:"transparent",
-        borderWidth:1.5,borderDash:[6,3],pointRadius:0,showLine:true,tension:.3,order:c+20,
-        yAxisID:"y2",hidden:!OVERLAY_PRICE_ON,
-        _kind:"price",_axis:"y2",_cycle:c,_basePrice:basePrice
-      };
-    }).filter(Boolean);
+    availableCycles.forEach(function(c){
+      if(!baseOf[c])return;
+      var sub=BY_CYCLE[c]?BY_CYCLE[c].filter(function(d){return d.cyclePct!=null&&d.price;}):[];
+      if(!sub.length)return;
+      priceDatasets.push(lineDataset(c,sample(sub,120),function(d){return +(d.price/baseOf[c]*100).toFixed(1);},"price"));
+    });
   }
+  var showPrice=priceDatasets.length>0;
 
-  // Peak / bottom markers: one dataset per kind so a single toggle controls them all.
+  var lastPoint=mvrvDatasets[mvrvDatasets.length-1].data.at(-1);
+  var overlayMax=Math.max(100,Math.ceil(lastPoint.x/25)*25);
+
+  // Peak / bottom markers (one dataset per kind so one toggle controls them all).
   var extremes={};availableCycles.forEach(function(c){extremes[c]=overlayCycleExtremes(c);});
-  var markerDataset=function(kind,axis,peak,what,build){
+  var markerDataset=function(kind,peak,what,build){
     var cycles=availableCycles.filter(function(c){return build(c)!=null;});
     if(!cycles.length)return null;
-    var pts=cycles.map(function(c){
-      var pt=build(c);pt._cycle=c;pt._prov=extremes[c].provisional;return pt;
-    });
-    var colors=cycles.map(cycleColor),hollow=axis==="y2";
-    var visible=OVERLAY_EXT_ON&&(axis!=="y2"||OVERLAY_PRICE_ON);
+    var pts=cycles.map(function(c){var pt=build(c);pt._cycle=c;pt._prov=extremes[c].provisional;return pt;});
+    var colors=cycles.map(cycleColor);
     return{
-      label:what,showLine:false,data:pts,yAxisID:axis,order:0,hidden:!visible,
-      pointStyle:"triangle",pointRotation:peak?0:180,pointRadius:7,pointHoverRadius:9,
-      pointBorderWidth:hollow?2.5:1.5,
-      pointBackgroundColor:hollow?colors.map(function(){return CC.surface}):colors,
-      pointBorderColor:hollow?colors:colors.map(function(){return CC.text}),
+      label:what,showLine:false,data:pts,order:0,hidden:!OVERLAY_EXT_ON,
+      pointStyle:"triangle",pointRotation:peak?0:180,pointRadius:7,pointHoverRadius:9,pointBorderWidth:1.5,
+      pointBackgroundColor:colors,pointBorderColor:colors.map(function(){return CC.text;}),
       borderColor:CC.text,backgroundColor:CC.surface,
-      _kind:kind,_axis:axis,_ext:true,_peak:peak,_what:what
+      _kind:kind,_ext:true,_peak:peak,_what:what
     };
   };
-  var priceBase=function(c){var s=priceCycleDatasets.find(function(d){return d._cycle===c});return s?s._basePrice:null;};
   var mvrvPt=function(key){return function(c){var r=extremes[c][key];return r?{x:r.cyclePct,y:r.mvrv,_row:r}:null;};};
   var pricePt=function(key){return function(c){
-    var r=extremes[c][key],b=priceBase(c);
+    var r=extremes[c][key],b=baseOf[c];
     return r&&b?{x:r.cyclePct,y:+(r.price/b*100).toFixed(1),_row:r,_base:b}:null;
   };};
-  // Marker datasets come first in the array so hover ties resolve to the marker, not the line beneath it.
-  var markerDatasets=[
-    markerDataset("mvrvPeak","y",true,"MVRV peak",mvrvPt("mvrvPeak")),
-    markerDataset("mvrvBottom","y",false,"MVRV bottom",mvrvPt("mvrvBottom")),
-    hasPriceData?markerDataset("pricePeak","y2",true,"BTC price peak",pricePt("pricePeak")):null,
-    hasPriceData?markerDataset("priceBottom","y2",false,"BTC price bottom",pricePt("priceBottom")):null
-  ].filter(Boolean);
+  var mvrvMarkers=[markerDataset("mvrvPeak",true,"MVRV peak",mvrvPt("mvrvPeak")),markerDataset("mvrvBottom",false,"MVRV bottom",mvrvPt("mvrvBottom"))].filter(Boolean);
+  var priceMarkers=showPrice?[markerDataset("pricePeak",true,"BTC price peak",pricePt("pricePeak")),markerDataset("priceBottom",false,"BTC price bottom",pricePt("priceBottom"))].filter(Boolean):[];
 
-  var allDatasets = markerDatasets.concat(monthDatasets,cycleDatasets,priceCycleDatasets);
+  // ---- Markup: controls, two linked panels, extremes table -----------------------------
+  var btnStyle='width:auto;min-height:34px;padding:6px 12px;font-size:13px';
+  var toolbar='<div role="group" aria-label="Chart overlays" style="display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 12px">'
+    +(showPrice?'<button type="button" class="btn" id="ov-toggle-price" onclick="toggleOverlayPrice()" aria-pressed="'+OVERLAY_PRICE_ON+'" style="'+btnStyle+'">BTC price: '+(OVERLAY_PRICE_ON?'on':'off')+'</button>':'')
+    +'<button type="button" class="btn" id="ov-toggle-ext" onclick="toggleOverlayExtremes()" aria-pressed="'+OVERLAY_EXT_ON+'" style="'+btnStyle+'">Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off')+'</button></div>';
+  var chips='<div id="ov-chips" role="group" aria-label="Highlight a cycle (hover, or click to pin)" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px">'
+    +availableCycles.map(function(c){
+      return '<button type="button" class="btn ov-chip" data-cycle="'+c+'" aria-pressed="false" onmouseenter="ovHover('+c+')" onmouseleave="ovHover(null)" onfocus="ovHover('+c+')" onblur="ovHover(null)" onclick="ovPin('+c+')" style="'+btnStyle+';display:inline-flex;align-items:center;gap:8px">'
+        +'<span aria-hidden="true" style="display:inline-block;width:22px;height:3px;border-radius:2px;background:'+cycleColor(c)+'"></span>'+cycleLabel(c)+'</button>';
+    }).join('')+'</div>';
 
-  var monthLabelPlugin = {
+  var sub=function(t){return '<div style="color:var(--muted);font-size:12px;white-space:nowrap">'+t+'</div>';};
+  var mvrvCell=function(r,color){return r?'<span style="color:'+color+';font-weight:600">'+r.mvrv.toFixed(2)+'</span>'+sub(r.dateStr+' · '+r.cyclePct.toFixed(0)+'%'):'—';};
+  var priceCell=function(r,b,color){return r&&b?'<span style="color:'+color+';font-weight:600">$'+Math.round(r.price).toLocaleString()+'</span>'+sub((r.price/b).toFixed(2)+'x · '+r.dateStr+' · '+r.cyclePct.toFixed(0)+'%'):'—';};
+  var tableRows=availableCycles.map(function(c){
+    var e=extremes[c];
+    return '<tr><td style="color:'+cycleColor(c)+';font-weight:600">C'+c+'</td><td>'+cycleLabel(c)+(e.provisional?sub('so far'):'')+'</td>'
+      +'<td>'+mvrvCell(e.mvrvPeak,CC.green)+'</td><td>'+mvrvCell(e.mvrvBottom,CC.red)+'</td>'
+      +(showPrice?'<td>'+priceCell(e.pricePeak,baseOf[c],CC.green)+'</td><td>'+priceCell(e.priceBottom,baseOf[c],CC.red)+'</td>':'')+'</tr>';
+  }).join('');
+  var extTable='<div class="chart-card"><div class="chart-title">Peaks &amp; bottoms by cycle</div><div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>MVRV peak</th><th>MVRV bottom</th>'
+    +(showPrice?'<th>BTC price peak</th><th>BTC price bottom</th>':'')+'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
+    +'<div class="quality-note">Each cell shows the value, then its date and position in the cycle (% of the halving interval)'+(showPrice?'; price also shows its multiple of the halving-day close':'')+'. Current-cycle values are the highest/lowest so far and can still move.</div></div>';
+
+  var infoText='Aligns cycles by fraction of each halving interval. Dashed vertical lines mark equal fractions; the labels under the axis use a 48-month reference and are not the exact calendar months for every cycle. A current interval with an estimated end can extend past 100% while confirmation is pending.'
+    +(showPrice?' Both panels share one x-axis: hover either panel to read every cycle at that point (MVRV, price and date). The price panel is indexed to the halving-day close (1x) on a log scale, so cycles are comparable; the tooltip also shows real dollars.':'')
+    +' ▲ marks a cycle peak and ▼ a cycle bottom. Hover a cycle button to highlight it, or click to pin it.';
+
+  document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">'+(showPrice?'MVRV &amp; BTC price':'MVRV')+' — all cycles overlaid · cycle position · vertical lines = equal cycle fractions</div>'
+    +toolbar+chips+makeCanvas("c3",340)
+    +(showPrice?'<div id="ov-price-panel" style="margin-top:6px'+(OVERLAY_PRICE_ON?'':';display:none')+'">'+makeCanvas("c3b",270)+'</div>':'')
+    +'</div><div class="info">'+infoText+'</div>'+extTable+'<div id="cycle-insights"></div>';
+
+  // ---- Shared chart pieces ---------------------------------------------------------------
+  var monthPct=100/48,keyMonths=[6,12,18,24,30,36,42];
+  var monthAnnotations=function(){
+    var a={};
+    keyMonths.forEach(function(m){
+      var x=+(m*monthPct).toFixed(2);
+      a["m"+m]={type:"line",xMin:x,xMax:x,borderColor:CC.muted,borderWidth:1,borderDash:[4,4],drawTime:"beforeDatasetsDraw"};
+    });
+    return a;
+  };
+  // Percent labels under the axis; drawn only on the lowest visible panel.
+  var monthLabelPlugin={
     id:"monthLabels",
-    afterDraw: function(chart){
-      var ctx = chart.ctx;
-      var xAxis = chart.scales.x;
-      var yAxis = chart.scales.y;
+    afterDraw:function(chart){
+      if(chart.canvas.id==="c3"&&showPrice&&OVERLAY_PRICE_ON)return;
+      var ctx=chart.ctx,xAxis=chart.scales.x,yAxis=chart.scales.y;
       ctx.save();
-      ctx.font = "11px 'JetBrains Mono','Fira Mono','Courier New',monospace";
-      ctx.fillStyle = CC.text;
-      ctx.textAlign = "center";
+      ctx.font="11px 'JetBrains Mono','Fira Mono','Courier New',monospace";
+      ctx.fillStyle=CC.text;ctx.textAlign="center";
       keyMonths.forEach(function(m){
-        var xPos = +(m * monthPct).toFixed(2);
-        var px = xAxis.getPixelForValue(xPos);
-        var py = yAxis.bottom + 14;
-        ctx.fillText(Math.round(m/48*100)+"%", px, py);
+        ctx.fillText(Math.round(m/48*100)+"%",xAxis.getPixelForValue(+(m*monthPct).toFixed(2)),yAxis.bottom+14);
       });
       ctx.restore();
     }
   };
-
-  // Value labels next to each peak/bottom marker (text has a halo so it stays legible over lines).
-  var extremeLabelPlugin = {
-    id:"overlayExtremeLabels",
-    afterDatasetsDraw: function(chart){
-      var ctx = chart.ctx, area = chart.chartArea, placed = [];
+  // Vertical hover line on both panels; the panel not being hovered also gets a dot per cycle.
+  var crosshairPlugin={
+    id:"overlayCrosshair",
+    afterEvent:function(chart,args){
+      var e=args.event;if(!e||args.replay)return;
+      if(e.type==="mouseout"||(e.type==="mousemove"&&!args.inChartArea)){
+        if(OV_STATE.x!==null){OV_STATE.x=null;OV_STATE.active=null;overlayRedrawPeers(chart);}
+        return;
+      }
+      if(e.type==="mousemove"&&args.inChartArea){
+        OV_STATE.x=chart.scales.x.getValueForPixel(e.x);OV_STATE.active=chart;overlayRedrawPeers(chart);
+      }
+    },
+    afterDatasetsDraw:function(chart){
+      if(OV_STATE.x===null||!chart.chartArea)return;
+      var area=chart.chartArea,px=chart.scales.x.getPixelForValue(OV_STATE.x);
+      if(px<area.left||px>area.right)return;
+      var ctx=chart.ctx;
       ctx.save();
-      ctx.font = "600 11px 'JetBrains Mono','Fira Mono','Courier New',monospace";
-      ctx.lineJoin = "round";ctx.lineWidth = 3;
-      chart.data.datasets.forEach(function(ds,i){
-        if(!ds._ext||!chart.isDatasetVisible(i))return;
-        chart.getDatasetMeta(i).data.forEach(function(el,j){
-          var pt = ds.data[j];
-          if(!pt||!pt._row||!el||!Number.isFinite(el.x)||!Number.isFinite(el.y))return;
-          var text = ds._axis==="y2" ? overlayUsd(pt._row.price) : pt._row.mvrv.toFixed(2);
-          var w = ctx.measureText(text).width, h = 12;
-          var align = el.x>area.right-26 ? "right" : (el.x<area.left+26 ? "left" : "center");
-          var x0 = align==="right" ? el.x-w : (align==="left" ? el.x : el.x-w/2);
-          var dir = ds._peak ? -1 : 1, y = el.y + dir*11;
-          // Nudge away from labels already drawn so values stay readable where markers cluster.
-          for(var k=0;k<8;k++){
-            var top = dir<0 ? y-h : y;
-            var hit = placed.some(function(r){return x0<r.x1&&x0+w>r.x0&&top<r.y1&&top+h>r.y0;});
-            if(!hit)break;
-            y += dir*h;
-          }
-          var top2 = dir<0 ? y-h : y;
-          placed.push({x0:x0,x1:x0+w,y0:top2,y1:top2+h});
-          ctx.textBaseline = dir<0 ? "bottom" : "top";
-          ctx.textAlign = align;
-          ctx.strokeStyle = CC.bg;ctx.fillStyle = CC.text;
-          ctx.strokeText(text, el.x, y);ctx.fillText(text, el.x, y);
+      ctx.strokeStyle=CC.muted;ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(px,area.top);ctx.lineTo(px,area.bottom);ctx.stroke();ctx.setLineDash([]);
+      if(OV_STATE.active&&OV_STATE.active!==chart){
+        chart.data.datasets.forEach(function(ds,i){
+          if(!ds._line||!chart.isDatasetVisible(i))return;
+          var j=overlayNearestIndex(ds.data,OV_STATE.x);
+          if(j<0||Math.abs(ds.data[j].x-OV_STATE.x)>1)return;
+          ctx.beginPath();
+          ctx.arc(chart.scales.x.getPixelForValue(ds.data[j].x),chart.scales.y.getPixelForValue(ds.data[j].y),4.5,0,Math.PI*2);
+          ctx.fillStyle=ds._color;ctx.fill();ctx.strokeStyle=CC.bg;ctx.lineWidth=1.5;ctx.stroke();
         });
-      });
+      }
       ctx.restore();
     }
   };
 
-  // Hover mode: a peak/bottom marker under the cursor wins over any line point beneath it
-  // (the BTC price line can pass straight through a MVRV marker); otherwise the nearest point.
-  if(Chart.Interaction&&Chart.Interaction.modes&&!Chart.Interaction.modes.markerFirst){
-    Chart.Interaction.modes.markerFirst=function(chart,e,options,useFinalPosition){
-      var modes=Chart.Interaction.modes;
+  // Hover mode: a peak/bottom marker under the cursor wins; otherwise one entry per cycle at the cursor's x.
+  if(Chart.Interaction&&Chart.Interaction.modes&&!Chart.Interaction.modes.cycleX){
+    Chart.Interaction.modes.cycleX=function(chart,e,options,useFinalPosition){
+      var modes=Chart.Interaction.modes,area=chart.chartArea;
       var hits=modes.point(chart,e,options,useFinalPosition).filter(function(it){return chart.data.datasets[it.datasetIndex]._ext;});
-      if(!hits.length)return modes.nearest(chart,e,options,useFinalPosition);
-      var best=null,bestD=Infinity;
-      hits.forEach(function(it){
-        var c=it.element.getCenterPoint(useFinalPosition),d=Math.hypot(c.x-e.x,c.y-e.y);
-        if(d<bestD){bestD=d;best=it;}
+      if(hits.length){
+        var best=null,bestD=Infinity;
+        hits.forEach(function(it){
+          var c=it.element.getCenterPoint(useFinalPosition),d=Math.hypot(c.x-e.x,c.y-e.y);
+          if(d<bestD){bestD=d;best=it;}
+        });
+        return [best];
+      }
+      if(!area||e.x<area.left||e.x>area.right||e.y<area.top||e.y>area.bottom)return [];
+      var xv=chart.scales.x.getValueForPixel(e.x),items=[];
+      chart.data.datasets.forEach(function(ds,i){
+        if(!ds._line||!chart.isDatasetVisible(i))return;
+        var j=overlayNearestIndex(ds.data,xv);
+        if(j<0||Math.abs(ds.data[j].x-xv)>1)return;   // this cycle has no data at that position
+        var el=chart.getDatasetMeta(i).data[j];
+        if(el)items.push({element:el,datasetIndex:i,index:j});
       });
-      return [best];
+      return items;
     };
   }
 
-  var closestRow = function(cyc,x,needPrice){
-    var sub = BY_CYCLE[cyc] ? BY_CYCLE[cyc].filter(function(d){return d.cyclePct!=null&&(!needPrice||d.price)}) : [];
-    if(!sub.length)return null;
-    return sub.reduce(function(a,b){return Math.abs(b.cyclePct-x)<Math.abs(a.cyclePct-x)?b:a},sub[0]);
-  };
-
-  var scales = {
-    x:Object.assign({},chartDefs().scales.x,{
-      type:"linear",
-      min:0,max:overlayMax,
-      title:{display:true,text:"Cycle position (%)",color:CC.text,font:{size:13}},
+  var xScale=function(showAxis){
+    return Object.assign({},chartDefs().scales.x,{
+      type:"linear",min:0,max:overlayMax,
+      title:{display:showAxis,text:"Cycle position (%)",color:CC.text,font:{size:13}},
       ticks:Object.assign({},chartDefs().scales.x.ticks,{
+        display:showAxis,
         callback:function(v){
-          var m = Math.round(v/monthPct);
-          if(keyMonths.indexOf(m)>-1 && Math.abs(v - m*monthPct)<0.5) return "";
+          var m=Math.round(v/monthPct);
+          if(keyMonths.indexOf(m)>-1&&Math.abs(v-m*monthPct)<0.5)return "";
           return v%25===0?v+"%":"";
         },
         maxTicksLimit:20
       })
-    }),
-    y:Object.assign({},chartDefs().scales.y,{
-      position:"left",
-      min:0,
-      title:{display:true,text:"MVRV",color:CC.text,font:{size:13}}
-    })
+    });
   };
-  if(hasPriceData){
-    scales.y2=Object.assign({},chartDefs().scales.y,{
-      type:"logarithmic",
-      position:"right",
-      display:OVERLAY_PRICE_ON,
-      grid:{drawOnChartArea:false},
-      title:{display:true,text:"BTC price index (halving = 100, log)",color:CC.text,font:{size:13}},
-      ticks:{color:CC.text,font:{size:12},callback:function(v){
-        // Label powers of ten only; the log axis would otherwise print 2, 3, 4… between them.
-        if(Math.abs(Math.log10(v)%1)>1e-6)return "";
-        if(v===100)return "100 (base)";
-        if(v>=1000)return (v/100)+"x";
-        return v+"";
-      }}
+  // Same fixed y-axis width on both panels so their plot areas line up vertically.
+  var fitWidth=function(scale){scale.width=72;};
+
+  var tooltip={
+    backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,
+    itemSort:function(a,b){return (a.dataset._cycle||0)-(b.dataset._cycle||0);},
+    callbacks:{
+      title:function(items){
+        var ds=items[0].dataset;
+        if(ds._ext){var pt=ds.data[items[0].dataIndex];return cycleLabel(pt._cycle)+" · "+ds._what+(pt._prov?" (so far)":"");}
+        return items[0].parsed.x.toFixed(1)+"% into cycle";
+      },
+      label:function(ctx){
+        var ds=ctx.dataset;
+        if(ds._ext){
+          var pt=ds.data[ctx.dataIndex],r=pt._row,pos=r.cyclePct.toFixed(1)+"% into cycle · "+r.dateStr;
+          if(ds._kind.indexOf("price")===0)return ["BTC $"+Math.round(r.price).toLocaleString()+" ("+(r.price/pt._base).toFixed(2)+"x from halving)","MVRV "+r.mvrv.toFixed(2),pos];
+          return ["MVRV "+r.mvrv.toFixed(3)+(r.price?" · $"+Math.round(r.price).toLocaleString():""),pos];
+        }
+        var row=ds._rows[ctx.dataIndex],parts=[row.dateStr];
+        if(Number.isFinite(row.mvrv))parts.push("MVRV "+row.mvrv.toFixed(2));
+        if(row.price&&ds._basePrice)parts.push("$"+Math.round(row.price).toLocaleString()+" ("+(row.price/ds._basePrice).toFixed(2)+"x)");
+        return ds.label+" · "+parts.join(" · ");
+      }
+    }
+  };
+  var interaction={mode:(Chart.Interaction&&Chart.Interaction.modes.cycleX)?"cycleX":"nearest",axis:"xy",intersect:false};
+
+  // ---- MVRV panel -------------------------------------------------------------------------
+  var topAnnotations=monthAnnotations();
+  topAnnotations.youAreHereArrow={
+    type:'line',xMin:lastPoint.x,xMax:lastPoint.x,yMin:lastPoint.y*3,yMax:lastPoint.y,
+    borderColor:'#7c6af7',borderWidth:3,arrowHeads:{end:{display:true,fill:true,length:10,width:10}},
+    label:{display:true,content:'we are here',position:'start',backgroundColor:'transparent',color:'#7c6af7',font:{size:20,weight:'bold',family:'JetBrains Mono'},yAdjust:-10}
+  };
+  var topShowsAxis=!showPrice||!OVERLAY_PRICE_ON;
+  CHARTS.c3=new Chart(document.getElementById("c3"),{
+    type:"scatter",
+    data:{datasets:mvrvMarkers.concat(mvrvDatasets)},
+    options:Object.assign({},chartDefs(),{
+      layout:{padding:{bottom:topShowsAxis?20:4,right:24}},
+      interaction:interaction,
+      scales:{
+        x:xScale(topShowsAxis),
+        y:Object.assign({},chartDefs().scales.y,{min:0,grace:"6%",afterFit:fitWidth,title:{display:true,text:"MVRV",color:CC.text,font:{size:13}}})
+      },
+      plugins:Object.assign({},chartDefs().plugins,{tooltip:tooltip,annotation:{annotations:topAnnotations}})
+    }),
+    plugins:[monthLabelPlugin,crosshairPlugin]
+  });
+
+  // ---- BTC price panel --------------------------------------------------------------------
+  if(showPrice){
+    var botAnnotations=monthAnnotations();
+    botAnnotations.halvingBase={
+      type:'line',yMin:100,yMax:100,borderColor:CC.muted,borderWidth:1.2,
+      label:{display:true,content:'halving-day price (1x)',position:'end',backgroundColor:'transparent',color:CC.muted,font:{size:11},yAdjust:-8}
+    };
+    botAnnotations.nowLine={type:'line',xMin:lastPoint.x,xMax:lastPoint.x,borderColor:'#7c6af7',borderWidth:1.5,borderDash:[2,3]};
+    CHARTS.c3b=new Chart(document.getElementById("c3b"),{
+      type:"scatter",
+      data:{datasets:priceMarkers.concat(priceDatasets)},
+      options:Object.assign({},chartDefs(),{
+        layout:{padding:{bottom:20,right:24}},
+        interaction:interaction,
+        scales:{
+          x:xScale(true),
+          y:Object.assign({},chartDefs().scales.y,{
+            type:"logarithmic",afterFit:fitWidth,
+            title:{display:true,text:"x from halving (log)",color:CC.text,font:{size:13}},
+            ticks:{color:CC.text,font:{size:12},callback:function(v){
+              // Label 1, 2 and 5 of each decade only; the log axis would otherwise print every digit.
+              var m=Math.round(v/Math.pow(10,Math.floor(Math.log10(v)+1e-9)));
+              if(m!==1&&m!==2&&m!==5)return "";
+              return +(v/100).toFixed(2)+"x";
+            }}
+          })
+        },
+        plugins:Object.assign({},chartDefs().plugins,{tooltip:tooltip,annotation:{annotations:botAnnotations}})
+      }),
+      plugins:[monthLabelPlugin,crosshairPlugin]
     });
   }
-
-  // No outer withLegend() here: it would replace the legend filter defined below.
-  var opts = Object.assign({},chartDefs(),{
-    layout:{padding:{bottom:20}},
-    scales:scales,
-    // One tooltip entry for the nearest point; with MVRV and price lines both drawn,
-    // the default "every point under the cursor" mode would list a dozen rows.
-    interaction:{mode:(Chart.Interaction&&Chart.Interaction.modes.markerFirst)?"markerFirst":"nearest",axis:"xy",intersect:true},
-    plugins:Object.assign({},withLegend(chartDefs()).plugins,{
-      legend:{display:true,labels:{
-        color:CC.text,font:{size:13},boxWidth:24,boxHeight:2,
-        filter:function(item,data){
-          var ds = data.datasets[item.datasetIndex];
-          if(!ds||ds._guide||ds._ext)return false;
-          return ds._axis!=="y2"||OVERLAY_PRICE_ON;
-        }
-      }},
-      tooltip:{
-        backgroundColor:CC.surface2,borderColor:CC.border,borderWidth:1,titleColor:CC.muted,bodyColor:CC.text,padding:12,
-        // Hide guide lines, and when a marker sits on a line point show only the marker.
-        filter:function(item,idx,items){
-          if(item.dataset._guide)return false;
-          return item.dataset._ext||!items.some(function(o){return o.dataset._ext;});
-        },
-        callbacks:{
-          title:function(items){
-            var ds = items[0].dataset, pt = ds.data[items[0].dataIndex];
-            if(ds._ext)return cycleLabel(pt._cycle)+" · "+ds._what+(pt._prov?" (so far)":"");
-            var row = closestRow(ds._cycle,items[0].parsed.x,ds._axis==="y2");
-            return row?row.dateStr:"";
-          },
-          label:function(ctx){
-            var ds = ctx.dataset;
-            if(ds._ext){
-              var pt = ds.data[ctx.dataIndex], r = pt._row;
-              var pos = r.cyclePct.toFixed(1)+"% into cycle · "+r.dateStr;
-              if(ds._axis==="y2")return ["BTC $"+Math.round(r.price).toLocaleString()+" ("+(r.price/pt._base).toFixed(2)+"x from halving)","MVRV "+r.mvrv.toFixed(2),pos];
-              return ["MVRV "+r.mvrv.toFixed(3)+(hasPriceData&&r.price?" · $"+Math.round(r.price).toLocaleString():""),pos];
-            }
-            if(ds._axis==="y2"){
-              var idx = ctx.parsed.y;
-              return ds.label+": $"+Math.round(idx/100*ds._basePrice).toLocaleString()+" · "+(idx/100).toFixed(2)+"x from halving";
-            }
-            var base = "MVRV: "+(ctx.parsed.y!=null?ctx.parsed.y.toFixed(3):"—");
-            if(hasPriceData&&ds._cycle!=null){
-              var closest = closestRow(ds._cycle,ctx.parsed.x,true);
-              if(closest&&closest.price)base += " · $"+Math.round(closest.price).toLocaleString();
-            }
-            return base;
-          }
-        }
-      },
-      annotation: {
-        annotations: {
-          youAreHereArrow: {
-            type: 'line',
-            xMin: lastPoint.x,
-            xMax: lastPoint.x,
-            yMin: lastPoint.y * 3,
-            yMax: lastPoint.y,
-            borderColor: '#7c6af7',
-            borderWidth: 3,
-            arrowHeads: {end:{display:true,fill:true,length:10,width:10}},
-            label: {
-              display: true,
-              content: 'we are here',
-              position: 'start',
-              backgroundColor: 'transparent',
-              color: '#7c6af7',
-              font: {size: 20, weight: 'bold', family: 'JetBrains Mono'},
-              yAdjust: -10
-            }
-          }
-        }
-      }
-    })
-  });
-
-  CHARTS.c3 = new Chart(document.getElementById("c3"),{
-    type:"scatter",
-    data:{datasets:allDatasets},
-    options:opts,
-    plugins:[monthLabelPlugin,extremeLabelPlugin]
-  });
   applyOverlayToggles();
+  applyOverlayFocus();
   buildCycleInsights();
 }
 
