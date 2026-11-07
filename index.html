@@ -891,8 +891,8 @@ function overlayNearestIndex(data,x){
   return Math.abs(data[lo].x-x)<=Math.abs(data[hi].x-x)?lo:hi;
 }
 
-// Highest/lowest daily MVRV and BTC price inside each halving cycle, taken from the
-// full (unsampled) rows so they match the Cycle Extremes / Price Peaks tabs.
+// Highest/lowest daily MVRV inside each halving cycle (full, unsampled rows, matching the
+// Cycle Extremes tab), plus the BTC price on those same two days.
 // The current cycle is provisional: its peak/bottom are "so far" and can still move.
 function overlayCycleExtremes(c){
   var rows=(BY_CYCLE[c]||[]).filter(function(d){return d.cyclePct!=null;});
@@ -902,11 +902,14 @@ function overlayCycleExtremes(c){
     return arr.reduce(function(a,b){return max?(b[key]>a[key]?b:a):(b[key]<a[key]?b:a);});
   };
   var mv=rows.filter(function(d){return Number.isFinite(d.mvrv);});
-  var pr=rows.filter(function(d){return Number.isFinite(d.price)&&d.price>0;});
+  var mvrvPeak=pick(mv,'mvrv',true),mvrvBottom=pick(mv,'mvrv',false);
+  var hasPx=function(r){return r&&Number.isFinite(r.price)&&r.price>0?r:null;};
+  // BTC price markers are not the price's own high/low: they sit on the same dates as the
+  // MVRV peak and bottom, so both panels mark the same day and show price on that day.
   return{
     provisional:!(cd&&cd.complete),
-    mvrvPeak:pick(mv,'mvrv',true),mvrvBottom:pick(mv,'mvrv',false),
-    pricePeak:pick(pr,'price',true),priceBottom:pick(pr,'price',false)
+    mvrvPeak:mvrvPeak,mvrvBottom:mvrvBottom,
+    pricePeak:hasPx(mvrvPeak),priceBottom:hasPx(mvrvBottom)
   };
 }
 
@@ -1079,7 +1082,7 @@ function buildCycleOverlay(){
     return r&&b?{x:r.cyclePct,y:+(r.price/b*100).toFixed(1),_row:r,_base:b}:null;
   };};
   var mvrvMarkers=[markerDataset("mvrvPeak",true,"MVRV peak",mvrvPt("mvrvPeak")),markerDataset("mvrvBottom",false,"MVRV bottom",mvrvPt("mvrvBottom"))].filter(Boolean);
-  var priceMarkers=showPrice?[markerDataset("pricePeak",true,"BTC price peak",pricePt("pricePeak")),markerDataset("priceBottom",false,"BTC price bottom",pricePt("priceBottom"))].filter(Boolean):[];
+  var priceMarkers=showPrice?[markerDataset("pricePeak",true,"BTC price at MVRV peak",pricePt("pricePeak")),markerDataset("priceBottom",false,"BTC price at MVRV bottom",pricePt("priceBottom"))].filter(Boolean):[];
 
   // ---- Markup: controls, two linked panels, extremes table -----------------------------
   var btnStyle='width:auto;min-height:34px;padding:6px 12px;font-size:13px';
@@ -1096,7 +1099,7 @@ function buildCycleOverlay(){
 
   var sub=function(t){return '<div style="color:var(--muted);font-size:12px;white-space:nowrap">'+t+'</div>';};
   var mvrvCell=function(r,color){return r?'<span style="color:'+color+';font-weight:600">'+r.mvrv.toFixed(2)+'</span>'+sub(r.dateStr+' · '+r.cyclePct.toFixed(0)+'%'):'—';};
-  var priceCell=function(r,b,color){return r&&b?'<span style="color:'+color+';font-weight:600">$'+Math.round(r.price).toLocaleString()+'</span>'+sub((r.price/b).toFixed(2)+'x · '+r.dateStr+' · '+r.cyclePct.toFixed(0)+'%'):'—';};
+  var priceCell=function(r,b,color){return r&&b?'<span style="color:'+color+';font-weight:600">$'+Math.round(r.price).toLocaleString()+'</span>'+sub((r.price/b).toFixed(2)+'x from halving'):'—';};
   var tableRows=availableCycles.map(function(c){
     var e=extremes[c];
     return '<tr><td style="color:'+cycleColor(c)+';font-weight:600">C'+c+'</td><td>'+cycleLabel(c)+(e.provisional?sub('so far'):'')+'</td>'
@@ -1104,8 +1107,8 @@ function buildCycleOverlay(){
       +(showPrice?'<td>'+priceCell(e.pricePeak,baseOf[c],CC.green)+'</td><td>'+priceCell(e.priceBottom,baseOf[c],CC.red)+'</td>':'')+'</tr>';
   }).join('');
   var extTable='<div class="chart-card"><div class="chart-title">Peaks &amp; bottoms by cycle</div><div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>MVRV peak</th><th>MVRV bottom</th>'
-    +(showPrice?'<th>BTC price peak</th><th>BTC price bottom</th>':'')+'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
-    +'<div class="quality-note">Each cell shows the value, then its date and position in the cycle (% of the halving interval)'+(showPrice?'; price also shows its multiple of the halving-day close':'')+'. Current-cycle values are the highest/lowest so far and can still move.</div></div>';
+    +(showPrice?'<th>BTC at MVRV peak</th><th>BTC at MVRV bottom</th>':'')+'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
+    +'<div class="quality-note">Each cell shows the value, then its date and position in the cycle (% of the halving interval)'+(showPrice?'; BTC columns show the price on the same day as the MVRV peak/bottom, with its multiple of the halving-day close':'')+'. Current-cycle values are the highest/lowest so far and can still move.</div></div>';
 
   var infoText='Aligns cycles by fraction of each halving interval. Dashed vertical lines mark equal fractions; the labels under the axis use a 48-month reference and are not the exact calendar months for every cycle. A current interval with an estimated end can extend past 100% while confirmation is pending.'
     +(showPrice?' Both panels share one x-axis: hover either panel to read every cycle at that point (MVRV, price and date). The price panel is indexed to the halving-day close (1x) on a log scale, so cycles are comparable; the tooltip also shows real dollars.':'')
