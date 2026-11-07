@@ -980,16 +980,27 @@ function overlayDrawLinks(cv,now){
   var ctx=cv.getContext('2d');ctx.clearRect(0,0,w,h);
   if(!OVERLAY_LINKS_ON||!OVERLAY_EXT_ON||!OVERLAY_PRICE_ON||!bot.canvas.offsetParent)return;
   var tr=top.canvas.getBoundingClientRect(),br=bot.canvas.getBoundingClientRect();
-  var f=OV_STATE.hover!=null?OV_STATE.hover:OV_STATE.pin;
+  // Only the link for the marker under the cursor (either panel) is shown.
+  var hov=null;
+  [top,bot].forEach(function(ch){
+    if(hov||!ch.tooltip||!ch.tooltip.getActiveElements)return;
+    ch.tooltip.getActiveElements().forEach(function(a){
+      var ds=ch.data.datasets[a.datasetIndex];
+      if(!hov&&ds&&ds._ext&&ds.data[a.index])hov={peak:ds._peak,cycle:ds.data[a.index]._cycle};
+    });
+  });
+  if(!hov)return;
   var find=function(chart,kind){return chart.data.datasets.findIndex(function(d){return d._kind===kind;});};
-  ctx.save();ctx.scale(k,k);ctx.lineWidth=2;ctx.setLineDash([7,5]);
+  ctx.save();ctx.scale(k,k);ctx.lineWidth=2.4;ctx.setLineDash([7,5]);
   ctx.lineDashOffset=-(now/35);              // dashes flow from the MVRV marker toward the price marker
-  [['mvrvPeak','pricePeak'],['mvrvBottom','priceBottom']].forEach(function(pair){
+  [['mvrvPeak','pricePeak',true],['mvrvBottom','priceBottom',false]].forEach(function(pair){
+    if(pair[2]!==hov.peak)return;
     var ai=find(top,pair[0]),bi=find(bot,pair[1]);
     if(ai<0||bi<0||!top.isDatasetVisible(ai)||!bot.isDatasetVisible(bi))return;
     var da=top.data.datasets[ai],db=bot.data.datasets[bi];
     var ea=top.getDatasetMeta(ai).data,eb=bot.getDatasetMeta(bi).data;
     da.data.forEach(function(pa,ja){
+      if(pa._cycle!==hov.cycle)return;
       var jb=db.data.findIndex(function(pb){return pb._cycle===pa._cycle;});
       if(jb<0||!ea[ja]||!eb[jb])return;
       var x1=tr.left-sr.left+ea[ja].x,y1=tr.top-sr.top+ea[ja].y;
@@ -998,7 +1009,7 @@ function overlayDrawLinks(cv,now){
       var dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),pad=10;
       if(len<2*pad+6)return;                  // markers already touching
       var ux=dx/len,uy=dy/len;
-      ctx.globalAlpha=(f!=null&&pa._cycle!==f)?0.12:0.9;
+      ctx.globalAlpha=0.95;
       ctx.strokeStyle=da.pointBackgroundColor[ja];
       ctx.beginPath();ctx.moveTo(x1+ux*pad,y1+uy*pad);ctx.lineTo(x2-ux*pad,y2-uy*pad);ctx.stroke();
     });
@@ -1149,7 +1160,7 @@ function buildCycleOverlay(){
   var toolbar='<div role="group" aria-label="Chart overlays" style="display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 12px">'
     +(showPrice?'<button type="button" class="btn" id="ov-toggle-price" onclick="toggleOverlayPrice()" aria-pressed="'+OVERLAY_PRICE_ON+'" style="'+btnStyle+'">BTC price: '+(OVERLAY_PRICE_ON?'on':'off')+'</button>':'')
     +'<button type="button" class="btn" id="ov-toggle-ext" onclick="toggleOverlayExtremes()" aria-pressed="'+OVERLAY_EXT_ON+'" style="'+btnStyle+'">Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off')+'</button>'
-    +(showPrice?'<button type="button" class="btn" id="ov-toggle-links" onclick="toggleOverlayLinks()" aria-pressed="'+OVERLAY_LINKS_ON+'" title="Dashed lines from each MVRV peak/bottom to its BTC price peak/bottom" style="'+btnStyle+'">Links: '+(OVERLAY_LINKS_ON?'on':'off')+'</button>':'')
+    +(showPrice?'<button type="button" class="btn" id="ov-toggle-links" onclick="toggleOverlayLinks()" aria-pressed="'+OVERLAY_LINKS_ON+'" title="Hover a peak or bottom marker to draw a dashed link to its counterpart in the other panel" style="'+btnStyle+'">Links: '+(OVERLAY_LINKS_ON?'on':'off')+'</button>':'')
     +(OV_REDUCED_MOTION?'':'<button type="button" class="btn" id="ov-toggle-ping" onclick="toggleOverlayPing()" aria-pressed="'+OVERLAY_PING_ON+'" title="Radar-style pulse around peaks and bottoms" style="'+btnStyle+'">Pulse: '+(OVERLAY_PING_ON?'on':'off')+'</button>')
     +'</div>';
   var chips='<div id="ov-chips" role="group" aria-label="Highlight a cycle (hover, or click to pin)" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px">'
@@ -1173,7 +1184,7 @@ function buildCycleOverlay(){
 
   var infoText='Aligns cycles by fraction of each halving interval. Dashed vertical lines mark equal fractions; the labels under the axis use a 48-month reference and are not the exact calendar months for every cycle. A current interval with an estimated end can extend past 100% while confirmation is pending.'
     +(showPrice?' Both panels share one x-axis: hover either panel to read every cycle at that point (MVRV, price and date). The price panel is indexed to the halving-day close (1x) on a log scale, so cycles are comparable; the tooltip also shows real dollars.':'')
-    +' ▲ marks a cycle peak and ▼ a cycle bottom. Hover a cycle button to highlight it, or click to pin it.';
+    +' ▲ marks a cycle peak and ▼ a cycle bottom'+(showPrice?'; hover one to draw a dashed link to its MVRV/price counterpart in the other panel':'')+'. Hover a cycle button to highlight it, or click to pin it.';
 
   document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">'+(showPrice?'MVRV &amp; BTC price':'MVRV')+' — all cycles overlaid · cycle position · vertical lines = equal cycle fractions</div>'
     +toolbar+chips+'<div id="ov-stage" style="position:relative">'+makeCanvas("c3",340)
