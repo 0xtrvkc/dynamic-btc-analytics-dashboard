@@ -879,6 +879,9 @@ var OVERLAY_PING_ON=true;
 try{if(localStorage.getItem('mvrv-overlay-ping')==='off')OVERLAY_PING_ON=false;}catch(e){}
 var OV_REDUCED_MOTION=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 var OV_PING={raf:null,layers:{}};
+// Animated dashed links: MVRV peak -> price peak and MVRV bottom -> price bottom, across the two panels.
+var OVERLAY_LINKS_ON=true;
+try{if(localStorage.getItem('mvrv-overlay-links')==='off')OVERLAY_LINKS_ON=false;}catch(e){}
 
 function overlayAlpha(hex,a){
   return /^#[0-9a-f]{6}$/i.test(hex)?hex+Math.round(a*255).toString(16).padStart(2,'0'):hex;
@@ -953,6 +956,56 @@ function toggleOverlayPing(){
   try{localStorage.setItem('mvrv-overlay-ping',OVERLAY_PING_ON?'on':'off');}catch(e){}
   applyOverlayToggles();
 }
+function toggleOverlayLinks(){
+  OVERLAY_LINKS_ON=!OVERLAY_LINKS_ON;
+  try{localStorage.setItem('mvrv-overlay-links',OVERLAY_LINKS_ON?'on':'off');}catch(e){}
+  applyOverlayToggles();
+}
+// One transparent canvas over both panels, so a line can run from a marker in the top chart
+// to its partner in the bottom chart.
+function overlayAttachStage(){
+  var stage=document.getElementById('ov-stage');if(!stage)return;
+  var cv=document.createElement('canvas');
+  cv.className='ov-links';cv.setAttribute('aria-hidden','true');
+  cv.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none';
+  stage.appendChild(cv);OV_PING.layers.stage=cv;
+}
+function overlayDrawLinks(cv,now){
+  var top=CHARTS.c3,bot=CHARTS.c3b,stage=cv.parentElement;
+  if(!top||!bot||!stage||!top.width)return;
+  var sr=stage.getBoundingClientRect(),k=top.canvas.width/top.width;
+  var w=Math.round(sr.width*k),h=Math.round(sr.height*k);
+  if(cv.width!==w)cv.width=w;
+  if(cv.height!==h)cv.height=h;
+  var ctx=cv.getContext('2d');ctx.clearRect(0,0,w,h);
+  if(!OVERLAY_LINKS_ON||!OVERLAY_EXT_ON||!OVERLAY_PRICE_ON||!bot.canvas.offsetParent)return;
+  var tr=top.canvas.getBoundingClientRect(),br=bot.canvas.getBoundingClientRect();
+  var f=OV_STATE.hover!=null?OV_STATE.hover:OV_STATE.pin;
+  var find=function(chart,kind){return chart.data.datasets.findIndex(function(d){return d._kind===kind;});};
+  ctx.save();ctx.scale(k,k);ctx.lineWidth=2;ctx.setLineDash([7,5]);
+  ctx.lineDashOffset=-(now/35);              // dashes flow from the MVRV marker toward the price marker
+  [['mvrvPeak','pricePeak'],['mvrvBottom','priceBottom']].forEach(function(pair){
+    var ai=find(top,pair[0]),bi=find(bot,pair[1]);
+    if(ai<0||bi<0||!top.isDatasetVisible(ai)||!bot.isDatasetVisible(bi))return;
+    var da=top.data.datasets[ai],db=bot.data.datasets[bi];
+    var ea=top.getDatasetMeta(ai).data,eb=bot.getDatasetMeta(bi).data;
+    da.data.forEach(function(pa,ja){
+      var jb=db.data.findIndex(function(pb){return pb._cycle===pa._cycle;});
+      if(jb<0||!ea[ja]||!eb[jb])return;
+      var x1=tr.left-sr.left+ea[ja].x,y1=tr.top-sr.top+ea[ja].y;
+      var x2=br.left-sr.left+eb[jb].x,y2=br.top-sr.top+eb[jb].y;
+      if(![x1,y1,x2,y2].every(Number.isFinite))return;
+      var dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),pad=10;
+      if(len<2*pad+6)return;                  // markers already touching
+      var ux=dx/len,uy=dy/len;
+      ctx.globalAlpha=(f!=null&&pa._cycle!==f)?0.12:0.9;
+      ctx.strokeStyle=da.pointBackgroundColor[ja];
+      ctx.beginPath();ctx.moveTo(x1+ux*pad,y1+uy*pad);ctx.lineTo(x2-ux*pad,y2-uy*pad);ctx.stroke();
+    });
+  });
+  ctx.restore();
+}
+
 // The rings are drawn on a transparent canvas laid over each chart, so the chart itself never
 // redraws per frame (hover, tooltips and the crosshair stay cheap).
 function overlayAttachPing(chart){
@@ -974,7 +1027,7 @@ function overlayPingFrame(now){
     if(cv.width!==w)cv.width=w;
     if(cv.height!==h)cv.height=h;
     var ctx=cv.getContext('2d');ctx.clearRect(0,0,w,h);
-    if(!OVERLAY_PING_ON||!OVERLAY_EXT_ON||!chart.width||!chart.canvas.offsetParent)return;
+    if(OV_REDUCED_MOTION||!OVERLAY_PING_ON||!OVERLAY_EXT_ON||!chart.width||!chart.canvas.offsetParent)return;
     var f=OV_STATE.hover!=null?OV_STATE.hover:OV_STATE.pin,k=w/chart.width;
     ctx.save();ctx.scale(k,k);ctx.lineWidth=2;
     chart.data.datasets.forEach(function(ds,i){
@@ -993,11 +1046,17 @@ function overlayPingFrame(now){
     });
     ctx.restore();
   });
-  if(alive)OV_PING.raf=requestAnimationFrame(overlayPingFrame);
+  var sg=OV_PING.layers.stage;
+  if(sg&&sg.isConnected){alive=true;overlayDrawLinks(sg,OV_REDUCED_MOTION?0:now);}
+  if(alive)overlayPingSchedule();
+}
+// Reduced motion: no animation, but the static links still need redrawing after a resize/toggle.
+function overlayPingSchedule(){
+  OV_PING.raf=OV_REDUCED_MOTION?setTimeout(function(){overlayPingFrame(0);},250):requestAnimationFrame(overlayPingFrame);
 }
 function overlayPingStart(){
-  if(OV_REDUCED_MOTION||OV_PING.raf!=null)return;
-  OV_PING.raf=requestAnimationFrame(overlayPingFrame);
+  if(OV_PING.raf!=null)return;
+  overlayPingSchedule();
 }
 
 function applyOverlayToggles(){
@@ -1006,6 +1065,8 @@ function applyOverlayToggles(){
   if(eb){eb.textContent='Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off');eb.setAttribute('aria-pressed',String(OVERLAY_EXT_ON));}
   var gb=document.getElementById('ov-toggle-ping');
   if(gb){gb.textContent='Pulse: '+(OVERLAY_PING_ON?'on':'off');gb.setAttribute('aria-pressed',String(OVERLAY_PING_ON));}
+  var lb=document.getElementById('ov-toggle-links');
+  if(lb){lb.textContent='Links: '+(OVERLAY_LINKS_ON?'on':'off');lb.setAttribute('aria-pressed',String(OVERLAY_LINKS_ON));}
   overlayPingStart();
   var top=CHARTS.c3,bot=CHARTS.c3b,panel=document.getElementById('ov-price-panel');
   if(panel)panel.style.display=OVERLAY_PRICE_ON?'':'none';
@@ -1088,6 +1149,7 @@ function buildCycleOverlay(){
   var toolbar='<div role="group" aria-label="Chart overlays" style="display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 12px">'
     +(showPrice?'<button type="button" class="btn" id="ov-toggle-price" onclick="toggleOverlayPrice()" aria-pressed="'+OVERLAY_PRICE_ON+'" style="'+btnStyle+'">BTC price: '+(OVERLAY_PRICE_ON?'on':'off')+'</button>':'')
     +'<button type="button" class="btn" id="ov-toggle-ext" onclick="toggleOverlayExtremes()" aria-pressed="'+OVERLAY_EXT_ON+'" style="'+btnStyle+'">Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off')+'</button>'
+    +(showPrice?'<button type="button" class="btn" id="ov-toggle-links" onclick="toggleOverlayLinks()" aria-pressed="'+OVERLAY_LINKS_ON+'" title="Dashed lines from each MVRV peak/bottom to its BTC price peak/bottom" style="'+btnStyle+'">Links: '+(OVERLAY_LINKS_ON?'on':'off')+'</button>':'')
     +(OV_REDUCED_MOTION?'':'<button type="button" class="btn" id="ov-toggle-ping" onclick="toggleOverlayPing()" aria-pressed="'+OVERLAY_PING_ON+'" title="Radar-style pulse around peaks and bottoms" style="'+btnStyle+'">Pulse: '+(OVERLAY_PING_ON?'on':'off')+'</button>')
     +'</div>';
   var chips='<div id="ov-chips" role="group" aria-label="Highlight a cycle (hover, or click to pin)" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px">'
@@ -1114,9 +1176,9 @@ function buildCycleOverlay(){
     +' ▲ marks a cycle peak and ▼ a cycle bottom. Hover a cycle button to highlight it, or click to pin it.';
 
   document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">'+(showPrice?'MVRV &amp; BTC price':'MVRV')+' — all cycles overlaid · cycle position · vertical lines = equal cycle fractions</div>'
-    +toolbar+chips+makeCanvas("c3",340)
+    +toolbar+chips+'<div id="ov-stage" style="position:relative">'+makeCanvas("c3",340)
     +(showPrice?'<div id="ov-price-panel" style="margin-top:6px'+(OVERLAY_PRICE_ON?'':';display:none')+'">'+makeCanvas("c3b",270)+'</div>':'')
-    +'</div><div class="info">'+infoText+'</div>'+extTable+'<div id="cycle-insights"></div>';
+    +'</div></div><div class="info">'+infoText+'</div>'+extTable+'<div id="cycle-insights"></div>';
 
   // ---- Shared chart pieces ---------------------------------------------------------------
   var monthPct=100/48,keyMonths=[6,12,18,24,30,36,42];
@@ -1304,6 +1366,7 @@ function buildCycleOverlay(){
   }
   overlayAttachPing(CHARTS.c3);
   if(CHARTS.c3b)overlayAttachPing(CHARTS.c3b);
+  overlayAttachStage();
   applyOverlayToggles();
   applyOverlayFocus();
   buildCycleInsights();
