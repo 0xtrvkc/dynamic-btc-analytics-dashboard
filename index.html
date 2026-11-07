@@ -874,6 +874,11 @@ try{
 }catch(e){}
 // Shared by the two linked panels: hover position (cycle %), and the highlighted cycle.
 var OV_STATE={x:null,active:null,pin:null,hover:null};
+// Radar-style pulse around peak/bottom markers. Skipped entirely when the OS asks for reduced motion.
+var OVERLAY_PING_ON=true;
+try{if(localStorage.getItem('mvrv-overlay-ping')==='off')OVERLAY_PING_ON=false;}catch(e){}
+var OV_REDUCED_MOTION=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+var OV_PING={raf:null,layers:{}};
 
 function overlayAlpha(hex,a){
   return /^#[0-9a-f]{6}$/i.test(hex)?hex+Math.round(a*255).toString(16).padStart(2,'0'):hex;
@@ -941,10 +946,65 @@ function applyOverlayFocus(){
   });
 }
 
+function toggleOverlayPing(){
+  OVERLAY_PING_ON=!OVERLAY_PING_ON;
+  try{localStorage.setItem('mvrv-overlay-ping',OVERLAY_PING_ON?'on':'off');}catch(e){}
+  applyOverlayToggles();
+}
+// The rings are drawn on a transparent canvas laid over each chart, so the chart itself never
+// redraws per frame (hover, tooltips and the crosshair stay cheap).
+function overlayAttachPing(chart){
+  var wrap=chart&&chart.canvas.parentElement;if(!wrap)return;
+  if(getComputedStyle(wrap).position==='static')wrap.style.position='relative';
+  var cv=document.createElement('canvas');
+  cv.className='ov-ping';cv.setAttribute('aria-hidden','true');
+  cv.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none';
+  wrap.appendChild(cv);OV_PING.layers[chart.canvas.id]=cv;
+}
+function overlayPingFrame(now){
+  OV_PING.raf=null;
+  var alive=false;
+  ['c3','c3b'].forEach(function(id){
+    var chart=CHARTS[id],cv=OV_PING.layers[id];
+    if(!chart||!cv||!cv.isConnected)return;
+    alive=true;
+    var w=chart.canvas.width,h=chart.canvas.height;
+    if(cv.width!==w)cv.width=w;
+    if(cv.height!==h)cv.height=h;
+    var ctx=cv.getContext('2d');ctx.clearRect(0,0,w,h);
+    if(!OVERLAY_PING_ON||!OVERLAY_EXT_ON||!chart.width||!chart.canvas.offsetParent)return;
+    var f=OV_STATE.hover!=null?OV_STATE.hover:OV_STATE.pin,k=w/chart.width;
+    ctx.save();ctx.scale(k,k);ctx.lineWidth=2;
+    chart.data.datasets.forEach(function(ds,i){
+      if(!ds._ext||!chart.isDatasetVisible(i))return;
+      chart.getDatasetMeta(i).data.forEach(function(el,j){
+        var pt=ds.data[j];
+        if(!pt||!Number.isFinite(el.x)||!Number.isFinite(el.y))return;
+        var dim=(f!=null&&pt._cycle!==f)?0.25:1;
+        for(var r=0;r<2;r++){              // two rings, half a cycle apart, like a sonar sweep
+          var ph=((now/2600)+(i*4+j)*0.17+r*0.5)%1;
+          ctx.globalAlpha=Math.pow(1-ph,1.6)*0.85*dim;
+          ctx.strokeStyle=ds.pointBackgroundColor[j];
+          ctx.beginPath();ctx.arc(el.x,el.y,7+ph*20,0,Math.PI*2);ctx.stroke();
+        }
+      });
+    });
+    ctx.restore();
+  });
+  if(alive)OV_PING.raf=requestAnimationFrame(overlayPingFrame);
+}
+function overlayPingStart(){
+  if(OV_REDUCED_MOTION||OV_PING.raf!=null)return;
+  OV_PING.raf=requestAnimationFrame(overlayPingFrame);
+}
+
 function applyOverlayToggles(){
   var pb=document.getElementById('ov-toggle-price'),eb=document.getElementById('ov-toggle-ext');
   if(pb){pb.textContent='BTC price: '+(OVERLAY_PRICE_ON?'on':'off');pb.setAttribute('aria-pressed',String(OVERLAY_PRICE_ON));}
   if(eb){eb.textContent='Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off');eb.setAttribute('aria-pressed',String(OVERLAY_EXT_ON));}
+  var gb=document.getElementById('ov-toggle-ping');
+  if(gb){gb.textContent='Pulse: '+(OVERLAY_PING_ON?'on':'off');gb.setAttribute('aria-pressed',String(OVERLAY_PING_ON));}
+  overlayPingStart();
   var top=CHARTS.c3,bot=CHARTS.c3b,panel=document.getElementById('ov-price-panel');
   if(panel)panel.style.display=OVERLAY_PRICE_ON?'':'none';
   [top,bot].forEach(function(chart){
@@ -1025,7 +1085,9 @@ function buildCycleOverlay(){
   var btnStyle='width:auto;min-height:34px;padding:6px 12px;font-size:13px';
   var toolbar='<div role="group" aria-label="Chart overlays" style="display:flex;flex-wrap:wrap;gap:8px;margin:-6px 0 12px">'
     +(showPrice?'<button type="button" class="btn" id="ov-toggle-price" onclick="toggleOverlayPrice()" aria-pressed="'+OVERLAY_PRICE_ON+'" style="'+btnStyle+'">BTC price: '+(OVERLAY_PRICE_ON?'on':'off')+'</button>':'')
-    +'<button type="button" class="btn" id="ov-toggle-ext" onclick="toggleOverlayExtremes()" aria-pressed="'+OVERLAY_EXT_ON+'" style="'+btnStyle+'">Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off')+'</button></div>';
+    +'<button type="button" class="btn" id="ov-toggle-ext" onclick="toggleOverlayExtremes()" aria-pressed="'+OVERLAY_EXT_ON+'" style="'+btnStyle+'">Peaks / bottoms: '+(OVERLAY_EXT_ON?'on':'off')+'</button>'
+    +(OV_REDUCED_MOTION?'':'<button type="button" class="btn" id="ov-toggle-ping" onclick="toggleOverlayPing()" aria-pressed="'+OVERLAY_PING_ON+'" title="Radar-style pulse around peaks and bottoms" style="'+btnStyle+'">Pulse: '+(OVERLAY_PING_ON?'on':'off')+'</button>')
+    +'</div>';
   var chips='<div id="ov-chips" role="group" aria-label="Highlight a cycle (hover, or click to pin)" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px">'
     +availableCycles.map(function(c){
       return '<button type="button" class="btn ov-chip" data-cycle="'+c+'" aria-pressed="false" onmouseenter="ovHover('+c+')" onmouseleave="ovHover(null)" onfocus="ovHover('+c+')" onblur="ovHover(null)" onclick="ovPin('+c+')" style="'+btnStyle+';display:inline-flex;align-items:center;gap:8px">'
@@ -1238,6 +1300,8 @@ function buildCycleOverlay(){
       plugins:[monthLabelPlugin,crosshairPlugin]
     });
   }
+  overlayAttachPing(CHARTS.c3);
+  if(CHARTS.c3b)overlayAttachPing(CHARTS.c3b);
   applyOverlayToggles();
   applyOverlayFocus();
   buildCycleInsights();
