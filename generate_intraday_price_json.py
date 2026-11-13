@@ -2,10 +2,10 @@
 generate_intraday_price_json.py
 
 Builds NEW, standalone JSON price files at 1H and 4H granularity from the
-same raw 1-minute CSV used by generate_price_json.py.
+same raw 1-minute CSV used by generate_daily_price_json.py.
 
 This script does NOT read, write, or modify:
-  - generate_price_json.py
+  - generate_daily_price_json.py
   - btc_daily_price.json
 
 It only reads the raw CSV (read-only) and writes two new files:
@@ -81,7 +81,7 @@ def main():
             f"({series.index[0]} -> {series.index[-1]}, {size_kb:.1f} KB)"
         )
 
-    print("Done. Existing generate_price_json.py and btc_daily_price.json were not touched.")
+    print("Done. Existing generate_daily_price_json.py and btc_daily_price.json were not touched.")
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ FILES
 index.html                   The whole app. All logic lives here.
 btc_daily_price.json         Daily BTC closes. Auto-updated by CI.
 mvrv.json                    MVRV data. Auto-updated by CI (blockchain.com scrape).
-generate_price_json.py       Price data refresh script (called by Actions).
+generate_daily_price_json.py       Price data refresh script (called by Actions).
 generate_summary.py          Headless port of the export function. No deps.
 exports/                     Auto-exported summaries, one .txt per day.
 
