@@ -26,17 +26,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas six kaggle
-          python -c "import six; print('six', six.__version__)"
-
-      - name: Download Kaggle CSV
+      - name: Install deps and download Kaggle CSV
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
+          python -m pip install --upgrade pip
+          python -m pip install pandas six "kaggle==1.6.17"
+          python -c "import six; print('six', six.__version__)"
           kaggle datasets download -d mczielinski/bitcoin-historical-data --unzip
           ls -lh
           test -f btcusd_1-min_data.csv || { echo "Expected CSV not found"; exit 1; }
