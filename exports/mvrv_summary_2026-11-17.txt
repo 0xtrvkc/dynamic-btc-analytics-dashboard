@@ -1,28 +1,29 @@
 
 === CURRENT STATUS ===
-Date: 2026-11-16
-MVRV: 1.205
-Z-score: -1.206
+Date: 2026-11-17
+MVRV: 1.206
+Z-score: -1.189
 Signal: Accumulate
-MA20: 1.388
-MA50: 1.479
-MA200: 1.363
+MA20: 1.374
+MA50: 1.472
+MA200: 1.361
 MA stack: Mixed
-ROC 30d: -20.4%
-ROC 90d: -1.4%
+ROC 30d: -20.2%
+ROC 90d: -2.9%
+BTC Price: $64,962
 All-time MVRV peak: 8.046 on 2010-11-08
 All-time MVRV bottom: 0.404 on 2011-10-21
 Historical mean MVRV: 1.848
-Data range: 2010-10-09 to 2026-11-16
-Total data points: 5,883
+Data range: 2010-10-09 to 2026-11-17
+Total data points: 5,884
 
 === CURRENT CYCLE POSITION ===
 Current cycle: C4 (2024–2028 (est.))
 Cycle position: 65.5%
 Cycle peak so far: 2.730 on 2024-11-22
 Current MVRV vs cycle peak: 44% of cycle peak
-Days in current cycle: 941
-Current drawdown from cycle peak: -55.9%
+Days in current cycle: 942
+Current drawdown from cycle peak: -55.8%
 
 === CYCLE SUMMARY ===
 
@@ -54,7 +55,7 @@ Cycle 4 (2024–2028 (est.)):
   Peak MVRV: 2.730 on 2024-11-22
   Trough MVRV: 1.116 on 2026-07-01
   Peak-to-trough range: 59% compression
-  Duration: 941 days
+  Duration: 942 days
   BTC price at MVRV peak: $99,013
   BTC price at MVRV trough: $59,963
 
@@ -242,15 +243,15 @@ Cycle 3:
 
 Cycle 4:
   Below 1.0: 0d (0%)
-  1.0-1.5: 252d (27%)
+  1.0-1.5: 253d (27%)
   1.5-2.0: 261d (28%)
   2.0-3.0: 428d (45%)
   Above 3.0: 0d (0%)
-  Avg BTC price in 1.0-1.5: $70,428
+  Avg BTC price in 1.0-1.5: $70,555
   Avg BTC price in 1.5-2.0: $80,538
   Avg BTC price in 2.0-3.0: $93,370
 
-Current MVRV zone: 1.0-1.5 (MVRV 1.205)
+Current MVRV zone: 1.0-1.5 (MVRV 1.206)
 
 === PRICE PEAK DIVERGENCE — MVRV lead/lag vs BTC price ATH ===
 
@@ -451,10 +452,10 @@ Error = (predicted − actual) / actual × 100.
   C1 halving: 2012-11-28 · block 210,000 [completed]
   C2 halving: 2016-07-09 · block 420,000 [completed]
   C3 halving: 2020-05-11 · block 630,000 [completed]
-  C4 halving: 2024-04-20 · block 840,000 [latest observed cycle · 65% of estimated interval]
-  C5 halving: 2028-03-26 · block 1,050,000 [estimated boundary — unconfirmed · 495d from latest data]
-  C6 halving: 2032-02-15 · block 1,260,000 [estimated boundary — unconfirmed · 1,916d from latest data]
-  C7 halving: 2036-01-10 · block 1,470,000 [estimated boundary — unconfirmed · 3,341d from latest data]
+  C4 halving: 2024-04-20 · block 840,000 [latest observed cycle · 66% of estimated interval]
+  C5 halving: 2028-03-26 · block 1,050,000 [estimated boundary — unconfirmed · 494d from latest data]
+  C6 halving: 2032-02-15 · block 1,260,000 [estimated boundary — unconfirmed · 1,915d from latest data]
+  C7 halving: 2036-01-10 · block 1,470,000 [estimated boundary — unconfirmed · 3,340d from latest data]
 
 ============================================================
 Built by Sirapob Dangpad — a numbers-obsessed nerd who finds
