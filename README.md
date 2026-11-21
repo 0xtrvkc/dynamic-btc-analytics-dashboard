@@ -16,6 +16,10 @@ cycle analysis at you:
   - MA20/50/200 with crossover events flagged
   - 30d and 90d rate-of-change momentum
   - Peak drawdown per cycle
+  - Cycle extremes use one rule everywhere: the cycle TOP is the highest
+    close within two years after the halving; the cycle BOTTOM is the lowest
+    close after that top, up to the next halving (the bear-market low, not
+    the post-halving dip). MVRV peaks/troughs use the same rule.
   - Bitcoin Spiral tab — every halving cycle as one clockwise turn
     (angle = estimated block position in the 210k-block cycle, radius =
     log10 price). Marks ATHs, cycle bottoms and halvings, compares every
@@ -29,14 +33,19 @@ cycle analysis at you:
     since halving, calendar rules with a leave-one-cycle-out test, an MVRV
     entry/exit sensitivity grid, and a same-cycle-day comparison for the
     live cycle. Historical, descriptive, daily closes only — not advice.
-  - Price projections via 4 independent models:
-      - MVRV Upside        (price at MVRV peak × median remaining upside)
-      - Halving Multiplier (halving price × log-decay fitted multiplier)
-      - ATH Multiplier     (prev ATH × log-decay ratio)
-      - MVRV × Realized Cap
-    IQR consensus across those four. Outliers get dropped automatically.
-  - Backtest tab — every model re-run with no-lookahead on completed cycles
-    so you can see whether any of this actually works historically
+  - Price scenarios from several simple models, fitted on completed cycles only:
+      - Halving Multiplier  (pre-halving close × power-law cycle multiplier)
+      - ATH Multiplier      (previous cycle top × power-law ratio of tops)
+      - MVRV × Realized     (latest price ÷ MVRV × projected peak MVRV)
+      - Floor versions of the same (halving floor ratio, bottom multiplier)
+      - MVRV Upside / Downside — conditional scenarios that need a future
+        turning point; shown separately, never in the ensemble or the backtest
+    Ensemble = plain median of the eligible models, with the min–max spread.
+    Nothing is trimmed (with 2–3 models an outlier test is meaningless).
+  - Backtest tab — every model re-run as of the close of the UTC day BEFORE
+    each halving, using only cycles completed before it (no lookahead).
+    With today's data that is only one or two scored cycles, so every score
+    shows its n and is an anecdote, not calibrated accuracy.
 
 Export button spits out a .txt summary you can paste into an LLM
 or just keep as a timestamped record.
@@ -44,17 +53,26 @@ or just keep as a timestamped record.
 
 FILES
 -----
-index.html                   The whole app. All logic lives here.
-btc_daily_price.json         Daily BTC closes. Auto-updated by CI.
-mvrv.json                    MVRV data. Auto-updated by CI (blockchain.com scrape).
-generate_daily_price_json.py       Price data refresh script (called by Actions).
-generate_summary.py          Headless port of the export function. No deps.
-exports/                     Auto-exported summaries, one .txt per day.
+index.html                     The whole app. All logic lives here.
+vendor/                        Self-hosted Chart.js 4.4.1 + chartjs-plugin-annotation 3.0.1
+                               (byte-for-byte from npm; MIT licences included).
+btc_daily_price.json           Daily BTC closes (UTC). Auto-updated by CI.
+mvrv.json                      Daily MVRV. Auto-updated by CI (blockchain.com scrape).
+btc_1h_price.json, btc_4h_price.json
+                               Intraday closes. Not used by index.html yet; workflow is manual-only.
+generate_daily_price_json.py   Price refresh script (called by Actions).
+generate_intraday_price_json.py  1H/4H price files (manual workflow).
+generate_summary.py            Headless Python port of the dashboard's analysis. Stdlib only.
+scripts/update_mvrv.js         MVRV scrape + sanity checks (called by Actions).
+scripts/push_with_retry.sh     Commit + rebase + push with retries (all workflows).
+requirements-ci.txt            Pinned Python packages for the price workflows.
+exports/                       Latest auto-exported summary (older days are in git history).
 
-.github/workflows/
-  update_price_json.yml      Daily — downloads Kaggle CSV, regenerates price JSON.
-  update-mvrv.yml            Daily — Playwright scrapes blockchain.com for MVRV.
-  auto_export_summary.yml    Hourly — runs generate_summary.py, commits to exports/.
+.github/workflows/  (all push through one concurrency group, so they never race)
+  update_price_json.yml        Daily 00:17 UTC — Kaggle CSV → btc_daily_price.json.
+  update-mvrv.yml              Daily 01:23 UTC — scrape, validate, update mvrv.json.
+  auto_export_summary.yml      Daily 02:41 UTC — generate_summary.py → exports/.
+  generate-intraday-price.yml  Manual only — 1H/4H price JSON.
 
 
 HOW DATA GETS IN
@@ -63,6 +81,11 @@ MVRV data:
   The dashboard can load a JSON you manually export from blockchain.com,
   OR it auto-fetches mvrv.json straight from this repo (already there).
   The CI scrape keeps mvrv.json current daily so you don't have to touch it.
+  The scrape reads the JSON blockchain.com's public chart page loads. It is not a
+  documented API, so it can break, and you should check blockchain.com's terms.
+  Before anything is committed, scripts/update_mvrv.js checks the new file: values
+  between 0.05 and 20, strictly increasing dates, no more than 5% fewer points than
+  before, and the same start date. A bad scrape fails the job and keeps the old file.
 
 Price data:
   btc_daily_price.json is rebuilt daily from the Kaggle BTC 1-min dataset.
@@ -76,7 +99,7 @@ DATA FLOW
 ![Repo data flow](docs/data-flow.svg)
 
   Kaggle + blockchain.com feed two daily workflows that commit JSON to the
-  repo; an hourly workflow reads that JSON to write exports/*.txt, and
+  repo; a daily workflow reads that JSON to write exports/*.txt, and
   index.html fetches the same JSON straight in the browser (no backend).
 
   Note: the in-page Export button writes a local .txt download. That's separate
@@ -85,15 +108,17 @@ DATA FLOW
 
 AUTO-EXPORT
 -----------
-generate_summary.py runs every hour via GitHub Actions.
-Reads mvrv.json + btc_daily_price.json, computes the same stats as the
-browser export, writes exports/mvrv_summary_YYYY-MM-DD.txt.
+generate_summary.py runs once a day via GitHub Actions, after both data updates.
+It reads mvrv.json + btc_daily_price.json and runs the same calculations as the
+dashboard: rolling z, moving averages, cycle extremes, the price models and the
+backtest. It writes exports/mvrv_summary_YYYY-MM-DD.txt.
 
-Once a day's file exists it won't overwrite it.
-No secrets needed. Runtime is ~4 seconds.
+Each run rewrites today's file and removes older ones from exports/. Every
+previous day's export is still in the git history.
+No secrets needed. Runtime is a few seconds. Set SKIP_CHAIN_CHECK=1 to skip the
+block-explorer halving check when running offline.
 
-To deploy: drop generate_summary.py in repo root and add
-auto_export_summary.yml to .github/workflows/. That's it.
+If you change a calculation in index.html, change generate_summary.py too.
 
 
 CONFIG
@@ -133,11 +158,23 @@ few prior cycles and are descriptive, not predictive.
 
 STACK
 -----
-Vanilla JS. Chart.js 4.4. 98.css for the UI chrome.
+Vanilla JS. Chart.js 4.4 (self-hosted in vendor/).
 Python 3.11 for the CI scripts (stdlib only — no pip install for generate_summary.py).
 GitHub Actions for all automation.
 
 No build step. No node_modules. index.html just works.
+
+
+SECURITY NOTES
+--------------
+- Scripts load only from this site (vendor/), and a Content-Security-Policy
+  limits network requests to jsDelivr, raw.githubusercontent.com, mempool.space
+  and blockstream.info.
+  To upgrade Chart.js: `npm pack chart.js@X` and copy dist/chart.umd.js to
+  vendor/chart.umd.min.js. Do the same for the annotation plugin.
+- Workflows pin actions to commit SHAs, pin Python/npm packages, declare
+  `permissions: contents: write`, and never expose the Kaggle key while
+  packages install.
 
 
 NOT FINANCIAL ADVICE.

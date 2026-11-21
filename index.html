@@ -3,12 +3,17 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<!-- Scripts only from this site; data fetches only from the hosts the dashboard uses. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://raw.githubusercontent.com https://mempool.space https://blockstream.info; object-src 'none'; base-uri 'none'"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
 <title>MVRV Analytics</title>
   <link rel="icon" type="image/png" href="data:image/png;base64,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">
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<!-- Self-hosted copies of chart.js@4.4.1 and chartjs-plugin-annotation@3.0.1 (from npm), so no third-party
+     script CDN can change the code this page runs. See vendor/ and the README to update them. -->
+<script src="vendor/chart.umd.min.js"></script>
+<script src="vendor/chartjs-plugin-annotation.min.js"></script>
 <style>
 :root{color-scheme:dark;--bg:#0c1117;--surface:#121b25;--surface2:#192533;--border:#2b3a49;--text:#e4edf5;--muted:#99adbf;--faint:#243545;--accent:#64d8c2;--teal:#38bdb0;--amber:#e9b452;--red:#ef7782;--green:#64c990;font-size:16px}
 :root[data-theme="light"]{color-scheme:light;--bg:#eaf0f5;--surface:#fff;--surface2:#f2f6fa;--border:#c5d0db;--text:#172b40;--muted:#52697c;--faint:#dbe5ed;--accent:#007e70;--teal:#008b82;--amber:#986100;--red:#bb3449;--green:#157342}
@@ -21,19 +26,21 @@
 dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:24px}dialog::backdrop{background:#0009}dialog h2{font-size:20px;margin:0}.dialog-heading,.dialog-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}dialog p{font-size:14px;color:var(--muted)}dialog input[type=date]{color:var(--text);background:var(--surface2);border:1px solid var(--border);padding:8px;min-height:42px;max-width:100%}dialog label{white-space:nowrap;font-size:14px}#cycle-date-error{color:var(--red);font-size:14px;margin-bottom:12px}.header-right{justify-content:flex-end}@media(max-width:800px){.header-right .btn{flex:1 1 140px}.header-right{justify-content:flex-start}}
 #cycle-insights{min-width:0}#cycle-insights .cycle-heat{min-width:790px;text-align:center;font-variant-numeric:tabular-nums}#cycle-insights .cycle-heat th:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--surface2)}#cycle-insights .cycle-heat td{min-width:88px;font-weight:600}#cycle-insights .chart-card>.quality-note{margin:12px 0 0}#cycle-insights .chart-card .chart-wrap+.chart-wrap{margin-top:12px}
 #cycle-insights .heat-cell-button{display:block;width:100%;min-height:46px;padding:4px;border:2px solid transparent;background:transparent;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}#cycle-insights .heat-cell-button:hover,#cycle-insights .heat-cell-button[aria-pressed="true"]{border-color:var(--accent);background:var(--surface2);color:var(--accent)}#cycle-insights .heat-cell-button small{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}#cycle-insights .cycle-heat-cell{padding:0}#c3segment-inspector .g3{margin-top:14px}
-#cycle-insights .cycle-heat.compact{table-layout:fixed;width:100%;min-width:0;font-size:9px}#cycle-insights .cycle-heat.compact th,#cycle-insights .cycle-heat.compact td{min-width:0;padding:3px 0;text-align:center;overflow:hidden;white-space:nowrap}#cycle-insights .cycle-heat.compact th{font-size:8px;letter-spacing:0}#cycle-insights .cycle-heat.compact th:first-child{width:48px;text-align:center}#cycle-insights .cycle-heat.compact th:nth-child(2){width:75px}#cycle-insights .cycle-heat.compact th:nth-child(3){width:92px}#cycle-insights .cycle-heat.compact td a{font-size:9px}#cycle-insights .cycle-heat.compact .heat-cell-button{min-height:30px;padding:0;border-width:1px;border-radius:0;font-size:8px;line-height:1.1;letter-spacing:-.04em;white-space:nowrap}#cycle-insights .cycle-heat.compact .heat-cell-button small{font-size:7px;letter-spacing:0}#cycle-insights .heat-period-toggle{display:inline-flex;flex-wrap:wrap;gap:6px;margin:12px 0}#cycle-insights .heat-period-toggle button{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);cursor:pointer}#cycle-insights .heat-period-toggle button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:700}@media(max-width:800px){#cycle-insights .cycle-heat.compact{min-width:1100px}}
+#cycle-insights .cycle-heat.compact{table-layout:auto;width:max-content;min-width:100%;font-size:12px}#cycle-insights .cycle-heat.compact th,#cycle-insights .cycle-heat.compact td{min-width:38px;padding:3px 2px;text-align:center;overflow:hidden;white-space:nowrap}#cycle-insights .cycle-heat.compact th{font-size:12px;letter-spacing:0}#cycle-insights .cycle-heat.compact th:first-child{width:48px;text-align:center}#cycle-insights .cycle-heat.compact th:nth-child(2){width:75px}#cycle-insights .cycle-heat.compact th:nth-child(3){width:92px}#cycle-insights .cycle-heat.compact td a{font-size:12px}#cycle-insights .cycle-heat.compact .heat-cell-button{min-height:30px;padding:0;border-width:1px;border-radius:0;font-size:12px;line-height:1.2;letter-spacing:0;white-space:nowrap}#cycle-insights .cycle-heat.compact .heat-cell-button small{font-size:11px;letter-spacing:0}#cycle-insights .heat-period-toggle{display:inline-flex;flex-wrap:wrap;gap:6px;margin:12px 0}#cycle-insights .heat-period-toggle button{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);cursor:pointer}#cycle-insights .heat-period-toggle button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:700}
 #p12{--sp-btc:#f5a04a;--sp-ath:#5aa9ff;--sp-bot:#ef5350;--sp-halv:#64c990}:root[data-theme="light"] #p12{--sp-btc:#e8891c;--sp-ath:#0f3a6b;--sp-bot:#9b1c1c;--sp-halv:#157342}
 .sp-controls{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;align-items:flex-start}.sp-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}.sp-lab{min-width:82px;font:600 12px ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.sp-events{border:1px solid var(--border);border-radius:4px;background:var(--surface2);padding:12px 14px;margin-bottom:14px;font-size:14px}.sp-events-title{font:700 13px ui-monospace,SFMono-Regular,Consolas,monospace;margin-bottom:4px}.sp-hint{color:var(--muted);font-size:13px;line-height:1.6}.sp-pair{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:8px 0}.sp-pair+.sp-pair{border-top:1px solid var(--border)}.sp-ev{display:flex;gap:8px;align-items:flex-start;min-width:170px}.sp-ev-k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.sp-ev-v{font-weight:700}.sp-ev-d{font-size:12px;color:var(--muted)}.sp-badge{margin-left:auto;padding:3px 10px;border:1px solid var(--amber);color:var(--amber);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}.sp-seg{display:inline-flex;flex-wrap:wrap;gap:6px}.sp-seg button{padding:5px 12px;min-height:34px;font-size:13px}.sp-seg button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:700}.sp-seg button[aria-pressed="false"]{opacity:.65}.sp-sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:baseline}
 .sp-stage{position:relative;max-width:860px;margin:auto}#sp-svg{width:100%;height:auto;display:block;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;touch-action:pan-y;border-radius:4px}.sp-tip{position:absolute;display:none;pointer-events:none;z-index:5;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;box-shadow:0 4px 14px #0006}.sp-pulse{animation:spPulse 1.8s ease-out infinite;transform-box:fill-box;transform-origin:center}@keyframes spPulse{from{transform:scale(1);opacity:.9}to{transform:scale(3.2);opacity:0}}
+@media(max-width:600px){table.stack thead{display:none}table.stack,table.stack tbody,table.stack tr{display:block;width:100%}table.stack tr{border-bottom:1px solid var(--border);padding:6px 0}table.stack td,table.stack tbody th{display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-width:0;padding:5px 14px;text-align:right;border:0;background:none;white-space:normal;text-transform:none;letter-spacing:0;font-size:14px}table.stack td::before,table.stack tbody th::before{content:attr(data-label);color:var(--muted);text-align:left;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}table.stack tr>:first-child{justify-content:flex-start;font-weight:700;font-size:15px}table.stack tr>:first-child::before{content:none}}
+.site-footer{padding:16px 24px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}.load-banner{margin:0 0 16px;padding:12px 16px;border:1px solid var(--amber);border-radius:4px;color:var(--text);background:var(--surface2)}.today{font-size:16px;line-height:1.6;border-left:3px solid var(--accent)}#autoload-status{font-size:1rem;color:var(--muted)}#own-file{width:min(560px,100%)}#own-file>summary{cursor:pointer;color:var(--accent);margin-bottom:14px}
 </style>
 </head>
 <body>
 
-<!-- Win98-style loading dialog -->
+<!-- Loading dialog -->
 <div id="loading-overlay" role="status" aria-live="polite">
   <div id="loading-dialog" class="window">
     <div class="title-bar">
-      <div class="title-bar-text">⏳ Please Wait...</div>
+      <div class="title-bar-text">⏳ Loading</div>
     </div>
     <div class="dialog-body">
       <div class="loading-msg" id="loading-msg">Parsing data...</div>
@@ -50,8 +57,8 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
     <div class="title-bar-text">MVRV / RESEARCH TERMINAL</div>
     <div class="title-bar-controls">
       <button id="theme-toggle" onclick="toggleTheme()" aria-label="Switch color theme">Light mode</button>
-      <button onclick="toggleFocus()" aria-label="Toggle navigation" title="Toggle navigation">☰</button>
-      <button onclick="resetApp()" aria-label="Return to upload" title="Return to upload">↥</button>
+      <button onclick="toggleFocus()" aria-label="Toggle navigation" title="Toggle navigation">☰ Menu</button>
+      <button onclick="resetApp()" aria-label="Use my own file" title="Use my own file">↥ Own file</button>
     </div>
   </div>
   <div class="window-body" style="padding:0">
@@ -66,10 +73,12 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
     </a>
     <div class="rotate-tip">
       <span class="rotate-icon">📱↔️</span>
-      <span>All 12 analysis views available on desktop and mobile</span>
+      <span>All 14 analysis views available on desktop and mobile</span>
     </div>
   </div>
 
+  <div id="autoload-status" role="status">⏳ Loading the latest MVRV and BTC price data…</div>
+  <details id="own-file"><summary>Use my own MVRV file instead</summary>
   <div class="step active" id="step1">
     <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Upload MVRV JSON file" onkeydown="if(event.target===this &amp;&amp; (event.key==='Enter'||event.key===' ')){event.preventDefault();document.getElementById('file-input').click()}" onclick="document.getElementById('file-input').click()">
       <div class="drop-icon">📂</div>
@@ -83,12 +92,13 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
     <div class="upload-error" id="upload-error" role="alert" style="display:none"></div>
     <div class="upload-note">Auto-detects mvrv array + converts timestamps</div>
     <div style="margin-top:16px;display:flex;align-items:center;gap:8px;font-size:0.85rem">
-      <span id="price-fetch-status" style="color:#000000">⏳ Fetching BTC price data…</span>
+      <span id="price-fetch-status" style="color:var(--muted)">⏳ Fetching BTC price data…</span>
     </div>
     <div class="progress-wrap" id="price-progress-wrap" style="margin-top:8px">
       <div class="progress-bar" id="price-progress-bar"></div>
     </div>
   </div>
+  </details>
 </div>
 
 <div id="app">
@@ -99,7 +109,7 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
     </div>
     <div class="header-right">
       <button class="btn" id="line-style-toggle" onclick="toggleLineStyle()" title="Curve rendering only; data values remain unchanged" aria-pressed="true">Lines: smooth</button><button class="btn" onclick="openCycleDates()">Cycle dates</button><button class="btn" onclick="exportSummary()">↓ Export Summary</button>
-      <button class="btn" onclick="fetchPriceData()">Retry prices</button><button class="btn" onclick="resetApp()">↑ Upload new file</button>
+      <button class="btn" onclick="fetchPriceData()">Retry prices</button><button class="btn" onclick="resetApp()">↑ Use my own file</button>
     </div>
   </div>
   <nav class="tabs" id="tabs" aria-label="Analysis views"></nav><div id="mobile-navigation"><label for="mobile-view">View <select id="mobile-view" onchange="switchTab(Number(this.value))"></select></label></div>
@@ -119,6 +129,7 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
     <div class="panel" id="p12"></div>
     <div class="panel" id="p13"></div>
   </div>
+  <footer class="site-footer" style="grid-column:1/-1">Historical, descriptive analysis of MVRV and daily BTC closes — not financial advice. Models are fitted on only a few completed cycles. <a href="https://github.com/0xtrvkc/dynamic-btc-analytics-dashboard#readme" target="_blank" rel="noopener noreferrer">Methodology &amp; source ↗</a></footer>
 </div>
 
 <dialog id="cycle-dates-dialog" aria-labelledby="cycle-dates-title">
@@ -260,7 +271,7 @@ const CONFIG = {
   ZSCORE_WINDOW: 365,      // rolling window (days) for z-score calculation
   ROC_SHORT: 30,
   ROC_LONG: 90,
-  HALVING_DATE_TOLERANCE_DAYS: 3, // prior days only when exact daily price is missing
+  HALVING_DATE_TOLERANCE_DAYS: 3, // extra prior days to try when the pre-halving close is missing
 };
 
 let DATA=[], STATS={}, CHARTS={}, activeTab=0;
@@ -268,13 +279,6 @@ let BY_CYCLE={};  // pre-built lookup: BY_CYCLE[cycleNum] = filtered DATA rows
 let PRICE_MAP={}, hasPriceData=false;
 const built = new Set();
 
-function parseDateFlexible(raw){
-  if(!raw)return null;
-  const s=String(raw).trim();
-  const dmy=s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
-  if(dmy)return new Date(dmy[3]+"-"+dmy[2].padStart(2,"0")+"-"+dmy[1].padStart(2,"0"));
-  const d=new Date(s);return isNaN(d)?null:d;
-}
 function fmtDate(d){return d?new Date(d).toISOString().slice(0,10):""}
 
 // O(n) running-sum moving average — replaces the O(n*w) slice version
@@ -289,11 +293,12 @@ function movingAvg(arr,w){
   return out;
 }
 
-// Use the same baseline everywhere. A post-halving price would leak future
-// information into a forecast presented as available at halving-day close.
+// Use the same baseline everywhere: the close of the UTC day BEFORE the halving.
+// Every halving so far happened before that day's close, so the pre-halving close
+// would already include post-halving trading.
 function priceAtHalvingPoint(halvingDate){
   if(!halvingDate||!hasPriceData)return null;
-  for(let days=0;days<=CONFIG.HALVING_DATE_TOLERANCE_DAYS;days++){
+  for(let days=1;days<=CONFIG.HALVING_DATE_TOLERANCE_DAYS+1;days++){
     const dateStr=fmtDate(new Date(+halvingDate-days*DAY_MS)),p=PRICE_MAP[dateStr];
     if(Number.isFinite(p)&&p>0)return {price:p,dateStr,date:new Date(dateStr)};
   }
@@ -448,7 +453,7 @@ function parseMvrvJson(json){
   if(rows.length<10)throw new Error('At least 10 valid daily observations are required.');
   return rows;
 }
-function autoLoadMVRV(){fetchWithRetry(MVRV_JSON_URL,MVRV_JSON_URL_FALLBACK).then(json=>{if(!manualUpload)loadData(parseMvrvJson(json));}).catch(err=>{if(manualUpload)return;const e=document.getElementById('upload-error');e.textContent='Auto-load unavailable. Upload a JSON file to continue. '+err.message;e.style.display='block';});}
+function autoLoadMVRV(){fetchWithRetry(MVRV_JSON_URL,MVRV_JSON_URL_FALLBACK).then(json=>{if(!manualUpload)loadData(parseMvrvJson(json));}).catch(err=>{if(manualUpload)return;const e=document.getElementById('upload-error');e.textContent='Auto-load unavailable. Upload a JSON file to continue. '+err.message;e.style.display='block';document.getElementById('own-file').open=true;document.getElementById('autoload-status').textContent='Couldn’t load the latest data automatically. Reload to retry, or use your own MVRV file below.';});}
 
 
 var manualUpload=false;
@@ -505,7 +510,7 @@ function fetchPriceData(){
     if(DATA.length){joinPrice();Object.keys(CHARTS).forEach(destroyChart);built.clear();switchTab(activeTab);}
   }).catch(()=>{setPriceProgress(0);setPriceStatus('Prices unavailable; MVRV analysis remains available.','var(--amber)');}).finally(()=>{priceFetchDone=true;priceFetchRunning=false;updateDataStatus();});
 }
-function updateDataStatus(){const el=document.getElementById('data-status');if(!DATA.length){el.textContent='';return;}const n=DATA.filter(d=>Number.isFinite(d.price)).length;const age=Math.max(0,Math.floor((Date.now()-STATS.last.date)/DAY_MS));el.textContent=n.toLocaleString()+'/'+DATA.length.toLocaleString()+' dates matched to BTC price · '+STATS.missingDays+' missing days'+(age>2?' · latest observation '+age+' days ago':'');}
+function updateDataStatus(){const el=document.getElementById('data-status');if(!DATA.length){el.textContent='';return;}const n=DATA.filter(d=>Number.isFinite(d.price)).length;const age=Math.max(0,Math.floor((Date.now()-STATS.last.date)/DAY_MS));const priceLast=hasPriceData?Object.keys(PRICE_MAP).sort().at(-1):null;el.textContent='MVRV as of '+STATS.last.dateStr+(priceLast?' · price as of '+priceLast:'')+' · '+n.toLocaleString()+'/'+DATA.length.toLocaleString()+' dates matched to BTC price · '+STATS.missingDays+' missing days'+(age>2?' · latest observation '+age+' days ago':'');}
 
 
 function joinPrice(){
@@ -520,7 +525,16 @@ function numText(v,digits=2){return Number.isFinite(v)?v.toFixed(digits):'—';}
 function moneyText(v){return Number.isFinite(v)&&v>0?'$'+Math.round(v).toLocaleString():'—';}
 function medianOf(values){const a=values.filter(Number.isFinite).sort((x,y)=>x-y),m=Math.floor(a.length/2);return a.length?(a.length%2?a[m]:(a[m-1]+a[m])/2):null;}
 function quantile(values,p){const a=values.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;const i=(a.length-1)*p,lo=Math.floor(i);return a[lo]+(a[Math.ceil(i)]-a[lo])*(i-lo);}
-function isIqrOutlier(value,values){const a=values.filter(Number.isFinite);if(a.length<4||!Number.isFinite(value))return false;const q1=quantile(a,.25),q3=quantile(a,.75),iqr=q3-q1;return value<q1-1.5*iqr||value>q3+1.5*iqr;}
+// Halving-anchored cycle extremes, same rule as the Spiral tab:
+// high = highest value within the first CYCLE_TOP_WINDOW_DAYS after the halving (the cycle top),
+// low  = lowest value AFTER that high, up to the next halving (the bear-market low).
+// Taking a plain min/max over the whole halving window instead picks the post-halving dip
+// (often the halving day itself) as the "bottom" and the next pre-halving rally as the "top".
+const CYCLE_TOP_WINDOW_DAYS=730;
+function cycleHighLow(rows,key){const r=rows.filter(d=>Number.isFinite(d[key])&&d[key]>0);if(!r.length)return null;
+  const h=HALVINGS[(r[0].cycle||0)-1],start=h?+h:+r[0].date,limit=start+CYCLE_TOP_WINDOW_DAYS*DAY_MS;
+  let hi=0;for(let i=1;i<r.length&&+r[i].date<=limit;i++)if(r[i][key]>r[hi][key])hi=i;
+  let lo=hi;for(let i=hi+1;i<r.length;i++)if(r[i][key]<r[lo][key])lo=i;return{high:r[hi],low:r[lo]};}
 function positive(v){return Number.isFinite(v)&&v>0?v:null;}
 function projected(reg,x,isLog=true){return reg&&reg.valid?positive(reg.slope*(isLog?Math.log(x):x)+reg.intercept):null;}
 function rollingStateLabel(d){if(!d||!d.zReady||!Number.isFinite(d.zscore))return 'Insufficient history';return d.zscore < -1.5?'Far below 1y mean':d.zscore<0?'Below 1y mean':d.zscore<1?'Near / above 1y mean':'Elevated vs 1y mean';}
@@ -552,7 +566,7 @@ function computeStats(data){
   if(!data.length)throw new Error('No valid daily observations.');
   const last=data.at(-1),groups={};data.forEach(d=>(groups[d.cycle]??=[]).push(d));
   const availCycles=Object.keys(groups).map(Number).filter(c=>c>0).sort((a,b)=>a-b);
-  const cycleData=availCycles.map(c=>{const sub=groups[c],pk=sub.reduce((a,b)=>a.mvrv>=b.mvrv?a:b),tr=sub.reduce((a,b)=>a.mvrv<=b.mvrv?a:b);
+  const cycleData=availCycles.map(c=>{const sub=groups[c],hl=cycleHighLow(sub,'mvrv'),pk=hl.high,tr=hl.low;
     const start=HALVINGS[c-1],end=HALVINGS[c],boundariesConfirmed=!!HALVING_EVENTS[c-1]?.confirmed&&!!HALVING_EVENTS[c]?.confirmed,complete=!!end&&last.date>=end&&boundariesConfirmed;
     const expected=end?Math.round((end-start)/DAY_MS):null,coverage=expected?sub.length/expected:null;
     return {cycle:c,peak:pk.mvrv,peakDate:pk.dateStr,trough:tr.mvrv,troughDate:tr.dateStr,days:sub.length,
@@ -570,7 +584,7 @@ function computeStats(data){
 function cycleModelData(beforeCycle){return STATS.cycleData.filter(c=>c.usable&&c.cycle<beforeCycle).map(c=>{
   const rows=BY_CYCLE[c.cycle]||[],priced=rows.filter(d=>Number.isFinite(d.price)&&d.price>0);
   if(priced.length/rows.length<.95)return null;
-  const high=priced.reduce((a,b)=>a.price>=b.price?a:b),low=priced.reduce((a,b)=>a.price<=b.price?a:b);
+  const hl=cycleHighLow(priced,'price'),high=hl.high,low=hl.low;
   const atPeak=PRICE_MAP[c.peakDate],atTrough=PRICE_MAP[c.troughDate],afterPeak=priced.filter(d=>d.dateStr>=c.peakDate),afterTrough=priced.filter(d=>d.dateStr>=c.troughDate);
   return {...c,high:high.price,low:low.price,halving:priceAtHalving(HALVINGS[c.cycle-1]),
     upside:atPeak&&afterPeak.length?Math.max(...afterPeak.map(d=>d.price))/atPeak-1:null,
@@ -591,7 +605,7 @@ function modelSet(targetCycle,origin,live=false){
   const realized=anchorValid?anchor.price/anchor.mvrv:null;
   const peak=projected(peakReg,targetCycle),trough=projected(troughReg,targetCycle);
   const current=visible.filter(d=>d.cycle===targetCycle);
-  const pk=current.length?current.reduce((a,b)=>a.mvrv>=b.mvrv?a:b):null,tr=current.length?current.reduce((a,b)=>a.mvrv<=b.mvrv?a:b):null;
+  const curHL=cycleHighLow(current,'mvrv'),pk=curHL?curHL.high:null,tr=curHL?curHL.low:null;
   const ups=prior.map(c=>c.upside).filter(Number.isFinite),downs=prior.map(c=>c.downside).filter(Number.isFinite);
   const r={m1:live&&pk?.price&&ups.length>=2?positive(pk.price*(1+medianOf(ups))):null,
     bm1:live&&tr?.price&&downs.length>=2?positive(tr.price*(1+medianOf(downs))):null,
@@ -628,7 +642,7 @@ function loadData(rows){
     Object.keys(CHARTS).forEach(destroyChart);built.clear();activeTab=0;buildTabs();
     document.getElementById('hdr-meta').textContent=DATA.length.toLocaleString()+' daily observations · '+DATA[0].dateStr+' → '+STATS.last.dateStr;
     document.getElementById('upload-screen').style.display='none';document.getElementById('app').style.display='flex';updateDataStatus();switchTab(0);
-    verifyHalvingsFromChain();
+    chartLibraryBanner();verifyHalvingsFromChain();
   }catch(error){const e=document.getElementById('upload-error');e.textContent='Unable to build the dashboard: '+error.message;e.style.display='block';document.getElementById('upload-screen').style.display='flex';document.getElementById('app').style.display='none';}finally{hideLoading();}},0);
 }
 
@@ -640,6 +654,8 @@ function resetApp(){
   document.getElementById("app").style.display="none";
   document.getElementById("file-input").value="";
   document.getElementById("upload-error").style.display="none";
+  document.getElementById("own-file").open=true;
+  document.getElementById("autoload-status").textContent="Choose an MVRV file to analyze, or reload the page for the latest data.";
   DATA=[];STATS={};CHARTS={};activeTab=0;built.clear();
   pendingRows=null;
 }
@@ -711,7 +727,7 @@ function buildOverview(){
       var daysAway=Math.round((h-now)/DAY_MS);
       status='<span style="color:var(--muted)">'+(HALVING_EVENTS[i]?.confirmed?'upcoming confirmed date':daysAway>=0?'estimated · '+daysAway.toLocaleString()+'d away':'estimate passed · unverified')+'</span>';
       var lp=s.logR?Math.max(0,s.logR.slope*Math.log(cycleNum)+s.logR.intercept):null;
-      if(lp)projNote='<span style="color:#000000">proj. peak '+lp.toFixed(2)+'</span>';
+      if(lp)projNote='<span style="color:var(--muted)">proj. peak '+lp.toFixed(2)+'</span>';
     }
     return'<div style="display:flex;flex-direction:column;padding:10px 0;border-bottom:.5px solid var(--border)">'
       +'<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">'
@@ -725,12 +741,19 @@ function buildOverview(){
 
   var halvingTimeline='<div class="chart-card"><div class="chart-title">Halving timeline</div>'
     +'<div style="padding:4px 0">'+halvingRows+'</div>'
-    +'<div style="font-size:0.8rem;color:#000000;margin-top:10px">Future halvings are estimates. Log model projections shown for upcoming cycles.</div>'
+    +'<div style="font-size:0.8rem;color:var(--muted);margin-top:10px">Future halvings are estimates. Log model projections shown for upcoming cycles.</div>'
     +'</div>';
 
   var priceChartHtml=hasPriceData?'<div class="chart-card"><div class="chart-title">BTC Price (USD) over time · vertical lines = halvings</div>'+makeCanvas("c0b",200)+'</div>':"";
 
-  document.getElementById("p0").innerHTML=
+  var zone=l.mvrv<1?'below 1.0':l.mvrv<1.5?'1.0–1.5':l.mvrv<2?'1.5–2.0':l.mvrv<3?'2.0–3.0':'above 3.0';
+  var curHL=hasPriceData?cycleHighLow((BY_CYCLE[l.cycle]||[]).filter(function(d){return Number.isFinite(d.price);}),'price'):null;
+  var cycleDay=l.cycle&&HALVINGS[l.cycle-1]?Math.round((l.date-HALVINGS[l.cycle-1])/DAY_MS)+1:null;
+  var today='<div class="info today"><strong>Today ('+l.dateStr+'):</strong> MVRV is <strong>'+l.mvrv.toFixed(2)+'</strong>, in the '+zone+' zone — '+rollingStateLabel(l).toLowerCase()+(Number.isFinite(l.zscore)?' (rolling z '+l.zscore.toFixed(2)+')':'')+'.'
+    +(cycleDay?' Day '+cycleDay.toLocaleString()+' of cycle C'+l.cycle+(Number.isFinite(l.cyclePct)?' (~'+Math.round(l.cyclePct)+'% of the '+(HALVING_EVENTS[l.cycle]?.confirmed?'':'estimated ')+'interval)':'')+'.':'')
+    +(Number.isFinite(l.price)&&curHL?' BTC '+moneyText(l.price)+', '+Math.abs((l.price/curHL.high.price-1)*100).toFixed(0)+'% '+(l.price<curHL.high.price?'below':'above')+' this cycle’s top of '+moneyText(curHL.high.price)+' ('+curHL.high.dateStr+').':'')
+    +' Descriptive only, not a forecast.</div>';
+  document.getElementById("p0").innerHTML=today+
     '<div class="g4">'+cards.join("")+'</div>'
     +'<div class="chart-card"><div class="chart-title">MVRV with MA20 / MA50 / MA200 · vertical lines = halvings</div>'+makeCanvas("c0",300)+'</div>'
     +priceChartHtml+historicalCards
@@ -819,7 +842,7 @@ function buildMomentum(){
       '<div class="stat-label">'+title+'</div>'+
       '<div class="stat-val" style="color:'+sig.color+'">'+val+'</div>'+
       '<div style="margin-top:6px;display:inline-block;font-size:0.75rem;padding:2px 10px;border-radius:99px;background:'+sig.color+'22;color:'+sig.color+';border:1px solid '+sig.color+'55;font-weight:600;letter-spacing:.04em">'+sig.label+'</div>'+
-      '<div style="font-size:0.82rem;color:#000000;margin-top:8px;line-height:1.5">'+sig.detail+'</div>'+
+      '<div style="font-size:0.82rem;color:var(--muted);margin-top:8px;line-height:1.5">'+sig.detail+'</div>'+
     '</div>';
   }
 
@@ -910,8 +933,8 @@ function overlayCycleExtremes(c){
   // affect the overlay mapping (cycle % = days since halving / halving interval).
   return{
     provisional:!(cd&&cd.complete),
-    mvrvPeak:pick(mv,'mvrv',true),mvrvBottom:pick(mv,'mvrv',false),
-    pricePeak:pick(pr,'price',true),priceBottom:pick(pr,'price',false)
+    mvrvPeak:(cycleHighLow(mv,'mvrv')||{}).high||null,mvrvBottom:(cycleHighLow(mv,'mvrv')||{}).low||null,
+    pricePeak:(cycleHighLow(pr,'price')||{}).high||null,priceBottom:(cycleHighLow(pr,'price')||{}).low||null
   };
 }
 
@@ -1118,7 +1141,7 @@ function buildCycleOverlay(){
     var sub=BY_CYCLE[c]?BY_CYCLE[c].filter(function(d){return d.cyclePct!=null;}):[];
     return lineDataset(c,sample(sub,120),function(d){return d.mvrv;},"mvrv");
   });
-  // BTC price indexed to the halving-day close (= 100) so cycles are comparable.
+  // BTC price indexed to the pre-halving close (= 100) so cycles are comparable.
   var priceDatasets=[];
   if(hasPriceData){
     availableCycles.forEach(function(c){
@@ -1181,10 +1204,10 @@ function buildCycleOverlay(){
   }).join('');
   var extTable='<div class="chart-card"><div class="chart-title">Peaks &amp; bottoms by cycle</div><div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>MVRV peak</th><th>MVRV bottom</th>'
     +(showPrice?'<th>BTC price peak</th><th>BTC price bottom</th>':'')+'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
-    +'<div class="quality-note">Each cell shows the value, then its date and position in the cycle (% of the halving interval)'+(showPrice?'; price also shows its multiple of the halving-day close':'')+'. Current-cycle values are the highest/lowest so far and can still move.</div></div>';
+    +'<div class="quality-note">Each cell shows the value, then its date and position in the cycle (% of the halving interval)'+(showPrice?'; price also shows its multiple of the pre-halving close':'')+'. Current-cycle values are the highest/lowest so far and can still move.</div></div>';
 
   var infoText='Aligns cycles by fraction of each halving interval. Dashed vertical lines mark equal fractions; the labels under the axis use a 48-month reference and are not the exact calendar months for every cycle. A current interval with an estimated end can extend past 100% while confirmation is pending.'
-    +(showPrice?' Both panels share one x-axis: hover either panel to read every cycle at that point (MVRV, price and date). The price panel is indexed to the halving-day close (1x) on a log scale, so cycles are comparable; the tooltip also shows real dollars.':'')
+    +(showPrice?' Both panels share one x-axis: hover either panel to read every cycle at that point (MVRV, price and date). The price panel is indexed to the pre-halving close (1x) on a log scale, so cycles are comparable; the tooltip also shows real dollars.':'')
     +' ▲ marks a cycle peak and ▼ a cycle bottom'+(showPrice?'; dashed links join each to its MVRV/price counterpart in the other panel (hover or tap a marker, or pick a cycle, to highlight one)':'')+'. Hover a cycle button to highlight it, or click to pin it.';
 
   document.getElementById("p3").innerHTML='<div class="chart-card"><div class="chart-title">'+(showPrice?'MVRV &amp; BTC price':'MVRV')+' — all cycles overlaid · cycle position · vertical lines = equal cycle fractions</div>'
@@ -1351,7 +1374,7 @@ function buildCycleOverlay(){
     var botAnnotations=monthAnnotations();
     botAnnotations.halvingBase={
       type:'line',yMin:100,yMax:100,borderColor:CC.muted,borderWidth:1.2,
-      label:{display:true,content:'halving-day price (1x)',position:'end',backgroundColor:'transparent',color:CC.muted,font:{size:11},yAdjust:-8}
+      label:{display:true,content:'pre-halving close (1x)',position:'end',backgroundColor:'transparent',color:CC.muted,font:{size:11},yAdjust:-8}
     };
     botAnnotations.nowLine={type:'line',xMin:lastPoint.x,xMax:lastPoint.x,borderColor:'#7c6af7',borderWidth:1.5,borderDash:[2,3]};
     CHARTS.c3b=new Chart(document.getElementById("c3b"),{
@@ -1685,7 +1708,7 @@ function buildZoneDays(){
     priceZoneHtml='<div class="tbl-wrap" style="margin-top:16px"><table><thead><tr><th>MVRV Zone</th>'+s.cycleData.map(function(c){return"<th>C"+c.cycle+" avg price</th>"}).join("")+'</tr></thead><tbody>'+priceRows+'</tbody></table></div>';
   }
   document.getElementById("p6").innerHTML='<div class="chart-card"><div class="chart-title">Days spent in each MVRV zone per cycle</div>'+makeCanvas("c6",300)+'</div>'
-    +(hasPriceData?priceZoneHtml+'<div style="font-size:0.85rem;color:#000000;margin:4px 0 12px">Avg BTC price when MVRV was in each zone — descriptive historical comparison</div>':"")
+    +(hasPriceData?priceZoneHtml+'<div style="font-size:0.85rem;color:var(--muted);margin:4px 0 12px">Avg BTC price when MVRV was in each zone — descriptive historical comparison</div>':"")
     +'<div class="tbl-wrap"><table><thead><tr><th>Zone</th>'+s.cycleData.map(function(c){return"<th>C"+c.cycle+"</th>"}).join("")+'</tr></thead><tbody>'+tblRows+'</tbody></table></div>'
     +'<div class="info">Zone days show how long MVRV spent in each band per cycle. Average price per zone is a descriptive historical comparison; it is not a current entry or exit target.</div>';
   destroyChart("c6");
@@ -1834,7 +1857,7 @@ function buildRegression(){
 
 function buildPricePeaks(){
   if(!hasPriceData){
-    document.getElementById("p8").innerHTML='<div class="info" style="margin-top:40px;text-align:center;color:#000000">BTC prices are unavailable. Use Retry prices in the header.</div>';
+    document.getElementById("p8").innerHTML='<div class="info" style="margin-top:40px;text-align:center;color:var(--muted)">BTC prices are unavailable. Use Retry prices in the header.</div>';
     return;
   }
   var s=STATS;
@@ -1861,7 +1884,8 @@ function buildPricePeaks(){
   STATS.availCycles.forEach(function(c){
     var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price});
     if(!sub.length)return;
-    var best=sub.reduce(function(a,b){return b.price>a.price?b:a});
+    // Price top = highest close within two years after the halving (same rule as Spiral)
+    var best=cycleHighLow(sub,'price').high;
     var mvrvPeak=s.cycleData.find(function(cd){return cd.cycle===c});
     var mvrvPeakDate=mvrvPeak?mvrvPeak.peakDate:null;
     var mvrvPeakMvrv=mvrvPeak?mvrvPeak.peak:null;
@@ -2048,7 +2072,7 @@ function buildPricePeaks(){
 
 function buildPriceBottoms(){
   if(!hasPriceData){
-    document.getElementById("p9").innerHTML='<div class="info" style="margin-top:40px;text-align:center;color:#000000">Price data is required for this panel.</div>';
+    document.getElementById("p9").innerHTML='<div class="info" style="margin-top:40px;text-align:center;color:var(--muted)">Price data is required for this panel.</div>';
     return;
   }
   var s=STATS;
@@ -2072,8 +2096,8 @@ function buildPriceBottoms(){
   s.availCycles.forEach(function(c){
     var sub=(BY_CYCLE[c]||[]).filter(function(d){return d.price;});
     if(!sub.length)return;
-    // Price bottom = lowest price in cycle
-    var worst=sub.reduce(function(a,b){return b.price<a.price?b:a});
+    // Price bottom = lowest price after the cycle's price high (bear-market low)
+    var worst=cycleHighLow(sub,'price').low;
     var mvrvTrough=s.cycleData.find(function(cd){return cd.cycle===c;});
     var mvrvTroughDate=mvrvTrough?mvrvTrough.troughDate:null;
     var mvrvTroughMvrv=mvrvTrough?mvrvTrough.trough:null;
@@ -2167,7 +2191,7 @@ function buildPriceBottoms(){
     '<div class="chart-card"><div class="chart-title">Further price downside after MVRV troughed · % drop from MVRV trough date to price bottom</div>'+makeCanvas("c9bot_d",200)+'</div>'+
     '<div class="chart-card"><div class="chart-title">MVRV divergence at price bottom (%)</div>'+makeCanvas("c9bot_c",200)+'</div>'+
     '<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>BTC Bottom</th><th>Bottom date</th><th>MVRV that day</th><th>Price @ MVRV trough</th><th>Further downside</th><th>Lead/lag</th><th>Divergence</th><th>Direction</th></tr></thead><tbody>'+tableRows+'</tbody></table></div>'+
-    '<div class="info">⚠ = statistical outlier (IQR method), excluded from median stats. Lead/lag can be positive or negative; neither ordering is guaranteed. Divergence = how far MVRV had already risen from its trough when BTC price bottomed. Further downside = % drop from price-at-MVRV-trough to actual price bottom. See Projections tab for price floor models.</div>';
+    '<div class="info">Price top = highest close within two years after the halving; price bottom = lowest close after that top (the bear-market low). MVRV peak and trough follow the same rule. ⚠ = statistical outlier (IQR, only flagged once four or more completed cycles exist), excluded from median stats. Lead/lag can be positive or negative; neither ordering is guaranteed. Divergence = how far MVRV had already risen from its trough when BTC price bottomed. Further downside = % drop from the price on the MVRV-trough day to the lowest close from that day on (0% if price never went lower). See Projections tab for price floor models.</div>';
 
   destroyChart("c9bot_a");destroyChart("c9bot_b");destroyChart("c9bot_c");destroyChart("c9bot_d");
 
@@ -2430,7 +2454,7 @@ function exportSummary(){
 
     // ---- Backtest accuracy section ----
     hr("BACKTEST — Ceiling & Floor model accuracy on past cycles");
-    lines.push("Eligible models use prior completed cycles and inputs available at halving-day close. Turning-point scenarios are not scored.");
+    lines.push("Eligible models use prior completed cycles and inputs available at pre-halving close. Turning-point scenarios are not scored.");
     lines.push("Error = (predicted − actual) / actual × 100.");
     lines.push("  Positive = overshot  |  Negative = undershot  |  Within ±20% = good · ±40% = ok · >40% = poor");
     lines.push("");
@@ -2537,7 +2561,7 @@ function exportSummary(){
 const MODEL_NAMES={m1:'MVRV Upside',m2:'Halving Multiplier',m3:'ATH Multiplier',m4:'MVRV × Realized Price',bm1:'MVRV Downside',bm2:'Halving Floor Ratio',bm3:'Bottom Multiplier',bm4:'MVRV Trough × Realized Price',consensus:'Ceiling ensemble',consensusBot:'Floor ensemble'};
 function buildProjections(){
   const l=STATS.last,r=modelSet(l.cycle,l.date,true),training=r.trainingCycles.map(c=>'C'+c).join(', ')||'none';
-  const descriptions={m1:'Price at MVRV high so far × median subsequent upside from completed cycles. Conditional scenario; high is unconfirmed.',m2:'Halving-day price × power-law cycle multiplier fitted on completed cycles.',m3:'Previous completed-cycle high × power-law ratio of consecutive cycle highs.',m4:'Latest price / MVRV × projected MVRV peak. Holds realized price constant; it can rise or fall.',bm1:'Price at MVRV low so far × median subsequent downside from completed cycles. Conditional scenario; low is unconfirmed.',bm2:'Halving-day price × power-law cycle floor ratio.',bm3:'Previous completed-cycle low × power-law ratio of consecutive cycle lows.',bm4:'Latest price / MVRV × projected MVRV trough. Additional scenario, outside the floor ensemble.'};
+  const descriptions={m1:'Price at MVRV high so far × median subsequent upside from completed cycles. Conditional scenario; high is unconfirmed.',m2:'Pre-halving close × power-law cycle multiplier fitted on completed cycles.',m3:'Previous completed-cycle high × power-law ratio of consecutive cycle highs.',m4:'Latest price / MVRV × projected MVRV peak. Holds realized price constant; it can rise or fall.',bm1:'Price at MVRV low so far × median subsequent downside from completed cycles. Conditional scenario; low is unconfirmed.',bm2:'Pre-halving close × power-law cycle floor ratio.',bm3:'Previous completed-cycle low × power-law ratio of consecutive cycle lows.',bm4:'Latest price / MVRV × projected MVRV trough. Additional scenario, outside the floor ensemble.'};
   const models=Object.keys(descriptions);
   const rows=models.map(k=>'<tr><th scope="row">'+MODEL_NAMES[k]+'</th><td>'+moneyText(r[k])+'</td><td>'+r.sampleSizes[k]+'</td><td>'+(k==='m1'||k==='bm1'?'Conditional':k==='bm4'?'Additional scenario':'In ensemble')+'</td><td>'+descriptions[k]+'</td></tr>').join('');
   document.getElementById('p10').innerHTML='<div class="g4">'+statCard('Ceiling ensemble',moneyText(r.consensus),'Median of '+[r.m2,r.m3,r.m4].filter(Number.isFinite).length+' available models')+statCard('Floor ensemble',moneyText(r.consensusBot),'Median of '+[r.bm2,r.bm3].filter(Number.isFinite).length+' available models')+statCard('Ceiling model spread',r.ceilingRange?r.ceilingRange.map(moneyText).join(' – '):'—','Not a probability interval')+statCard('Floor model spread',r.floorRange?r.floorRange.map(moneyText).join(' – '):'—','Not a probability interval')+'</div>'+
@@ -2545,7 +2569,7 @@ function buildProjections(){
     '<div class="chart-card"><div class="chart-title">Ceiling models and conditional upside scenario</div>'+makeCanvas('projection-high',300)+'</div>'+
     '<div class="chart-card"><div class="chart-title">Floor models and conditional downside scenarios</div>'+makeCanvas('projection-low',300)+'</div>'+
     '<div class="tbl-wrap"><table><thead><tr><th>Model</th><th>Estimate</th><th>Training n</th><th>Role</th><th>Basis / limitations</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div class="info">Compare historical errors in <button class="btn" onclick="switchTab(11)">Backtest</button>. Those forecasts are frozen at halving-day close; these live scenarios use today’s available inputs. No confidence level has been statistically calibrated.</div>';
+    '<div class="info">Compare historical errors in <button class="btn" onclick="switchTab(11)">Backtest</button>. Those forecasts are frozen at pre-halving close; these live scenarios use today’s available inputs. No confidence level has been statistically calibrated.</div>';
   for(const [id,keys] of [['projection-high',['m1','m2','m3','m4']],['projection-low',['bm1','bm2','bm3','bm4']]]){
     destroyChart(id);CHARTS[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels:keys.map(k=>MODEL_NAMES[k]),datasets:[{label:'Scenario price (USD)',data:keys.map(k=>r[k]),backgroundColor:keys.map((k,i)=>[CC.green,CC.teal,CC.amber,CC.accent][i])}]},options:withLegend(chartDefs())});
   }
@@ -2556,9 +2580,10 @@ function runBacktest(){
   if(!hasPriceData)return {allResults:[],completedResults:[]};
   const allResults=STATS.availCycles.filter(c=>c>=2).map(c=>{
     const cd=STATS.cycleData.find(d=>d.cycle===c),sub=(BY_CYCLE[c]||[]).filter(d=>Number.isFinite(d.price));
-    const models=modelSet(c,new Date(HALVINGS[c-1]),false);
+    // Forecast origin = close of the UTC day before the halving, so no post-halving data leaks in.
+    const models=modelSet(c,new Date(+HALVINGS[c-1]-DAY_MS),false),hl=cycleHighLow(sub,'price');
     const pricedCoverage=sub.length/((BY_CYCLE[c]||[]).length||1);
-    return {...models,cycle:c,actualATH:sub.length?Math.max(...sub.map(d=>d.price)):null,actualBottom:sub.length?Math.min(...sub.map(d=>d.price)):null,
+    return {...models,cycle:c,actualATH:hl?hl.high.price:null,actualBottom:hl?hl.low.price:null,
       isCurrent:c===STATS.last.cycle,provisionalDates:!cd.boundariesConfirmed,evaluable:cd.usable&&pricedCoverage>=.95};
   });
   return {allResults,completedResults:allResults.filter(r=>r.evaluable&&!r.isCurrent)};
@@ -2571,8 +2596,8 @@ function buildBacktest(){
   const summary=keys.map(k=>{const a=errorStats(bt.completedResults,k,actualKey(k));return '<tr><th scope="row">'+MODEL_NAMES[k]+'</th><td>'+numText(a.mape,1)+'</td><td>'+numText(a.medianAPE,1)+'</td><td>'+numText(a.bias,1)+'</td><td>'+a.n+'</td></tr>';}).join('');
   const cell=(r,k)=>{const actual=r[actualKey(k)],pred=r[k];if(!Number.isFinite(pred))return '<td class="muted">'+(k==='m1'||k==='bm1'?'Scenario only':'Insufficient data')+'</td>';const e=actual>0?(pred/actual-1)*100:null;const score=r.evaluable&&!r.isCurrent;return '<td>'+moneyText(pred)+'<br><span class="'+(score?(Math.abs(e)<20?'tone-good':Math.abs(e)<40?'tone-warn':'tone-bad'):'muted')+'">'+(e===null?'—':(e>0?'+':'')+numText(e,1)+'%')+(score?'':' · provisional')+'</span></td>';};
   const rows=bt.allResults.map(r=>'<tr><th scope="row">C'+r.cycle+'<br><span class="muted">'+(r.isCurrent?'Open':r.provisionalDates?'Unconfirmed dates':r.evaluable?'Completed':'Incomplete coverage')+'</span></th><td>'+r.origin+'</td><td>'+moneyText(r.actualATH)+'</td>'+keys.slice(0,5).map(k=>cell(r,k)).join('')+'<td>'+moneyText(r.actualBottom)+'</td>'+keys.slice(5).map(k=>cell(r,k)).join('')+'</tr>').join('');
-  document.getElementById('p11').innerHTML='<div class="g3">'+statCard('Evaluated cycles',String(bt.completedResults.length),'Completed cycles with ≥95% matched price coverage')+statCard('Forecast origin','Halving close','UTC date; parameters use prior completed cycles')+statCard('Accuracy measure','Absolute error','Signed error is reported separately as bias')+'</div>'+
-    '<div class="info">Each historical forecast is frozen at halving-day close. Future observations are used only to measure the outcome. MVRV Upside and MVRV Downside require an unconfirmed future turning point, so they remain conditional scenarios in Projections and receive no cycle-start accuracy score. Open cycles and incomplete data are excluded from aggregate scores.</div>'+
+  document.getElementById('p11').innerHTML='<div class="g3">'+statCard('Evaluated cycles',String(bt.completedResults.length),'Completed cycles with ≥95% matched price coverage')+statCard('Forecast origin','Pre-halving close','Close of the UTC day before each halving; parameters use prior completed cycles')+statCard('Accuracy measure','Absolute error','Signed error is reported separately as bias')+'</div>'+
+    '<div class="info">Each historical forecast is frozen at pre-halving close. Future observations are used only to measure the outcome. MVRV Upside and MVRV Downside require an unconfirmed future turning point, so they remain conditional scenarios in Projections and receive no cycle-start accuracy score. Open cycles and incomplete data are excluded from aggregate scores. Cycle high = highest close within two years after the halving (the cycle top, same rule as Spiral); cycle low = lowest close <em>after</em> that high, up to the next halving (the bear-market low, not the post-halving dip). With only a few completed cycles, every score rests on n ≤ 3 forecasts — read them as anecdotes, not calibrated accuracy.</div>'+
     '<div class="tbl-wrap"><table><thead><tr><th>Model</th><th>Mean absolute error %</th><th>Median absolute error %</th><th>Signed bias %</th><th>Evaluated n</th></tr></thead><tbody>'+summary+'</tbody></table></div>'+
     '<div class="chart-card"><div class="chart-title">Ceiling predictions versus actual cycle high</div>'+makeCanvas('backtest-high',320)+'</div>'+
     '<div class="chart-card"><div class="chart-title">Floor predictions versus actual cycle low</div>'+makeCanvas('backtest-low',320)+'</div>'+
@@ -3141,8 +3166,9 @@ function buildTiming(){
   };
 }
 
-function reportRenderError(err){console.error(err);const p=document.getElementById('p'+activeTab);const note=document.createElement('div');note.className='info';note.setAttribute('role','alert');note.textContent='This view could not render. Check that chart scripts are available, then select the tab to retry. '+err.message;p.prepend(note);}
-function applyTheme(theme){document.documentElement.dataset.theme=theme;const c=getComputedStyle(document.documentElement);['bg','surface','surface2','border','text','muted','faint','accent'].forEach(k=>CC[k]=c.getPropertyValue('--'+k).trim());document.getElementById('theme-toggle').textContent=theme==='dark'?'Light mode':'Dark mode';document.getElementById('theme-toggle').setAttribute('aria-pressed',String(theme==='light'));if(typeof Chart!=='undefined'){Chart.defaults.color=CC.text;Chart.defaults.font.family='ui-monospace, SFMono-Regular, Consolas, monospace';Chart.defaults.animation=false;}CHART_DEFAULTS.plugins.tooltip.titleColor=CC.text;CHART_DEFAULTS.plugins.tooltip.bodyColor=CC.text;CHART_DEFAULTS.plugins.tooltip.backgroundColor=CC.surface2;CHART_DEFAULTS.plugins.tooltip.borderColor=CC.border;Object.values(CHART_DEFAULTS.scales).forEach(a=>{a.ticks.color=CC.muted;a.grid.color=CC.border;});if(DATA.length){Object.keys(CHARTS).forEach(destroyChart);built.clear();switchTab(activeTab);}}
+function chartLibraryBanner(){if(typeof Chart!=='undefined'||document.getElementById('chart-missing'))return;const b=document.createElement('div');b.id='chart-missing';b.className='load-banner';b.setAttribute('role','alert');b.innerHTML='Charts couldn’t load (the chart library was blocked or you are offline). Tables and numbers still show where possible. <button class="btn" onclick="location.reload()">Reload</button>';document.getElementById('content').prepend(b);}
+function reportRenderError(err){console.error(err);if(typeof Chart==='undefined'){chartLibraryBanner();return;}const p=document.getElementById('p'+activeTab);const note=document.createElement('div');note.className='info';note.setAttribute('role','alert');note.textContent='This view could not render. Check that chart scripts are available, then select the tab to retry. '+err.message;p.prepend(note);}
+function applyTheme(theme){document.documentElement.dataset.theme=theme;const c=getComputedStyle(document.documentElement);['bg','surface','surface2','border','text','muted','faint','accent','teal','amber','red','green'].forEach(k=>CC[k]=c.getPropertyValue('--'+k).trim());document.getElementById('theme-toggle').textContent=theme==='dark'?'Light mode':'Dark mode';document.getElementById('theme-toggle').setAttribute('aria-pressed',String(theme==='light'));if(typeof Chart!=='undefined'){Chart.defaults.color=CC.text;Chart.defaults.font.family='ui-monospace, SFMono-Regular, Consolas, monospace';Chart.defaults.animation=false;}CHART_DEFAULTS.plugins.tooltip.titleColor=CC.text;CHART_DEFAULTS.plugins.tooltip.bodyColor=CC.text;CHART_DEFAULTS.plugins.tooltip.backgroundColor=CC.surface2;CHART_DEFAULTS.plugins.tooltip.borderColor=CC.border;Object.values(CHART_DEFAULTS.scales).forEach(a=>{a.ticks.color=CC.muted;a.grid.color=CC.border;});if(DATA.length){Object.keys(CHARTS).forEach(destroyChart);built.clear();switchTab(activeTab);}}
 function toggleTheme(){const next=document.documentElement.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem('mvrv-theme',next);}catch(e){}applyTheme(next);}
 function decoratePanel(i){
   const panel=document.getElementById('p'+i),note=document.createElement('div');note.className='quality-note';
@@ -3151,8 +3177,11 @@ function decoratePanel(i){
   if(i===4)addCausalDrawdown(panel);
   if(STATS.last.cycle>0&&!HALVING_EVENTS[STATS.last.cycle-1]?.confirmed){const n=document.createElement('div');n.className='info';n.textContent='The latest cycle boundary is unverified. Use Cycle dates to retry the on-chain check.';panel.prepend(n);}
   if(i>=7&&i<12){const n=document.createElement('div');n.className='quality-note';n.textContent='Completed cycles available for fitting: '+(STATS.trainingCycles.map(c=>'C'+c).join(', ')||'none')+'. Current-cycle extrema are provisional. Future halving dates are estimates.';panel.prepend(n);}
+  stackTables(panel);
   const walker=document.createTreeWalker(panel,NodeFilter.SHOW_TEXT);let node;while(node=walker.nextNode()){if(node.parentElement?.tagName!=='SCRIPT'&&node.parentElement?.tagName!=='STYLE')node.textContent=node.textContent.replace(/\bNaN\b|\bInfinity\b/g,'—');}
 }
+// Phones: wide tables (5+ columns) become one card per row, each value labelled by its column.
+function stackTables(root){root.querySelectorAll('table').forEach(t=>{if(t.closest('#cycle-insights')||/heat/.test(t.className)||t.closest('[id*="heat"]'))return;const heads=[...t.querySelectorAll('thead th')].map(th=>th.textContent.trim());if(heads.length<5)return;t.classList.add('stack');t.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((cell,i)=>{if(heads[i]&&!cell.hasAttribute('colspan'))cell.setAttribute('data-label',heads[i]);}));});}
 function addCausalDrawdown(panel){
   const wrap=document.createElement('div');wrap.className='chart-card';wrap.innerHTML='<div class="chart-title">MVRV drawdown over time: running versus eventual cycle peak</div>'+makeCanvas('causal-dd',260)+'<div class="quality-note">Running peak uses only information available at each date. The dashed retrospective series uses the highest value anywhere in that cycle and can change when new data arrives. Neither measures BTC price drawdown.</div>';panel.prepend(wrap);
   const pts=sample(DATA);destroyChart('causal-dd');CHARTS['causal-dd']=new Chart(document.getElementById('causal-dd'),{type:'line',data:{labels:pts.map(p=>p.dateStr),datasets:[{label:'Running-peak drawdown %',data:pts.map(p=>p.drawdown),borderColor:CC.teal,pointRadius:0,borderWidth:2},{label:'Retrospective distance to cycle peak %',data:pts.map(p=>p.retrospectiveDrawdown),borderColor:CC.muted,borderDash:[4,4],pointRadius:0,borderWidth:1}]},options:withLegend(chartDefs())});
