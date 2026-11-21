@@ -32,6 +32,7 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
 .sp-stage{position:relative;max-width:860px;margin:auto}#sp-svg{width:100%;height:auto;display:block;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;touch-action:pan-y;border-radius:4px}.sp-tip{position:absolute;display:none;pointer-events:none;z-index:5;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;box-shadow:0 4px 14px #0006}.sp-pulse{animation:spPulse 1.8s ease-out infinite;transform-box:fill-box;transform-origin:center}@keyframes spPulse{from{transform:scale(1);opacity:.9}to{transform:scale(3.2);opacity:0}}
 @media(max-width:600px){table.stack thead{display:none}table.stack,table.stack tbody,table.stack tr{display:block;width:100%}table.stack tr{border-bottom:1px solid var(--border);padding:6px 0}table.stack td,table.stack tbody th{display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-width:0;padding:5px 14px;text-align:right;border:0;background:none;white-space:normal;text-transform:none;letter-spacing:0;font-size:14px}table.stack td::before,table.stack tbody th::before{content:attr(data-label);color:var(--muted);text-align:left;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}table.stack tr>:first-child{justify-content:flex-start;font-weight:700;font-size:15px}table.stack tr>:first-child::before{content:none}}
 .site-footer{padding:16px 24px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}.load-banner{margin:0 0 16px;padding:12px 16px;border:1px solid var(--amber);border-radius:4px;color:var(--text);background:var(--surface2)}.today{font-size:16px;line-height:1.6;border-left:3px solid var(--accent)}#autoload-status{font-size:1rem;color:var(--muted)}#own-file{width:min(560px,100%)}#own-file>summary{cursor:pointer;color:var(--accent);margin-bottom:14px}
+#halving-bar{margin:0 0 20px;padding:14px 16px;border:2px solid var(--amber);border-radius:6px;background:var(--surface)}#halving-bar:empty{display:none}.hv-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.hv-title{font:700 15px ui-monospace,monospace;color:var(--amber);letter-spacing:.04em;text-transform:uppercase}.hv-btn{padding:6px 12px;font-size:13px}.hv-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}.hv-chip{flex:1 0 170px;min-width:170px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);scroll-snap-align:start}.hv-chip.hv-cur{border:2px solid var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 20%,transparent)}.hv-chip.hv-est{border-style:dashed;opacity:.9}.hv-top{display:flex;align-items:center;gap:8px;font:700 14px ui-monospace,monospace}.hv-tag{font:700 11px system-ui;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:99px;background:var(--amber);color:var(--bg)}.hv-date{font:700 20px ui-monospace,monospace;margin:4px 0 2px;color:var(--text);white-space:nowrap}@media(max-width:600px){.hv-chip{flex:0 0 205px}.hv-date{font-size:18px}}.hv-sub{font-size:13px;color:var(--muted)}.hv-src{font-size:12px;margin-top:6px}.hv-note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -114,6 +115,7 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
   </div>
   <nav class="tabs" id="tabs" aria-label="Analysis views"></nav><div id="mobile-navigation"><label for="mobile-view">View <select id="mobile-view" onchange="switchTab(Number(this.value))"></select></label></div>
   <div class="content" id="content">
+    <section id="halving-bar" aria-label="Bitcoin halving dates"></section>
     <div class="panel active" id="p0"></div>
     <div class="panel" id="p1"></div>
     <div class="panel" id="p2"></div>
@@ -161,7 +163,7 @@ function validateHalvingEvents(events,now=Date.now()){
     if(i<4&&(e.date!==DEFAULT_HALVING_EVENTS[i].date||e.confirmed!==true))throw new Error('The four known historical dates are fixed.');
     if(e.confirmed===true&&t>now)throw new Error('A future date must remain an estimate until the halving occurs.');
     if(i>=4&&e.confirmed===true&&!/^[0-9a-f]{64}$/.test(e.blockHash||''))throw new Error('Future halvings require a verified block hash before confirmation.');
-    return {date:e.date,confirmed:e.confirmed===true,...(i>=4&&e.confirmed?{blockHash:e.blockHash}:{})};
+    return {date:e.date,confirmed:e.confirmed===true,...(i>=4&&e.confirmed?{blockHash:e.blockHash,...(/^\d{2}:\d{2}:\d{2}$/.test(e.time||'')?{time:e.time}:{})}:{})};
   });
 }
 function refreshCycleMetadata(){
@@ -188,11 +190,37 @@ let halvingVerificationStatus='Checking block explorers…';
 let halvingVerificationRunning=false;
 let halvingVerificationQueued=false;
 function halvingBlockHeight(c){return c*HALVING_INTERVAL;}
+// UTC timestamps of the halving blocks, as reported by mempool.space and Blockstream
+// (both explorers agree on hash and timestamp for each block).
+const KNOWN_HALVING_TIMES={1:'15:24:38',2:'16:46:13',3:'19:23:43',4:'00:09:27'};
+function halvingTime(c){return HALVING_EVENTS[c-1]?.time||KNOWN_HALVING_TIMES[c]||null;}
+function halvingExplorerLinks(c){
+  const h=halvingBlockHeight(c),a=(href,t)=>'<a href="'+href+'" target="_blank" rel="noopener noreferrer">'+t+' ↗</a>';
+  return a('https://mempool.space/block/'+h,'mempool.space')+' · '+a('https://blockstream.info/block-height/'+h,'Blockstream');
+}
 function halvingSourceLink(c){
   const e=HALVING_EVENTS[c-1],height=halvingBlockHeight(c);
   if(!e?.confirmed)return 'Block '+height.toLocaleString()+' · awaiting confirmation';
-  const block=e.blockHash||String(height);
-  return '<a href="https://mempool.space/block/'+block+'" target="_blank" rel="noopener noreferrer">Block '+height.toLocaleString()+' ↗</a>';
+  return 'Block '+height.toLocaleString()+(halvingTime(c)?' at '+halvingTime(c)+' UTC':'')+' · '+halvingExplorerLinks(c);
+}
+// Halving bar: shown above every view so the cycle boundaries are always visible.
+function renderHalvingBar(){
+  const host=document.getElementById('halving-bar');if(!host||!DATA.length)return;
+  const last=STATS.last.date,cur=STATS.last.cycle,show=Math.min(HALVING_EVENTS.length,Math.max(cur+1,5));
+  const chips=HALVING_EVENTS.slice(0,show).map((e,i)=>{
+    const c=i+1,h=HALVINGS[i],isCur=c===cur,isNext=c===cur+1,days=Math.round((h-last)/DAY_MS);
+    const when=e.confirmed?(isCur?'Day '+(Math.round((last-h)/DAY_MS)+1).toLocaleString()+' of this cycle':'Completed'):(days>=0?'≈ '+days.toLocaleString()+' days away':'Estimate passed · awaiting block');
+    return '<div class="hv-chip'+(isCur?' hv-cur':'')+(e.confirmed?'':' hv-est')+'">'
+      +'<div class="hv-top"><b>C'+c+'</b>'+(isCur?'<span class="hv-tag">current</span>':isNext?'<span class="hv-tag">next</span>':'')+'</div>'
+      +'<div class="hv-date">'+(e.confirmed?'':'≈ ')+e.date+'</div>'
+      +'<div class="hv-sub">'+(e.confirmed&&halvingTime(c)?halvingTime(c)+' UTC · ':'')+'block '+halvingBlockHeight(c).toLocaleString()+'</div>'
+      +'<div class="hv-sub">'+when+'</div>'
+      +'<div class="hv-src">'+(e.confirmed?halvingExplorerLinks(c):'Estimate · not yet mined')+'</div></div>';
+  }).join('');
+  host.innerHTML='<div class="hv-head"><span class="hv-title">₿ Bitcoin halvings</span><button class="btn hv-btn" onclick="openCycleDates()">All dates &amp; verify</button></div>'
+    +'<div class="hv-row" role="list">'+chips+'</div>'
+    +'<div class="hv-note">Sources: the timestamp of each halving block (every 210,000 blocks) from the <a href="https://mempool.space" target="_blank" rel="noopener noreferrer">mempool.space</a> and <a href="https://blockstream.info" target="_blank" rel="noopener noreferrer">Blockstream</a> block explorers, which are cross-checked on every page load. Dates are UTC. A future date (≈) is an estimate, not an on-chain fact. It is confirmed only once the block is mined, has 6 confirmations, and both explorers agree.</div>';
+  const row=host.querySelector('.hv-row'),curChip=host.querySelector('.hv-cur');if(row&&curChip)row.scrollLeft=Math.max(0,curChip.offsetLeft-row.offsetLeft-12);
 }
 async function halvingFetch(source,path,json=false){
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),8000);
@@ -214,7 +242,8 @@ async function verifiedHalvingBlock(height){
   }));
   if(blocks[0].id!==blocks[1].id||blocks[0].timestamp!==blocks[1].timestamp)throw new Error('Block explorers disagree; no date was changed.');
   if(blocks[0].timestamp*1000>Date.now())throw new Error('Block timestamp is in the future.');
-  return {date:new Date(blocks[0].timestamp*1000).toISOString().slice(0,10),blockHash:blocks[0].id};
+  const iso=new Date(blocks[0].timestamp*1000).toISOString();
+  return {date:iso.slice(0,10),time:iso.slice(11,19),blockHash:blocks[0].id};
 }
 async function verifyHalvingsFromChain(showStatus=false){
   if(halvingVerificationRunning){halvingVerificationQueued=true;return;}
@@ -240,7 +269,7 @@ async function verifyHalvingsFromChain(showStatus=false){
       DATA=enrichData(DATA.map(d=>({date:d.date,mvrv:d.mvrv})));
       if(hasPriceData)joinPrice();
       STATS=computeStats(DATA);BY_CYCLE={};DATA.forEach(d=>(BY_CYCLE[d.cycle]??=[]).push(d));
-      Object.keys(CHARTS).forEach(destroyChart);built.clear();switchTab(activeTab);updateDataStatus();
+      Object.keys(CHARTS).forEach(destroyChart);built.clear();switchTab(activeTab);updateDataStatus();renderHalvingBar();
     }
   }catch(err){halvingVerificationStatus='Could not cross-check both explorers: '+err.message+'. Dates remain estimates.';}
   finally{
@@ -642,7 +671,7 @@ function loadData(rows){
     Object.keys(CHARTS).forEach(destroyChart);built.clear();activeTab=0;buildTabs();
     document.getElementById('hdr-meta').textContent=DATA.length.toLocaleString()+' daily observations · '+DATA[0].dateStr+' → '+STATS.last.dateStr;
     document.getElementById('upload-screen').style.display='none';document.getElementById('app').style.display='flex';updateDataStatus();switchTab(0);
-    chartLibraryBanner();verifyHalvingsFromChain();
+    renderHalvingBar();chartLibraryBanner();verifyHalvingsFromChain();
   }catch(error){const e=document.getElementById('upload-error');e.textContent='Unable to build the dashboard: '+error.message;e.style.display='block';document.getElementById('upload-screen').style.display='flex';document.getElementById('app').style.display='none';}finally{hideLoading();}},0);
 }
 

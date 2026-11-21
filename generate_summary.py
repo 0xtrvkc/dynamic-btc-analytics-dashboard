@@ -21,6 +21,8 @@ HALVING_EVENTS = [
     {"date": "2036-01-10", "confirmed": False},
 ]
 HALVING_INTERVAL = 210000
+# UTC block times of the halving blocks (mempool.space and Blockstream agree).
+KNOWN_HALVING_TIMES = {1: "15:24:38", 2: "16:46:13", 3: "19:23:43", 4: "00:09:27"}
 EXPLORER_APIS = ("https://mempool.space/api", "https://blockstream.info/api")
 HALVINGS = [e["date"] for e in HALVING_EVENTS]
 HALVING_DTS = []
@@ -89,7 +91,7 @@ def verify_future_halvings():
             actual = stamp.date().isoformat()
             old_date = parse_date(HALVING_EVENTS[i]["date"])
             shift = (parse_date(actual) - old_date).days
-            HALVING_EVENTS[i] = {"date": actual, "confirmed": True, "blockHash": blocks[0]["id"]}
+            HALVING_EVENTS[i] = {"date": actual, "time": stamp.strftime("%H:%M:%S"), "confirmed": True, "blockHash": blocks[0]["id"]}
             for later in HALVING_EVENTS[i+1:]:
                 if not later["confirmed"]:
                     later["date"] = (parse_date(later["date"]) + timedelta(days=shift)).date().isoformat()
@@ -632,7 +634,14 @@ def build_export(data, stats, price_map, all_results, completed_results):
             extra = f" · {days_away:,}d from latest data" if days_away >= 0 else " · estimate passed"
         else:
             extra = ""
-        row(f"  C{i+1} halving", f"{h} · block {(i+1)*HALVING_INTERVAL:,} [{status}{extra}]")
+        height = (i+1)*HALVING_INTERVAL
+        t = HALVING_EVENTS[i].get("time") or KNOWN_HALVING_TIMES.get(i+1)
+        when = f"{h} {t} UTC" if HALVING_EVENTS[i]["confirmed"] and t else (h if HALVING_EVENTS[i]["confirmed"] else f"~{h} (estimate)")
+        row(f"  C{i+1} halving", f"{when} · block {height:,} [{status}{extra}]")
+        if HALVING_EVENTS[i]["confirmed"]:
+            lines.append(f"      source: https://mempool.space/block/{height} · https://blockstream.info/block-height/{height}")
+    lines.append("  Sources: halving block timestamps from mempool.space and Blockstream (cross-checked).")
+    lines.append("  Future dates are estimates, not on-chain facts, until the block is mined and both explorers agree.")
 
     lines.append(""); lines.append("="*60)
     lines.append("Built by Sirapob Dangpad — a numbers-obsessed nerd who finds")
