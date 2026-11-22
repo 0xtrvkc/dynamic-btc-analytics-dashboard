@@ -33,7 +33,7 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
 @media(max-width:600px){table.stack thead{display:none}table.stack,table.stack tbody,table.stack tr{display:block;width:100%}table.stack tr{border-bottom:1px solid var(--border);padding:6px 0}table.stack td,table.stack tbody th{display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-width:0;padding:5px 14px;text-align:right;border:0;background:none;white-space:normal;text-transform:none;letter-spacing:0;font-size:14px}table.stack td::before,table.stack tbody th::before{content:attr(data-label);color:var(--muted);text-align:left;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}table.stack tr>:first-child{justify-content:flex-start;font-weight:700;font-size:15px}table.stack tr>:first-child::before{content:none}}
 .site-footer{padding:16px 24px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}.load-banner{margin:0 0 16px;padding:12px 16px;border:1px solid var(--amber);border-radius:4px;color:var(--text);background:var(--surface2)}.today{font-size:16px;line-height:1.6;border-left:3px solid var(--accent)}#autoload-status{font-size:1rem;color:var(--muted)}#own-file{width:min(560px,100%)}#own-file>summary{cursor:pointer;color:var(--accent);margin-bottom:14px}
 #halving-bar{margin:0 0 20px;padding:14px 16px;border:2px solid var(--amber);border-radius:6px;background:var(--surface)}#halving-bar:empty{display:none}.hv-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.hv-title{font:700 15px ui-monospace,monospace;color:var(--amber);letter-spacing:.04em;text-transform:uppercase}.hv-btn{padding:6px 12px;font-size:13px}.hv-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}.hv-chip{flex:1 0 170px;min-width:170px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);scroll-snap-align:start}.hv-chip.hv-cur{border:2px solid var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 20%,transparent)}.hv-chip.hv-est{border-style:dashed;opacity:.9}.hv-top{display:flex;align-items:center;gap:8px;font:700 14px ui-monospace,monospace}.hv-tag{font:700 11px system-ui;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:99px;background:var(--amber);color:var(--bg)}.hv-date{font:700 20px ui-monospace,monospace;margin:4px 0 2px;color:var(--text);white-space:nowrap}@media(max-width:600px){.hv-chip{flex:0 0 205px}.hv-date{font-size:18px}}.hv-sub{font-size:13px;color:var(--muted)}.hv-src{font-size:12px;margin-top:6px}.hv-note{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
-#p14 .sig-summary{border:2px solid var(--border);background:var(--surface);border-radius:6px;padding:18px;margin-bottom:22px}.sig-sum-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;font-size:15px}.sig-sides{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sig-side{border:1px solid var(--border);border-top:4px solid;border-radius:4px;padding:14px;background:var(--surface2);min-width:0}.sig-side.buy{border-top-color:var(--green)}.sig-side.sell{border-top-color:var(--red)}.sig-side-t{font:700 13px ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase}.sig-side.buy .sig-side-t,.sig-side.buy .sig-big{color:var(--green)}.sig-side.sell .sig-side-t,.sig-side.sell .sig-big{color:var(--red)}.sig-big{font:700 46px/1.1 ui-monospace,monospace;margin:6px 0 2px}.sig-big small{font-size:22px;color:var(--muted)}.sig-side-s{font-size:13px;color:var(--muted)}.sig-dots{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.sig-dot{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid var(--muted);background:transparent;vertical-align:middle}.sig-dot.sig-hit{background:var(--accent);border-color:var(--accent)}.sig-side.buy .sig-dot.sig-hit{background:var(--green);border-color:var(--green)}.sig-side.sell .sig-dot.sig-hit{background:var(--red);border-color:var(--red)}.sig-dot.sig-near{border-color:var(--amber);background:linear-gradient(90deg,var(--amber) 50%,transparent 50%)}.sig-dot.sig-passed{border-style:dashed;opacity:.6}.sig-dot.sig-na{opacity:.25}.sig-meter{margin:18px 0 10px}.sig-meter-track{position:relative;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--green),var(--faint) 50%,var(--red))}.sig-meter-mark{position:absolute;top:-6px;width:6px;height:24px;margin-left:-3px;border-radius:3px;background:var(--text);box-shadow:0 0 0 2px var(--surface)}.sig-meter-lbl{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-top:8px}.sig-meter-lbl strong{color:var(--text);font-size:14px;text-align:center}.sig-ctx{font-size:13px;color:var(--muted);margin-top:6px}.sig-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:12px}.sig-legend i{margin-right:5px;width:12px;height:12px}.sig-h{font-size:16px;margin:8px 0 12px}.sig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:22px}.sig-card{border:1px solid var(--border);border-left:4px solid var(--faint);border-radius:4px;background:var(--surface);padding:14px;min-width:0}.sig-card.sig-hit{border-left-color:var(--accent)}.side-buy.sig-hit{border-left-color:var(--green)}.side-sell.sig-hit{border-left-color:var(--red)}.side-buy.sig-hit .sig-badge,.side-buy.sig-hit .sig-bar span{background:var(--green)!important}.side-sell.sig-hit .sig-badge,.side-sell.sig-hit .sig-bar span{background:var(--red)!important}.sig-card.sig-near{border-left-color:var(--amber)}.sig-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.sig-name{font-weight:600;font-size:14px}.sig-badge{font:700 11px ui-monospace,monospace;text-transform:uppercase;padding:3px 7px;border-radius:3px;background:var(--faint);white-space:nowrap}.sig-card.sig-hit .sig-badge{background:var(--accent);color:var(--bg)}.sig-card.sig-near .sig-badge{background:var(--amber);color:var(--bg)}.sig-val{font:650 26px ui-monospace,monospace;margin:8px 0}.sig-bar{height:8px;border-radius:4px;background:var(--faint);overflow:hidden}.sig-bar span{display:block;height:100%;background:var(--muted)}.sig-card.sig-hit .sig-bar span{background:var(--accent)}.sig-card.sig-near .sig-bar span{background:var(--amber)}.sig-rule{font-size:13px;margin-top:8px;font-family:ui-monospace,monospace}.sig-past,.sig-hint{font-size:12px;color:var(--muted);margin-top:4px}.sig-chip{display:flex;flex-wrap:wrap;gap:6px 16px;width:100%;text-align:left;margin:-8px 0 20px;font:600 14px ui-monospace,monospace;border:1px solid var(--border);background:var(--surface)}@media(max-width:600px){#p14 .sig-summary{padding:14px}.sig-big{font-size:38px}.sig-side{padding:12px}.sig-sides{gap:8px}.sig-side-s{font-size:12px}}</style>
+#p14 .val-summary{border:2px solid var(--border);background:var(--surface);border-radius:6px;padding:18px;margin-bottom:22px}.val-head{font-size:13px;margin-bottom:6px}.val-zone{font:700 34px/1.15 ui-monospace,monospace;margin:4px 0}.val-zone.cheap{color:var(--green)}.val-zone.normal{color:var(--text)}.val-zone.hot{color:var(--red)}.val-lead{font-size:15px;margin-bottom:14px}.val-g{margin:10px 0}.val-g-top{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted)}.val-g-top strong{color:var(--text);font:600 15px ui-monospace,monospace}.val-g.big .val-g-top strong{font-size:20px}.val-track{position:relative;display:flex;height:10px;border-radius:5px;overflow:visible;margin:6px 0}.val-g.big .val-track{height:16px}.val-track .seg{display:block;height:100%}.val-track .c{width:20%;background:var(--green);border-radius:5px 0 0 5px}.val-track .n{width:60%;background:var(--faint)}.val-track .h{width:20%;background:var(--red);border-radius:0 5px 5px 0}.val-track i{position:absolute;top:-5px;bottom:-5px;width:6px;margin-left:-3px;border-radius:3px;background:var(--text);box-shadow:0 0 0 2px var(--surface)}.val-g-sub{font-size:12px;color:var(--muted)}.val-g-sub b{color:var(--text)}.val-mini{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}.val-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 0 12px}.val-legend i{display:inline-block;width:12px;height:8px;border-radius:2px;margin-right:5px}.val-legend .c{background:var(--green)}.val-legend .n{background:var(--faint)}.val-legend .h{background:var(--red)}.val-note,.val-clock{font-size:13px;border-top:1px solid var(--border);padding-top:10px;margin-top:10px}.val-clock{color:var(--muted)}.val-h{font-size:16px;margin:8px 0 12px}tr.val-cur td{background:var(--faint);font-weight:600}.val-hyp{border:1px dashed var(--amber);border-radius:6px;padding:16px;margin-bottom:20px;background:var(--surface)}.val-hyp-t{font:700 13px ui-monospace,monospace;color:var(--amber);text-transform:uppercase;letter-spacing:.04em}.val-hyp p{font-size:14px;margin:8px 0 12px}.val-chip{display:flex;flex-wrap:wrap;gap:4px 14px;width:100%;text-align:left;margin:-8px 0 20px;font:600 14px ui-monospace,monospace;border:1px solid var(--border);background:var(--surface)}.val-chip.tone-cheap{border-left:4px solid var(--green)}.val-chip.tone-hot{border-left:4px solid var(--red)}@media(max-width:600px){#p14 .val-summary{padding:14px}.val-zone{font-size:28px}.val-mini{grid-template-columns:1fr}}</style>
 </head>
 <body>
 
@@ -145,7 +145,7 @@ dialog{width:min(680px,calc(100vw - 24px));max-height:90vh;overflow:auto;backgro
 </dialog>
 
 <script>
-const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Cycle Extremes","Price Peaks","Price Bottoms","Projections","Backtest","Spiral","Cycle Timing","Cycle signals"];
+const TAB_NAMES = ["Overview","Z-Score","Momentum","Cycle Overlay","Drawdown","MA Crossovers","Zone Days","Cycle Extremes","Price Peaks","Price Bottoms","Projections","Backtest","Spiral","Cycle Timing","Valuation zone"];
 const CC = {bg:"#0a0a0f",surface:"#111118",surface2:"#16161f",border:"#1e1e2e",text:"#e8e6f0",muted:"#6b6880",faint:"#2a2838",accent:"#7c6af7",teal:"#2563eb",amber:"#f59e0b",red:"#f43f5e",green:"#22c55e"};
 const DEFAULT_HALVING_EVENTS=[
   {date:'2012-11-28',confirmed:true},{date:'2016-07-09',confirmed:true},
@@ -269,7 +269,7 @@ async function verifyHalvingsFromChain(showStatus=false){
     if(changed&&DATA.length){
       DATA=enrichData(DATA.map(d=>({date:d.date,mvrv:d.mvrv})));
       if(hasPriceData)joinPrice();
-      STATS=computeStats(DATA);SIGNALS_CACHE=null;BY_CYCLE={};DATA.forEach(d=>(BY_CYCLE[d.cycle]??=[]).push(d));
+      STATS=computeStats(DATA);VALUATION_CACHE=null;BY_CYCLE={};DATA.forEach(d=>(BY_CYCLE[d.cycle]??=[]).push(d));
       Object.keys(CHARTS).forEach(destroyChart);built.clear();switchTab(activeTab);updateDataStatus();renderHalvingBar();
     }
   }catch(err){halvingVerificationStatus='Could not cross-check both explorers: '+err.message+'. Dates remain estimates.';}
@@ -668,7 +668,7 @@ function hideLoading() {
 function loadData(rows){
   const generation=++loadGeneration;showLoading('Preparing '+rows.length.toLocaleString()+' daily observations',25,'Calculating rolling indicators');
   setTimeout(()=>{if(generation!==loadGeneration)return;try{
-    DATA=enrichData(rows);if(hasPriceData)joinPrice();STATS=computeStats(DATA);SIGNALS_CACHE=null;BY_CYCLE={};DATA.forEach(d=>(BY_CYCLE[d.cycle]??=[]).push(d));
+    DATA=enrichData(rows);if(hasPriceData)joinPrice();STATS=computeStats(DATA);VALUATION_CACHE=null;BY_CYCLE={};DATA.forEach(d=>(BY_CYCLE[d.cycle]??=[]).push(d));
     Object.keys(CHARTS).forEach(destroyChart);built.clear();activeTab=0;buildTabs();
     document.getElementById('hdr-meta').textContent=DATA.length.toLocaleString()+' daily observations · '+DATA[0].dateStr+' → '+STATS.last.dateStr;
     document.getElementById('upload-screen').style.display='none';document.getElementById('app').style.display='flex';updateDataStatus();switchTab(0);
@@ -690,7 +690,7 @@ function resetApp(){
   pendingRows=null;
 }
 
-var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression,buildPricePeaks,buildPriceBottoms,buildProjections,buildBacktest,buildSpiral,buildTiming,buildSignals];
+var builders=[buildOverview,buildZScore,buildMomentum,buildCycleOverlay,buildDrawdown,buildMAX,buildZoneDays,buildRegression,buildPricePeaks,buildPriceBottoms,buildProjections,buildBacktest,buildSpiral,buildTiming,buildValuation];
 
 const TAB_GROUPS=[{name:'Monitor',ids:[0,14,1,2,5]},{name:'Cycle research',ids:[3,12,13,4,6,7,8,9]},{name:'Models & validation',ids:[10,11]}];
 function buildTabs(){document.getElementById('mobile-view').innerHTML=TAB_GROUPS.map(g=>'<optgroup label="'+g.name+'">'+g.ids.map(i=>'<option value="'+i+'">'+TAB_NAMES[i]+'</option>').join('')+'</optgroup>').join('');document.getElementById('tabs').innerHTML=TAB_GROUPS.map(g=>'<div class="nav-group"><div class="nav-group-label">'+g.name+'</div>'+g.ids.map(i=>'<button id="tab-'+i+'" class="tab" data-panel="'+i+'" aria-controls="p'+i+'" onclick="switchTab('+i+')">'+TAB_NAMES[i]+'</button>').join('')+'</div>').join('');}
@@ -783,7 +783,7 @@ function buildOverview(){
     +(cycleDay?' Day '+cycleDay.toLocaleString()+' of cycle C'+l.cycle+(Number.isFinite(l.cyclePct)?' (~'+Math.round(l.cyclePct)+'% of the '+(HALVING_EVENTS[l.cycle]?.confirmed?'':'estimated ')+'interval)':'')+'.':'')
     +(Number.isFinite(l.price)&&curHL?' BTC '+moneyText(l.price)+', '+Math.abs((l.price/curHL.high.price-1)*100).toFixed(0)+'% '+(l.price<curHL.high.price?'below':'above')+' this cycle’s top of '+moneyText(curHL.high.price)+' ('+curHL.high.dateStr+').':'')
     +' Descriptive only, not a forecast.</div>';
-  document.getElementById("p0").innerHTML=today+signalsChip()+
+  document.getElementById("p0").innerHTML=today+valuationChip()+
     '<div class="g4">'+cards.join("")+'</div>'
     +'<div class="chart-card"><div class="chart-title">MVRV with MA20 / MA50 / MA200 · vertical lines = halvings</div>'+makeCanvas("c0",300)+'</div>'
     +priceChartHtml+historicalCards
@@ -2554,20 +2554,9 @@ function exportSummary(){
     lines.push("  * No future observations enter cycle-start forecasts. Scores exclude incomplete cycle coverage.");
     lines.push("  * Current cycle errors measured against ATH/low seen so far, not the final confirmed value.");
   }
-  if(hasPriceData){try{var SG=computeSignals();
-    hr("CYCLE SIGNALS — buy-zone (past bottoms) & sell-zone (past tops), as of "+SG.now.dateStr);
-    row("Buy-zone signals (like past bottoms)",SG.buy.hit+"/"+SG.buy.total+" hit, "+SG.buy.near+" near");
-    row("Sell-zone signals (like past tops)",SG.sell.hit+"/"+SG.sell.total+" hit, "+SG.sell.near+" near");
-    row("Reading",signalLean(SG).label);
-    [["buy","BUY-ZONE","Lowest in past bear markets"],["sell","SELL-ZONE","Highest in past bull runs"]].forEach(function(x){
-      lines.push("","  --- "+x[1]+" ---");
-      SG[x[0]].items.forEach(function(i){
-        var rule=i.window?"window "+i.fmt(i.window[0])+" – "+i.fmt(i.window[1]):Number.isFinite(i.th)?(i.dir<0?"≤ ":"≥ ")+i.fmt(i.th)+(i.fixed?" (fixed rule)":" (mildest past cycle)"):"needs 2+ completed cycles";
-        lines.push("  ["+SIG_BADGE[i.status].toUpperCase()+"] "+i.label+": "+(Number.isFinite(i.value)?i.fmt(i.value):"—")+" · "+rule);
-        lines.push("      "+(i.window?"At past "+(x[0]==="buy"?"bottoms":"tops"):x[2])+": "+(i.past.map(function(p){return "C"+p.cycle+" "+i.fmt(p.v);}).join(" · ")||"—"));
-      });
-    });
-    lines.push("  * Threshold = the mildest extreme across past cycles; few cycles exist, so treat as context. Descriptive only, not investment advice.");
+  if(hasPriceData){try{var VZ=computeValuation();
+    hr("VALUATION ZONE — each measure vs its previous 4 years, as of "+VZ.now.dateStr);
+    valuationExportLines(VZ).forEach(function(x){lines.push(x);});
   }catch(e){console.warn(e);}}
   hr("HALVING DATES");
   var now=l.date;
@@ -3212,167 +3201,162 @@ function buildTiming(){
 }
 
 function chartLibraryBanner(){if(typeof Chart!=='undefined'||document.getElementById('chart-missing'))return;const b=document.createElement('div');b.id='chart-missing';b.className='load-banner';b.setAttribute('role','alert');b.innerHTML='Charts couldn’t load (the chart library was blocked or you are offline). Tables and numbers still show where possible. <button class="btn" onclick="location.reload()">Reload</button>';document.getElementById('content').prepend(b);}
-/* ===== Cycle signals (tab 14) =====
-   A checklist like the "bottom signals" pages, built only from this dashboard's own data
-   (MVRV + daily BTC price). Each signal's threshold is the LEAST extreme value seen at the
-   matching point in past cycles, so the checklist asks: "is today at least as stretched as the
-   mildest past bottom / top?". Thresholds come from history, so they update when a cycle completes.
-   Buy-zone side = conditions seen at past cycle bottoms; sell-zone side = conditions seen at past tops. */
-const SIG_SELL_WINDOW_DAYS=CYCLE_TOP_WINDOW_DAYS;
-const SIGNAL_DEFS=[
-  {side:'buy',id:'b_mvrv',key:'mvrv',dir:-1,fixed:1,label:'MVRV below 1',hint:'BTC trades under the average on-chain cost basis (realized price).',fmt:v=>v.toFixed(2),near:{rel:.1}},
-  {side:'buy',id:'b_z',key:'z',dir:-1,label:'Rolling MVRV z deeply negative',hint:'MVRV far below its own 1-year average.',fmt:v=>v.toFixed(2),near:{abs:.3}},
-  {side:'buy',id:'b_w200',key:'w200',dir:-1,label:'Price vs 200-week average',hint:'Price ÷ 200-week moving average of price.',fmt:v=>v.toFixed(2)+'×',near:{rel:.1}},
-  {side:'buy',id:'b_mayer',key:'mayer',dir:-1,label:'Mayer multiple',hint:'Price ÷ 200-day moving average of price.',fmt:v=>v.toFixed(2)+'×',near:{rel:.1}},
-  {side:'buy',id:'b_dd',key:'dd',dir:-1,label:'Drop from cycle top',hint:'Percent below this cycle’s highest close.',fmt:v=>v.toFixed(0)+'%',near:{abs:10}},
-  {side:'buy',id:'b_ttop',key:'daysTop',window:true,label:'Days since cycle top',hint:'Past bear-market lows came this many days after the top.',fmt:v=>Math.round(v)+' d'},
-  {side:'buy',id:'b_thalv',key:'daysHalv',window:true,label:'Days since halving (bottom timing)',hint:'Past bear-market lows came this many days after the halving.',fmt:v=>Math.round(v)+' d'},
-  {side:'sell',id:'s_mvrv',key:'mvrv',dir:1,label:'MVRV high',hint:'Price far above the average on-chain cost basis.',fmt:v=>v.toFixed(2),near:{rel:.1}},
-  {side:'sell',id:'s_z',key:'z',dir:1,label:'Rolling MVRV z high',hint:'MVRV far above its own 1-year average.',fmt:v=>v.toFixed(2),near:{abs:.3}},
-  {side:'sell',id:'s_w200',key:'w200',dir:1,label:'Price vs 200-week average',hint:'Price ÷ 200-week moving average of price.',fmt:v=>v.toFixed(2)+'×',near:{rel:.1}},
-  {side:'sell',id:'s_mayer',key:'mayer',dir:1,label:'Mayer multiple',hint:'Price ÷ 200-day moving average of price.',fmt:v=>v.toFixed(2)+'×',near:{rel:.1}},
-  {side:'sell',id:'s_thalv',key:'daysHalv',window:true,label:'Days since halving (top timing)',hint:'Past cycle tops came this many days after the halving.',fmt:v=>Math.round(v)+' d'},
-  {side:'sell',id:'s_tbot',key:'daysBottom',window:true,label:'Days since last bear low',hint:'Past cycle tops came this many days after the previous bear-market low.',fmt:v=>Math.round(v)+' d'}
-];
-const SIG_TIME_NEAR_DAYS=60;
-let SIGNALS_CACHE=null;
+/* ===== Valuation zone (tab 14) =====
+   Each measure is ranked against its own previous 4 years: no thresholds are learned from past cycles,
+   so the gauge adapts as cycles shrink. Backtests showed that buying more when MVRV is cheap does NOT
+   reliably beat plain weekly DCA, so this view is context, not a signal.
+   generate_summary.py mirrors computeValuation(); change both together. */
+const VAL_WINDOW_DAYS=1461,VAL_MIN_POINTS=730,VAL_CHEAP=.20,VAL_HOT=.80,VAL_VERY=.05,VAL_DCA_STEP_DAYS=30;
+const VAL_HYPOTHESIS={registered:'2026-11-22',metric:'w200',scheme:'S1',
+  text:'Weekly buys scaled by price / 200-week average (2× in its cheapest 20% of the last 4 years, 0.5× in its dearest 20%, else 1×) beat plain weekly DCA.'};
+const VAL_METRICS=[['mvrv','MVRV'],['w200','Price / 200-week average'],['mayer','Mayer multiple (price / 200-day average)']];
+const VAL_SCHEMES=[['S1','Bands 2× / 1× / 0.5×'],['S2','Sliding 0–2×'],['S3','Wait for cheap (≤ 4y median)']];
+let VALUATION_CACHE=null;
 
-// Per-date inputs. Price MAs need full, gap-free windows of daily closes.
-function signalSeries(){
+function valZone(p){if(!Number.isFinite(p))return 'No data';return p<=VAL_VERY?'Very cheap':p<=VAL_CHEAP?'Cheap':p>=1-VAL_VERY?'Very overheated':p>=VAL_HOT?'Overheated':'Normal';}
+function valMedian(v){const s=[...v].sort((a,b)=>a-b),n=s.length;return n?(n%2?s[n>>1]:(s[n/2-1]+s[n/2])/2):null;}
+function valSigned(v,d=1){return Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(d)+'%':'—';}
+function lowerBound(a,x){let lo=0,hi=a.length;while(lo<hi){const m=(lo+hi)>>1;if(a[m]<x)lo=m+1;else hi=m;}return lo;}
+
+function valuationRows(){
   const dates=Object.keys(PRICE_MAP).sort(),px=dates.map(d=>PRICE_MAP[d]),pos=new Map(dates.map((d,i)=>[d,i]));
   const roll=w=>{const out=new Array(px.length).fill(null);let s=0,gap=0;
     for(let i=0;i<px.length;i++){s+=px[i];if(i>=w)s-=px[i-w];if(i&&Date.parse(dates[i])-Date.parse(dates[i-1])!==DAY_MS)gap=i;if(i>=w-1&&gap<=i-w+1)out[i]=s/w;}return out;};
-  const ma200=hasPriceData?roll(200):[],ma1400=hasPriceData?roll(1400):[];
-  const lows={};const prevLow=c=>{if(c<2)return null;if(!(c-1 in lows)){const r=(BY_CYCLE[c-1]||[]).filter(d=>Number.isFinite(d.price));lows[c-1]=r.length?cycleHighLow(r,'price')?.low||null:null;}return lows[c-1];};
-  let cur=-1,hi=null;
-  return DATA.map(d=>{
-    const c=d.cycle,h=HALVINGS[c-1],p=Number.isFinite(d.price)?d.price:null,i=pos.get(d.dateStr);
-    if(c!==cur){cur=c;hi=null;}
-    if(p&&h&&+d.date<=+h+SIG_SELL_WINDOW_DAYS*DAY_MS&&(!hi||p>hi.price))hi={price:p,date:d.date};
-    const low=prevLow(c),days=t=>Math.round((d.date-t)/DAY_MS);
-    return {date:d.date,dateStr:d.dateStr,cycle:c,price:p,mvrv:d.mvrv,z:d.zReady&&Number.isFinite(d.zscore)?d.zscore:null,
-      mayer:p&&i!==undefined&&ma200[i]?p/ma200[i]:null,w200:p&&i!==undefined&&ma1400[i]?p/ma1400[i]:null,
-      dd:p&&hi?(p/hi.price-1)*100:null,daysTop:p&&hi?days(hi.date):null,daysHalv:h?days(h):null,daysBottom:low?days(low.date):null};
-  });
+  const ma200=roll(200),ma1400=roll(1400);
+  return DATA.map(d=>{const p=Number.isFinite(d.price)&&d.price>0?d.price:null,i=pos.get(d.dateStr);
+    return {date:d.date,dateStr:d.dateStr,cycle:d.cycle,price:p,mvrv:d.mvrv,mayer:p&&i!==undefined&&ma200[i]?p/ma200[i]:null,w200:p&&i!==undefined&&ma1400[i]?p/ma1400[i]:null};});
 }
-
-// What each completed cycle looked like at its top (sell side) and bottom (buy side).
-function signalCalibration(rows){
-  const last=rows.at(-1).date,out={sell:[],buy:[]},ext=(a,k,f)=>{const v=a.map(r=>r[k]).filter(Number.isFinite);return v.length>=.9*a.length?f(...v):null;};  // skip a cycle when the measure covers <90% of the phase
-  for(let c=1;c<=HALVINGS.length;c++){
-    const h=HALVINGS[c-1];if(!h||!HALVING_EVENTS[c-1]?.confirmed)continue;
-    const cr=rows.filter(r=>r.cycle===c&&r.price);if(cr.length<30)continue;
-    const hl=cycleHighLow(cr,'price');if(!hl)continue;const top=hl.high,bot=hl.low;
-    if(+last>=+h+SIG_SELL_WINDOW_DAYS*DAY_MS){const w=cr.filter(r=>+r.date<=+h+SIG_SELL_WINDOW_DAYS*DAY_MS);
-      out.sell.push({cycle:c,date:top.dateStr,price:top.price,mvrv:ext(w,'mvrv',Math.max),z:ext(w,'z',Math.max),w200:ext(w,'w200',Math.max),mayer:ext(w,'mayer',Math.max),daysHalv:top.daysHalv,daysBottom:top.daysBottom});}
-    const next=HALVINGS[c];
-    if(next&&HALVING_EVENTS[c]?.confirmed&&+last>=+next){const w=cr.filter(r=>r.date>=top.date);
-      out.buy.push({cycle:c,date:bot.dateStr,price:bot.price,mvrv:ext(w,'mvrv',Math.min),z:ext(w,'z',Math.min),w200:ext(w,'w200',Math.min),mayer:ext(w,'mayer',Math.min),dd:(bot.price/top.price-1)*100,daysTop:Math.round((bot.date-top.date)/DAY_MS),daysHalv:bot.daysHalv});}
+// Share of the previous 4 years' readings strictly below today's (needs 730+ prior readings).
+function valPercentiles(rows,key){
+  const win=[],srt=[],out={};let head=0;
+  for(const r of rows){
+    while(head<win.length&&+win[head][0]<=+r.date-VAL_WINDOW_DAYS*DAY_MS){srt.splice(lowerBound(srt,win[head][1]),1);head++;}
+    const v=r[key];
+    if(Number.isFinite(v)){if(srt.length>=VAL_MIN_POINTS)out[r.dateStr]=lowerBound(srt,v)/srt.length;win.push([r.date,v]);srt.splice(lowerBound(srt,v),0,v);}
   }
   return out;
 }
-
-function signalRules(cal){
-  return SIGNAL_DEFS.map(s=>{
-    const past=cal[s.side].map(c=>({cycle:c.cycle,v:c[s.key]})).filter(p=>Number.isFinite(p.v)),vals=past.map(p=>p.v);
-    let rule={...s,past,n:past.length};
-    if(s.window){if(vals.length>=2)rule.window=[Math.min(...vals),Math.max(...vals)];}
-    else if(Number.isFinite(s.fixed))rule.th=s.fixed;
-    else if(vals.length>=2)rule.th=s.dir<0?Math.max(...vals):Math.min(...vals);  // least extreme past value
-    rule.ready=s.window?!!rule.window:Number.isFinite(rule.th);
-    return rule;
-  });
+function valDca(mondays,pct,start,end,scheme){
+  let cash=0,btc=0,dep=0,last=null;
+  for(const r of mondays){
+    if(!(+r.date>=+start&&+r.date<+end)||!(r.dateStr in pct))continue;
+    cash+=100;dep+=100;const p=pct[r.dateStr];
+    let amt=scheme==='DCA'?100:scheme==='S1'?(p<=VAL_CHEAP?200:p>=VAL_HOT?50:100):scheme==='S2'?200*(1-p):(p<=.5?cash:0);
+    amt=Math.min(amt,cash);btc+=amt/r.price;cash-=amt;last=r.price;
+  }
+  return dep?{weeks:Math.round(dep/100),value:(btc*last+cash)/dep,cashLeft:cash/dep}:null;
+}
+function valDcaStudy(rows,mondays,pct){
+  const keys=Object.keys(pct).sort();const first=new Date(keys[0]),last=rows.at(-1).date,W=VAL_WINDOW_DAYS*DAY_MS;
+  const starts=[];for(let d=+first;d+W<=+last;d+=VAL_DCA_STEP_DAYS*DAY_MS)starts.push(new Date(d));
+  const diffs={},series=[];VAL_SCHEMES.forEach(([k])=>diffs[k]=[]);
+  starts.forEach(s0=>{const e=new Date(+s0+W),base=valDca(mondays,pct,s0,e,'DCA'),pt={start:fmtDate(s0)};
+    VAL_SCHEMES.forEach(([k])=>{const x=(valDca(mondays,pct,s0,e,k).value/base.value-1)*100;diffs[k].push(x);pt[k]=x;});series.push(pt);});
+  const summary={};VAL_SCHEMES.forEach(([k])=>{const v=diffs[k];summary[k]={beat:v.filter(x=>x>0).length,n:v.length,median:valMedian(v),worst:v.length?Math.min(...v):null,best:v.length?Math.max(...v):null};});
+  const cycles=[];
+  for(let c=1;c<=HALVINGS.length;c++){
+    if(!HALVING_EVENTS[c-1]?.confirmed)continue;
+    const a=new Date(Math.max(+HALVINGS[c-1],+first)),b=HALVINGS[c]&&HALVING_EVENTS[c]?.confirmed?HALVINGS[c]:new Date(+last+DAY_MS);
+    if(+a>=+b)continue;const base=valDca(mondays,pct,a,b,'DCA');if(!base||base.weeks<52)continue;
+    const row={cycle:c,from:fmtDate(a),to:fmtDate(new Date(Math.min(+b-DAY_MS,+last))),dca:base.value};
+    VAL_SCHEMES.forEach(([k])=>{const x=valDca(mondays,pct,a,b,k);row[k]=(x.value/base.value-1)*100;row[k+'_cash']=x.cashLeft*100;});
+    cycles.push(row);
+  }
+  return {first:fmtDate(first),windows:starts.length,summary,cycles,series};
+}
+function computeValuation(){
+  if(VALUATION_CACHE&&VALUATION_CACHE.key===STATS.last.dateStr+'|'+DATA.length)return VALUATION_CACHE;
+  const rows=valuationRows(),now=rows.at(-1),mondays=rows.filter(r=>r.price&&r.date.getUTCDay()===1),pcts={};
+  VAL_METRICS.forEach(([k])=>pcts[k]=valPercentiles(rows,k));
+  const gauges=VAL_METRICS.map(([k,label])=>({key:k,label,value:now[k],pct:pcts[k][now.dateStr]}));
+  const fwd={},cyc={},ep={},lastDay={};
+  rows.forEach(r=>{const p=pcts.mvrv[r.dateStr];if(p===undefined||!r.price)return;
+    const later=PRICE_MAP[fmtDate(new Date(+r.date+365*DAY_MS))];if(!later)return;
+    const z=valZone(p);(fwd[z]??=[]).push((later/r.price-1)*100);(cyc[z]??=new Set()).add(r.cycle);
+    if(lastDay[z]===undefined||Math.round((r.date-lastDay[z])/DAY_MS)>30)ep[z]=(ep[z]||0)+1;  // new episode after a 30+ day gap
+    lastDay[z]=r.date;});
+  const outcomes=['Very cheap','Cheap','Normal','Overheated','Very overheated'].map(z=>{const v=(fwd[z]||[]).slice().sort((a,b)=>a-b);
+    if(!v.length)return {zone:z,n:0};const q=x=>v[Math.floor(x*(v.length-1))];
+    return {zone:z,n:v.length,episodes:ep[z],cycles:[...cyc[z]].sort((a,b)=>a-b),median:valMedian(v),p10:q(.1),p90:q(.9),min:v[0],max:v.at(-1),up:v.filter(x=>x>0).length/v.length*100};});
+  const dca=valDcaStudy(rows,mondays,pcts.mvrv),hp=pcts[VAL_HYPOTHESIS.metric];
+  const hypIn=valDcaStudy(rows,mondays,hp).summary[VAL_HYPOTHESIS.scheme];
+  const reg=new Date(+new Date(VAL_HYPOTHESIS.registered)+DAY_MS),end=new Date(+now.date+DAY_MS);
+  const base=valDca(mondays,hp,reg,end,'DCA'),test=valDca(mondays,hp,reg,end,VAL_HYPOTHESIS.scheme);
+  const hypLive={weeks:base?base.weeks:0,diff:base?(test.value/base.value-1)*100:null};
+  const cur=(BY_CYCLE[now.cycle]||[]).filter(d=>Number.isFinite(d.price)),hl=cur.length?cycleHighLow(cur,'price'):null;
+  VALUATION_CACHE={key:STATS.last.dateStr+'|'+DATA.length,now,gauges,zone:valZone(gauges[0].pct),outcomes,dca,hypIn,hypLive,top:hl?hl.high:null};
+  return VALUATION_CACHE;
 }
 
-// hit | near | no | passed | na
-function signalStatus(rule,v){
-  if(!rule.ready||!Number.isFinite(v))return 'na';
-  if(rule.window){const [a,b]=rule.window;return v>=a&&v<=b?'hit':v>b?'passed':v>=a-SIG_TIME_NEAR_DAYS?'near':'no';}
-  if(rule.dir*(v-rule.th)>=0)return 'hit';
-  const gap=Math.abs(v-rule.th);return (rule.near.abs!==undefined?gap<=rule.near.abs:gap<=Math.abs(rule.th)*rule.near.rel)?'near':'no';
+function valuationExportLines(V){
+  const L=[],cyc=c=>c?'C'+c:'pre-C1';
+  L.push('Zone (MVRV vs its previous 4 years): '+V.zone);
+  V.gauges.forEach(g=>L.push('  '+g.label+': '+(Number.isFinite(g.value)?g.value.toFixed(2):'—')+' · '+(g.pct!==undefined?'cheaper than '+(100-g.pct*100).toFixed(1)+'% of the last 4 years ('+valZone(g.pct)+')':'not enough history')));
+  L.push('','  --- WHAT THE NEXT 12 MONTHS LOOKED LIKE (by MVRV zone, daily starts) ---');
+  V.outcomes.forEach(o=>L.push(o.n?'  '+o.zone+': median '+valSigned(o.median,0)+' · middle 80% '+valSigned(o.p10,0)+' to '+valSigned(o.p90,0)+' · up '+o.up.toFixed(0)+'% of '+o.n.toLocaleString('en-US')+' days in '+o.episodes+' separate episodes · cycles '+o.cycles.map(cyc).join(', '):'  '+o.zone+': no past days'));
+  const D=V.dca;L.push('','  --- MVRV-SCALED BUYING vs PLAIN WEEKLY DCA ('+D.windows+' rolling 4-year periods from '+D.first+') ---');
+  VAL_SCHEMES.forEach(([k,lbl])=>{const x=D.summary[k];L.push('  '+k+' '+lbl+': beat DCA in '+x.beat+'/'+x.n+' · median '+valSigned(x.median)+' · worst '+valSigned(x.worst)+' · best '+valSigned(x.best));});
+  D.cycles.forEach(c=>L.push('  C'+c.cycle+' '+c.from+' → '+c.to+' (DCA ×'+c.dca.toFixed(2)+'): '+VAL_SCHEMES.map(([k])=>k+' '+valSigned(c[k])).join(' · ')));
+  const H=V.hypIn,live=V.hypLive;
+  L.push('','  --- TRACKED HYPOTHESIS (registered '+VAL_HYPOTHESIS.registered+') ---','  '+VAL_HYPOTHESIS.text,
+    '  Before registration (in-sample, overlapping periods): beat DCA in '+H.beat+'/'+H.n+' · median '+valSigned(H.median),
+    '  Since registration: '+live.weeks+' weeks'+(live.weeks?' · '+valSigned(live.diff)+' vs DCA':'')+' (read nothing until 52+ weeks)',
+    '  * Days within one episode are not independent: judge the zone table by its episode count.',
+    '  * Rolling periods overlap heavily; there are only ~4 independent cycles. Descriptive only, not investment advice.');
+  return L;
 }
 
-function computeSignals(){
-  if(SIGNALS_CACHE&&SIGNALS_CACHE.lastDate===STATS.last.dateStr&&SIGNALS_CACHE.n===DATA.length)return SIGNALS_CACHE;
-  const rows=signalSeries(),cal=signalCalibration(rows),rules=signalRules(cal),now=rows.at(-1);
-  // full-history median of each metric = the 0% end of the progress bar
-  const median=k=>{const v=rows.map(r=>r[k]).filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[Math.floor(v.length/2)]:null;};
-  const items=rules.map(r=>{const v=now[r.key],st=signalStatus(r,v);let pct=0;
-    if(st==='hit'||st==='passed')pct=100;
-    else if(r.window&&Number.isFinite(v))pct=Math.max(0,Math.min(99,v/r.window[0]*100));
-    else if(r.ready&&Number.isFinite(v)){const m=median(r.key);pct=Number.isFinite(m)&&m!==r.th?Math.max(0,Math.min(99,(v-m)/(r.th-m)*100)):0;}
-    return {...r,value:v,status:st,pct};});
-  const side=k=>{const s=items.filter(i=>i.side===k),usable=s.filter(i=>i.status!=='na');
-    return {items:s,total:usable.length,hit:usable.filter(i=>i.status==='hit').length,near:usable.filter(i=>i.status==='near').length};};
-  // daily hit counts with today's thresholds (in-sample: thresholds were learned from these same cycles)
-  const hist=rows.map(r=>{const c={buy:0,sell:0};rules.forEach(rule=>{if(signalStatus(rule,r[rule.key])==='hit')c[rule.side]++;});return {dateStr:r.dateStr,price:r.price,buy:c.buy,sell:c.sell};});
-  let models=null;try{if(hasPriceData)models=modelSet(STATS.last.cycle,STATS.last.date,true);}catch(e){console.warn(e);}
-  SIGNALS_CACHE={lastDate:STATS.last.dateStr,n:DATA.length,now,cal,items,buy:side('buy'),sell:side('sell'),hist,models};
-  return SIGNALS_CACHE;
+const VAL_TONE={'Very cheap':'cheap','Cheap':'cheap','Normal':'normal','Overheated':'hot','Very overheated':'hot','No data':'normal'};
+function valGauge(g,big){
+  const ok=Number.isFinite(g.pct),pos=ok?(g.pct*100).toFixed(1):0,cheaper=ok?(100-g.pct*100).toFixed(0):null;
+  return '<div class="val-g'+(big?' big':'')+'"><div class="val-g-top"><span>'+g.label+'</span><strong>'+(Number.isFinite(g.value)?g.value.toFixed(2)+(g.key==='mvrv'?'':'×'):'—')+'</strong></div>'
+    +'<div class="val-track" role="img" aria-label="'+(ok?'Cheaper than '+cheaper+'% of the last 4 years':'Not enough history')+'"><span class="seg c"></span><span class="seg n"></span><span class="seg h"></span>'+(ok?'<i style="left:'+pos+'%"></i>':'')+'</div>'
+    +'<div class="val-g-sub">'+(ok?'Cheaper than <b>'+cheaper+'%</b> of the last 4 years · '+valZone(g.pct):'Not enough history yet')+'</div></div>';
 }
-
-function signalLean(S){
-  const sc=s=>s.total?(s.hit+.5*s.near)/s.total:0,b=sc(S.buy),s=sc(S.sell),lean=s-b; // -1 = all buy-zone, +1 = all sell-zone
-  const label=b>=.5&&b>s?'Many bottom-like conditions':s>=.5&&s>b?'Many top-like conditions':b>s+.2?'Leaning toward bottom-like':s>b+.2?'Leaning toward top-like':'Mixed / mid-cycle';
-  return {lean,label,b,s};
-}
-
-function signalDots(side){return side.items.map(i=>'<span class="sig-dot sig-'+i.status+'" title="'+i.label+': '+i.status+'"></span>').join('');}
-
-const SIG_BADGE={hit:'Hit',near:'Near',no:'Not yet',passed:'Window passed',na:'No data'};
-function signalCard(i){
-  const past=i.past.map(p=>'C'+p.cycle+' '+i.fmt(p.v)).join(' · ')||'—';
-  const rule=i.window?'Window '+i.fmt(i.window[0])+' – '+i.fmt(i.window[1]):Number.isFinite(i.th)?(i.dir<0?'≤ ':'≥ ')+i.fmt(i.th)+(i.fixed?' (fixed rule)':' (mildest past cycle)'):'Needs 2+ completed cycles';
-  return '<div class="sig-card sig-'+i.status+' side-'+i.side+'"><div class="sig-head"><span class="sig-name">'+i.label+'</span><span class="sig-badge">'+SIG_BADGE[i.status]+'</span></div>'
-    +'<div class="sig-val">'+(Number.isFinite(i.value)?i.fmt(i.value):'—')+'</div>'
-    +'<div class="sig-bar" role="img" aria-label="'+Math.round(i.pct)+'% of the way to the threshold"><span style="width:'+i.pct.toFixed(0)+'%"></span></div>'
-    +'<div class="sig-rule">'+rule+'</div><div class="sig-past">'+(i.window?'At past '+(i.side==='buy'?'bottoms':'tops'):i.side==='buy'?'Lowest in past bear markets':'Highest in past bull runs')+': '+past+'</div><div class="sig-hint">'+i.hint+'</div></div>';
-}
-
-function signalsChip(){
+function valuationChip(){
   if(!hasPriceData)return '';
-  try{const S=computeSignals(),L=signalLean(S);
-    return '<button class="sig-chip" onclick="switchTab(14)" aria-label="Open Cycle signals"><span class="tone-good">▼ Buy-zone '+S.buy.hit+'/'+S.buy.total+'</span><span class="tone-bad">▲ Sell-zone '+S.sell.hit+'/'+S.sell.total+'</span><span class="muted">'+L.label+' →</span></button>';}
+  try{const V=computeValuation(),g=V.gauges[0];if(!Number.isFinite(g.pct))return '';
+    return '<button class="val-chip tone-'+VAL_TONE[V.zone]+'" onclick="switchTab(14)" aria-label="Open Valuation zone"><span>Valuation: <b>'+V.zone+'</b></span><span class="muted">MVRV cheaper than '+(100-g.pct*100).toFixed(0)+'% of the last 4 years →</span></button>';}
   catch(e){console.warn(e);return '';}
 }
-
-function buildSignals(){
+function buildValuation(){
   const el=document.getElementById('p14');
-  if(!hasPriceData){el.innerHTML='<div class="info">Cycle signals need daily BTC prices. Load price data to see this view.</div>';return;}
-  const S=computeSignals(),L=signalLean(S),n=S.now,m=S.models,pos=((L.lean+1)/2*100).toFixed(1);
-  const ctx=[];
-  if(Number.isFinite(n.price))ctx.push('BTC '+moneyText(n.price));
-  if(Number.isFinite(n.daysHalv))ctx.push('day '+(n.daysHalv+1).toLocaleString()+' of C'+n.cycle);
-  if(Number.isFinite(n.dd))ctx.push(Math.abs(n.dd).toFixed(0)+'% below cycle top');
-  if(m&&Number.isFinite(m.consensusBot)&&Number.isFinite(n.price))ctx.push('model floor '+moneyText(m.consensusBot)+' ('+((n.price/m.consensusBot-1)*100>=0?'+':'')+((n.price/m.consensusBot-1)*100).toFixed(0)+'%)');
-  if(m&&Number.isFinite(m.consensus)&&Number.isFinite(n.price))ctx.push('model ceiling '+moneyText(m.consensus)+' ('+((n.price/m.consensus-1)*100).toFixed(0)+'%)');
-  const gauge=(s,cls,title,sub)=>'<div class="sig-side '+cls+'"><div class="sig-side-t">'+title+'</div><div class="sig-big">'+s.hit+'<small>/'+s.total+'</small></div><div class="sig-side-s">'+sub+(s.near?' · '+s.near+' near':'')+'</div><div class="sig-dots">'+signalDots(s)+'</div></div>';
-  el.innerHTML='<section class="sig-summary" aria-label="Signal summary">'
-    +'<div class="sig-sum-head"><strong>Cycle signals</strong><span class="muted">as of '+n.dateStr+'</span></div>'
-    +'<div class="sig-sides">'+gauge(S.buy,'buy','▼ Buy-zone signals','like past bottoms')+gauge(S.sell,'sell','▲ Sell-zone signals','like past tops')+'</div>'
-    +'<div class="sig-meter" role="img" aria-label="'+L.label+'"><div class="sig-meter-track"><span class="sig-meter-mark" style="left:'+pos+'%"></span></div><div class="sig-meter-lbl"><span>Bottom-like</span><strong>'+L.label+'</strong><span>Top-like</span></div></div>'
-    +'<div class="sig-ctx">'+ctx.join(' · ')+'</div>'
-    +'<div class="sig-legend"><span><i class="sig-dot sig-hit"></i>Hit</span><span><i class="sig-dot sig-near"></i>Near</span><span><i class="sig-dot sig-no"></i>Not yet</span><span><i class="sig-dot sig-passed"></i>Timing window passed</span></div>'
+  if(!hasPriceData){el.innerHTML='<div class="info">The valuation zone needs daily BTC prices. Load price data to see this view.</div>';return;}
+  const V=computeValuation(),n=V.now,D=V.dca,S1=D.summary.S1,cyc=c=>c?'C'+c:'pre-C1';
+  const day=n.cycle&&HALVINGS[n.cycle-1]?Math.round((n.date-HALVINGS[n.cycle-1])/DAY_MS)+1:null,sinceTop=V.top?Math.round((n.date-V.top.date)/DAY_MS):null;
+  const zoneCls=VAL_TONE[V.zone];
+  el.innerHTML='<section class="val-summary" aria-label="Valuation summary">'
+    +'<div class="val-head"><span class="muted">Valuation zone · as of '+n.dateStr+'</span></div>'
+    +'<div class="val-zone '+zoneCls+'">'+V.zone+'</div>'
+    +'<div class="val-lead">'+(Number.isFinite(V.gauges[0].pct)?'MVRV '+V.gauges[0].value.toFixed(2)+' is cheaper than '+(100-V.gauges[0].pct*100).toFixed(0)+'% of readings in the last 4 years.':'Not enough MVRV history yet.')+'</div>'
+    +valGauge(V.gauges[0],true)+'<div class="val-mini">'+V.gauges.slice(1).map(g=>valGauge(g,false)).join('')+'</div>'
+    +'<div class="val-legend"><span><i class="c"></i>Cheapest 20%</span><span><i class="n"></i>Normal</span><span><i class="h"></i>Dearest 20%</span></div>'
+    +'<div class="val-note"><strong>Context, not a buy signal.</strong> Buying more when MVRV was cheap roughly tied plain weekly DCA (beat it in '+S1.beat+' of '+S1.n+' four-year periods, median '+valSigned(S1.median)+'). See the test below.</div>'
+    +(day?'<div class="val-clock">Halving clock: day '+day.toLocaleString()+' of C'+n.cycle+(sinceTop!==null?' · '+sinceTop+' days since this cycle’s top ('+V.top.dateStr+')':'')+'. Past tops came 525–546 days after a halving and past lows 364–406 days after the top (only 3 cycles each).</div>':'')
     +'</section>'
-    +'<h3 class="sig-h">▼ Buy-zone: conditions seen at past bottoms</h3><div class="sig-grid">'+S.buy.items.map(signalCard).join('')+'</div>'
-    +'<h3 class="sig-h">▲ Sell-zone: conditions seen at past tops</h3><div class="sig-grid">'+S.sell.items.map(signalCard).join('')+'</div>'
-    +'<div class="chart-card"><div class="chart-title">Signals hit over time · green ▲ buy-zone, red ▼ sell-zone · grey = BTC price (log)</div>'+makeCanvas('c14',300)+'</div>'
-    +'<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Top date</th><th>Top</th><th>Bottom date</th><th>Bottom</th><th>Drop</th></tr></thead><tbody>'
-    +[...new Set([...S.cal.sell,...S.cal.buy].map(c=>c.cycle))].sort().map(c=>{const t=S.cal.sell.find(x=>x.cycle===c),b=S.cal.buy.find(x=>x.cycle===c);
-      return '<tr><td>C'+c+'</td><td>'+(t?t.date:'—')+'</td><td>'+(t?moneyText(t.price):'—')+'</td><td>'+(b?b.date:'not final')+'</td><td>'+(b?moneyText(b.price):'—')+'</td><td>'+(b?b.dd.toFixed(0)+'%':'—')+'</td></tr>';}).join('')+'</tbody></table></div>'
-    +'<div class="info"><strong>How to read this.</strong> Each signal compares today with how far the same measure went in past cycles: the lowest reading in each past bear market (buy side) or the highest in each past bull run (sell side). The threshold is the <em>mildest</em> of those past extremes, so “Hit” means today is at least as stretched as the least extreme past cycle. MVRV below 1 is a fixed rule because every past bear market crossed it. More hits on one side means more measures agree. Timing signals are “Hit” inside the range of past timings and “Window passed” after it. Tops use the highest close within '+SIG_SELL_WINDOW_DAYS+' days of the halving; bottoms use the lowest close after that top, so a cycle’s bottom only counts once the next halving has happened.'
-    +'<br><br><strong>Limits.</strong> Only '+S.cal.buy.length+' completed bottoms and '+S.cal.sell.length+' tops exist, so thresholds rest on very few cases. The history chart uses today’s thresholds on the same cycles they came from, so it looks better than real-time use would have. Peaks and drawdowns have shrunk each cycle, so sell-zone thresholds take the latest (mildest) cycle and the drop threshold may still be too strict. The model floor and ceiling are shown for context only and are not counted. Descriptive only — not investment advice.</div>';
+    +'<h3 class="val-h">What the next 12 months looked like after past days in each zone</h3>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>MVRV zone</th><th>Median 12m return</th><th>Middle 80%</th><th>Up</th><th>Days · episodes</th><th>Cycles</th></tr></thead><tbody>'
+    +V.outcomes.map(o=>'<tr'+(o.zone===V.zone?' class="val-cur"':'')+'><td>'+o.zone+(o.zone===V.zone?' ← now':'')+'</td>'+(o.n?'<td>'+valSigned(o.median,0)+'</td><td>'+valSigned(o.p10,0)+' to '+valSigned(o.p90,0)+'</td><td>'+o.up.toFixed(0)+'%</td><td>'+o.n.toLocaleString()+' · '+o.episodes+'</td><td>'+o.cycles.map(cyc).join(', ')+'</td>':'<td colspan="5">No past days</td>')+'</tr>').join('')
+    +'</tbody></table></div>'
+    +'<div class="info">Days inside one episode move together, so read each row by its <strong>episode</strong> count, not its day count. “Very cheap” rests on only a handful of episodes from 3 cycles.</div>'
+    +'<h3 class="val-h">Does buying more when cheap beat plain weekly DCA?</h3>'
+    +'<div class="g3">'+VAL_SCHEMES.map(([k,lbl])=>{const x=D.summary[k];return statCard(lbl,'<span class="'+(x.median>0?'tone-good':'tone-bad')+'">'+valSigned(x.median)+'</span>','Median vs DCA · beat it in '+x.beat+'/'+x.n+' periods · worst '+valSigned(x.worst)+' · best '+valSigned(x.best));}).join('')+'</div>'
+    +'<div class="chart-card"><div class="chart-title">Result vs plain DCA for every 4-year period, by start date (above 0 = beat DCA)</div>'+makeCanvas('c14',260)+'</div>'
+    +'<div class="tbl-wrap"><table><thead><tr><th>Cycle</th><th>Period</th><th>Plain DCA</th>'+VAL_SCHEMES.map(([k])=>'<th>'+k+' vs DCA</th>').join('')+'</tr></thead><tbody>'
+    +D.cycles.map(c=>'<tr><td>C'+c.cycle+'</td><td>'+c.from+' → '+c.to+'</td><td>×'+c.dca.toFixed(2)+'</td>'+VAL_SCHEMES.map(([k])=>'<td class="'+(c[k]>0?'tone-good':'tone-bad')+'">'+valSigned(c[k])+'</td>').join('')+'</tr>').join('')
+    +'</tbody></table></div>'
+    +'<div class="info">Every strategy deposits $100 a week; plain DCA buys $100 every Monday. S1 buys 2× in MVRV’s cheapest 20% of the last 4 years and 0.5× in its dearest 20%. S2 slides from 0× (dearest) to 2× (cheapest). S3 buys only when MVRV is below its 4-year median and saves the cash otherwise. Unspent cash counts at face value. Periods start every 30 days and overlap heavily, so '+D.windows+' periods hold only about 4 independent cycles.</div>'
+    +'<div class="val-hyp"><div class="val-hyp-t">Tracked hypothesis · registered '+VAL_HYPOTHESIS.registered+'</div><p>'+VAL_HYPOTHESIS.text+'</p>'
+    +'<div class="g3" style="margin-bottom:0">'+statCard('Before registration','Beat in '+V.hypIn.beat+'/'+V.hypIn.n,'In-sample · median '+valSigned(V.hypIn.median)+' · flattered by testing 15 combinations')+statCard('Since registration',V.hypLive.weeks+' weeks',V.hypLive.weeks?valSigned(V.hypLive.diff)+' vs DCA so far':'Collecting new data')+statCard('Verdict',V.hypLive.weeks>=52?(V.hypLive.diff>0?'Holding up':'Not holding up'):'Too early','Judged only on data after registration; needs 52+ weeks')+'</div></div>'
+    +'<div class="info"><strong>Method and limits.</strong> Each measure is ranked against its own readings over the previous 4 years (at least 730 of them), so nothing is fitted to past cycle tops or bottoms and the scale adapts as cycles shrink. Zones: cheapest 20% = Cheap (5% = Very cheap), dearest 20% = Overheated (5% = Very overheated). An earlier checklist that learned thresholds from past tops and bottoms fired up to a year early on tops and missed the 2025 top, so it was retired. Descriptive only — not investment advice.</div>';
   destroyChart('c14');
-  const h=[];for(let i=0;i<S.hist.length;i+=7){const w=S.hist.slice(i,i+7),e=w.at(-1);h.push({dateStr:e.dateStr,price:e.price,buy:Math.max(...w.map(r=>r.buy)),sell:Math.max(...w.map(r=>r.sell))});}
-  const o=withLegend(chartDefs());  // weekly max; buy-zone plotted up, sell-zone mirrored down
-  o.scales.y=Object.assign(o.scales.y,{min:-S.sell.total,max:S.buy.total,ticks:Object.assign({},o.scales.y.ticks,{stepSize:1,callback:v=>Math.abs(v)}),title:{display:true,text:'▲ buy-zone · sell-zone ▼',color:CC.text}});
-  o.scales.y1={type:'logarithmic',position:'right',grid:{display:false},ticks:{color:CC.muted,callback:v=>{const k=Math.log10(v);return Number.isInteger(Math.round(k*1e6)/1e6)?'$'+(v>=1000?(v/1000)+'k':v):'';}},border:{display:false}};
-  o.interaction={mode:'index',intersect:false};o.plugins.tooltip.callbacks={label:c=>c.dataset.yAxisID==='y1'?'BTC '+moneyText(c.raw):c.dataset.label+': '+Math.abs(c.raw)};
-  o.plugins.annotation={annotations:buildHalvingAnnotations(h)};
-  CHARTS.c14=new Chart(document.getElementById('c14'),{type:'line',data:{labels:h.map(r=>r.dateStr),datasets:[
-    {label:'Buy-zone hits',data:h.map(r=>r.buy),borderColor:CC.green,backgroundColor:CC.green+'33',fill:'origin',stepped:true,borderWidth:1.5,pointRadius:0},
-    {label:'Sell-zone hits',data:h.map(r=>-r.sell),borderColor:CC.red,backgroundColor:CC.red+'33',fill:'origin',stepped:true,borderWidth:1.5,pointRadius:0},
-    {label:'BTC price',data:h.map(r=>r.price),yAxisID:'y1',borderColor:CC.muted,borderWidth:1,pointRadius:0}]},options:o});
+  const o=withLegend(chartDefs());o.interaction={mode:'index',intersect:false};
+  o.scales.y.ticks=Object.assign({},o.scales.y.ticks,{callback:v=>v+'%'});
+  o.plugins.tooltip.callbacks={label:c=>c.dataset.label+': '+valSigned(c.raw)};
+  o.plugins.annotation={annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:CC.muted,borderWidth:1,borderDash:[4,4]}}};
+  const cols={S1:CC.accent,S2:CC.amber,S3:CC.red};
+  CHARTS.c14=new Chart(document.getElementById('c14'),{type:'line',data:{labels:D.series.map(p=>p.start),
+    datasets:VAL_SCHEMES.map(([k])=>({label:k,data:D.series.map(p=>p[k]),borderColor:cols[k],borderWidth:k==='S1'?2.5:1.5,pointRadius:0}))},options:o});
 }
 
 function reportRenderError(err){console.error(err);if(typeof Chart==='undefined'){chartLibraryBanner();return;}const p=document.getElementById('p'+activeTab);const note=document.createElement('div');note.className='info';note.setAttribute('role','alert');note.textContent='This view could not render. Check that chart scripts are available, then select the tab to retry. '+err.message;p.prepend(note);}
