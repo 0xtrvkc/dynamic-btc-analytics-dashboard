@@ -219,33 +219,32 @@ def price_at_halving(price_map, halving_dt):
         if p: return p
     return None
 
-# ── cycle signals (mirrors computeSignals() in index.html, tab "Cycle signals") ──
-# Threshold = the mildest extreme seen across past cycles (lowest reading in each past bear market
-# for buy-zone signals, highest in each past bull run for sell-zone signals). MVRV < 1 is a fixed rule.
-SIG_TIME_NEAR_DAYS = 60
-SIGNAL_DEFS = [
-    # side, id, key, dir, label, fmt, near, fixed, window
-    ("buy",  "b_mvrv",  "mvrv",       -1, "MVRV below 1",                       "f2",  ("rel", .1), 1.0,  False),
-    ("buy",  "b_z",     "z",          -1, "Rolling MVRV z deeply negative",     "f2",  ("abs", .3), None, False),
-    ("buy",  "b_w200",  "w200",       -1, "Price vs 200-week average",          "x",   ("rel", .1), None, False),
-    ("buy",  "b_mayer", "mayer",      -1, "Mayer multiple",                     "x",   ("rel", .1), None, False),
-    ("buy",  "b_dd",    "dd",         -1, "Drop from cycle top",                "pct", ("abs", 10), None, False),
-    ("buy",  "b_ttop",  "daysTop",     0, "Days since cycle top",               "d",   None,        None, True),
-    ("buy",  "b_thalv", "daysHalv",    0, "Days since halving (bottom timing)", "d",   None,        None, True),
-    ("sell", "s_mvrv",  "mvrv",        1, "MVRV high",                          "f2",  ("rel", .1), None, False),
-    ("sell", "s_z",     "z",           1, "Rolling MVRV z high",                "f2",  ("abs", .3), None, False),
-    ("sell", "s_w200",  "w200",        1, "Price vs 200-week average",          "x",   ("rel", .1), None, False),
-    ("sell", "s_mayer", "mayer",       1, "Mayer multiple",                     "x",   ("rel", .1), None, False),
-    ("sell", "s_thalv", "daysHalv",    0, "Days since halving (top timing)",    "d",   None,        None, True),
-    ("sell", "s_tbot",  "daysBottom",  0, "Days since last bear low",           "d",   None,        None, True),
-]
-SIG_BADGE = {"hit": "HIT", "near": "NEAR", "no": "NOT YET", "passed": "WINDOW PASSED", "na": "NO DATA"}
+# ── valuation zone (mirrors computeValuation() in index.html, tab "Valuation zone") ──
+# Each measure is ranked against its own previous 4 years (no thresholds learned from past cycles),
+# so the gauge adapts as cycles shrink. Backtests showed MVRV-scaled buying does NOT reliably beat
+# plain weekly DCA, so this is context, not a signal. Keep in sync with index.html.
+VAL_WINDOW_DAYS = 1461
+VAL_MIN_POINTS = 730
+VAL_CHEAP, VAL_HOT, VAL_VERY = 0.20, 0.80, 0.05
+VAL_DCA_STEP_DAYS = 30
+VAL_HYPOTHESIS = {"registered": "2026-11-22", "metric": "w200", "scheme": "S1",
+                  "text": "Weekly buys scaled by price / 200-week average (2× in its cheapest 20% of the last 4 years, 0.5× in its dearest 20%, else 1×) beat plain weekly DCA."}
+VAL_METRICS = (("mvrv", "MVRV"), ("w200", "Price / 200-week average"), ("mayer", "Mayer multiple (price / 200-day average)"))
+VAL_SCHEMES = (("S1", "Bands 2× / 1× / 0.5×"), ("S2", "Sliding 0–2×"), ("S3", "Wait for cheap (≤ 4y median)"))
 
-def sig_fmt(kind, v):
-    if not finite(v): return "—"
-    return {"f2": f"{v:.2f}", "x": f"{v:.2f}×", "pct": f"{v:.0f}%", "d": f"{round(v)} d"}[kind]
+def val_zone(p):
+    if not finite(p): return "No data"
+    return ("Very cheap" if p <= VAL_VERY else "Cheap" if p <= VAL_CHEAP else
+            "Very overheated" if p >= 1 - VAL_VERY else "Overheated" if p >= VAL_HOT else "Normal")
 
-def signal_series(data, price_map):
+def val_quantile(sorted_vals, q):
+    return sorted_vals[int(q * (len(sorted_vals) - 1))]
+
+def val_median(v):
+    v = sorted(v); n = len(v)
+    return (v[n//2] if n % 2 else (v[n//2-1] + v[n//2]) / 2) if n else None
+
+def valuation_rows(data, price_map):
     dates = sorted(price_map); px = [price_map[d] for d in dates]; pos = {d: i for i, d in enumerate(dates)}
     def roll(w):
         out = [None] * len(px); acc = 0.0; gap = 0
@@ -256,110 +255,125 @@ def signal_series(data, price_map):
             if i >= w-1 and gap <= i-w+1: out[i] = acc / w
         return out
     ma200, ma1400 = roll(200), roll(1400)
-    by_cycle = {}
-    for d in data: by_cycle.setdefault(d["cycle"], []).append(d)
-    lows = {}
-    def prev_low(c):
-        if c < 2: return None
-        if c-1 not in lows:
-            r = [d for d in by_cycle.get(c-1, []) if finite(d.get("price"))]
-            hl = cycle_high_low(r, "price") if r else None
-            lows[c-1] = hl[1] if hl else None
-        return lows[c-1]
-    out = []; cur = -1; hi = None
+    rows = []
     for d in data:
-        c = d["cycle"]; h = HALVING_DTS[c-1] if c >= 1 else None
         p = d["price"] if finite(d.get("price")) else None; i = pos.get(d["date"])
-        if c != cur: cur = c; hi = None
-        if p and h and d["dt"] <= h + timedelta(days=CYCLE_TOP_WINDOW_DAYS) and (hi is None or p > hi[0]): hi = (p, d["dt"])
-        low = prev_low(c)
-        days = lambda t: round((d["dt"] - t).total_seconds() / 86400)
-        out.append({"dt": d["dt"], "date": d["date"], "cycle": c, "price": p, "mvrv": d["mvrv"],
-                    "z": d["zscore"] if d["zReady"] and finite(d.get("zscore")) else None,
-                    "mayer": p / ma200[i] if p and i is not None and ma200[i] else None,
-                    "w200": p / ma1400[i] if p and i is not None and ma1400[i] else None,
-                    "dd": (p / hi[0] - 1) * 100 if p and hi else None,
-                    "daysTop": days(hi[1]) if p and hi else None,
-                    "daysHalv": days(h) if h else None,
-                    "daysBottom": days(low["dt"]) if low else None})
+        rows.append({"dt": d["dt"], "date": d["date"], "cycle": d["cycle"], "price": p, "mvrv": d["mvrv"],
+                     "mayer": p / ma200[i] if p and i is not None and ma200[i] else None,
+                     "w200": p / ma1400[i] if p and i is not None and ma1400[i] else None})
+    return rows
+
+def val_percentiles(rows, key):
+    """Share of the previous 4 years' readings strictly below today's (needs 730+ prior readings)."""
+    import bisect
+    from collections import deque
+    win = deque(); srt = []; out = {}
+    for r in rows:
+        while win and win[0][0] <= r["dt"] - timedelta(days=VAL_WINDOW_DAYS):
+            srt.pop(bisect.bisect_left(srt, win.popleft()[1]))
+        v = r[key]
+        if finite(v):
+            if len(srt) >= VAL_MIN_POINTS: out[r["date"]] = bisect.bisect_left(srt, v) / len(srt)
+            win.append((r["dt"], v)); bisect.insort(srt, v)
     return out
 
-def signal_calibration(rows):
-    last = rows[-1]["dt"]; out = {"sell": [], "buy": []}
-    def ext(a, k, f):
-        v = [r[k] for r in a if finite(r.get(k))]
-        return f(v) if v and len(v) >= .9 * len(a) else None   # skip a cycle when the measure covers <90% of the phase
+def val_dca(rows, pct, start, end, scheme):
+    cash = btc = dep = 0.0; last = None
+    for r in rows:
+        if not (r["price"] and start <= r["dt"] < end and r["dt"].weekday() == 0 and r["date"] in pct): continue
+        cash += 100; dep += 100; p = pct[r["date"]]
+        if scheme == "DCA": amt = 100
+        elif scheme == "S1": amt = 200 if p <= VAL_CHEAP else 50 if p >= VAL_HOT else 100
+        elif scheme == "S2": amt = 200 * (1 - p)
+        else: amt = cash if p <= 0.5 else 0
+        amt = min(amt, cash); btc += amt / r["price"]; cash -= amt; last = r["price"]
+    if not dep: return None
+    return {"weeks": int(dep / 100), "value": (btc * last + cash) / dep, "cash_left": cash / dep}
+
+def val_dca_study(rows, pct):
+    first = min(parse_date(d) for d in pct); last = rows[-1]["dt"]
+    starts = []; d = first
+    while d + timedelta(days=VAL_WINDOW_DAYS) <= last: starts.append(d); d += timedelta(days=VAL_DCA_STEP_DAYS)
+    diffs = {k: [] for k, _ in VAL_SCHEMES}; series = []
+    for s0 in starts:
+        e = s0 + timedelta(days=VAL_WINDOW_DAYS); base = val_dca(rows, pct, s0, e, "DCA"); pt = {"start": s0.strftime("%Y-%m-%d")}
+        for k, _ in VAL_SCHEMES:
+            x = (val_dca(rows, pct, s0, e, k)["value"] / base["value"] - 1) * 100; diffs[k].append(x); pt[k] = x
+        series.append(pt)
+    summary = {k: {"beat": sum(x > 0 for x in v), "n": len(v), "median": val_median(v), "worst": min(v) if v else None, "best": max(v) if v else None} for k, v in diffs.items()}
+    cycles = []
     for c in range(1, len(HALVING_DTS) + 1):
-        h = HALVING_DTS[c-1]
         if not HALVING_EVENTS[c-1]["confirmed"]: continue
-        cr = [r for r in rows if r["cycle"] == c and r["price"]]
-        if len(cr) < 30: continue
-        hl = cycle_high_low(cr, "price")
-        if not hl: continue
-        top, bot = hl
-        end = h + timedelta(days=CYCLE_TOP_WINDOW_DAYS)
-        if last >= end:
-            w = [r for r in cr if r["dt"] <= end]
-            out["sell"].append({"cycle": c, "date": top["date"], "price": top["price"], "mvrv": ext(w, "mvrv", max), "z": ext(w, "z", max),
-                                "w200": ext(w, "w200", max), "mayer": ext(w, "mayer", max), "daysHalv": top["daysHalv"], "daysBottom": top["daysBottom"]})
-        if c < len(HALVING_DTS) and HALVING_EVENTS[c]["confirmed"] and last >= HALVING_DTS[c]:
-            w = [r for r in cr if r["dt"] >= top["dt"]]
-            out["buy"].append({"cycle": c, "date": bot["date"], "price": bot["price"], "mvrv": ext(w, "mvrv", min), "z": ext(w, "z", min),
-                               "w200": ext(w, "w200", min), "mayer": ext(w, "mayer", min), "dd": (bot["price"] / top["price"] - 1) * 100,
-                               "daysTop": round((bot["dt"] - top["dt"]).total_seconds() / 86400), "daysHalv": bot["daysHalv"]})
-    return out
+        a = max(HALVING_DTS[c-1], first)
+        b = HALVING_DTS[c] if c < len(HALVING_DTS) and HALVING_EVENTS[c]["confirmed"] else last + DAY
+        if a >= b: continue
+        base = val_dca(rows, pct, a, b, "DCA")
+        if not base or base["weeks"] < 52: continue
+        row = {"cycle": c, "from": a.strftime("%Y-%m-%d"), "to": min(b - DAY, last).strftime("%Y-%m-%d"), "dca": base["value"]}
+        for k, _ in VAL_SCHEMES:
+            x = val_dca(rows, pct, a, b, k); row[k] = (x["value"] / base["value"] - 1) * 100; row[k + "_cash"] = x["cash_left"] * 100
+        cycles.append(row)
+    return {"first": first.strftime("%Y-%m-%d"), "windows": len(starts), "summary": summary, "cycles": cycles, "series": series}
 
-def signal_status(rule, v):
-    if not rule["ready"] or not finite(v): return "na"
-    if rule["window"]:
-        a, b = rule["range"]
-        return "hit" if a <= v <= b else "passed" if v > b else "near" if v >= a - SIG_TIME_NEAR_DAYS else "no"
-    if rule["dir"] * (v - rule["th"]) >= 0: return "hit"
-    kind, amt = rule["near"]; gap = abs(v - rule["th"])
-    return "near" if (gap <= amt if kind == "abs" else gap <= abs(rule["th"]) * amt) else "no"
+def compute_valuation(data, price_map):
+    rows = valuation_rows(data, price_map); now = rows[-1]
+    pcts = {k: val_percentiles(rows, k) for k, _ in VAL_METRICS}
+    gauges = [{"key": k, "label": lbl, "value": now[k], "pct": pcts[k].get(now["date"])} for k, lbl in VAL_METRICS]
+    # what the next 12 months looked like after past days in each MVRV zone
+    fwd = {}
+    for r in rows:
+        p = pcts["mvrv"].get(r["date"])
+        if p is None or not r["price"]: continue
+        later = price_map.get((r["dt"] + timedelta(days=365)).strftime("%Y-%m-%d"))
+        if not later: continue
+        z = val_zone(p); fwd.setdefault(z, []).append((later / r["price"] - 1) * 100)
+        fwd.setdefault("_cycles_" + z, set()).add(r["cycle"])
+        prev = fwd.get("_last_" + z)   # a new episode starts after a 30+ day gap in the zone
+        if prev is None or (r["dt"] - prev).days > 30: fwd["_ep_" + z] = fwd.get("_ep_" + z, 0) + 1
+        fwd["_last_" + z] = r["dt"]
+    outcomes = []
+    for z in ("Very cheap", "Cheap", "Normal", "Overheated", "Very overheated"):
+        v = sorted(fwd.get(z, []))
+        if not v: outcomes.append({"zone": z, "n": 0}); continue
+        outcomes.append({"zone": z, "n": len(v), "episodes": fwd["_ep_" + z], "cycles": sorted(fwd["_cycles_" + z]), "median": val_median(v),
+                         "p10": val_quantile(v, .1), "p90": val_quantile(v, .9), "min": v[0], "max": v[-1],
+                         "up": sum(x > 0 for x in v) / len(v) * 100})
+    main = val_dca_study(rows, pcts["mvrv"])
+    hyp_pct = pcts[VAL_HYPOTHESIS["metric"]]
+    hyp_in = val_dca_study(rows, hyp_pct)["summary"][VAL_HYPOTHESIS["scheme"]]
+    reg = parse_date(VAL_HYPOTHESIS["registered"]) + DAY
+    base = val_dca(rows, hyp_pct, reg, now["dt"] + DAY, "DCA"); test = val_dca(rows, hyp_pct, reg, now["dt"] + DAY, VAL_HYPOTHESIS["scheme"])
+    live = {"weeks": base["weeks"] if base else 0, "diff": (test["value"] / base["value"] - 1) * 100 if base else None}
+    return {"now": now, "gauges": gauges, "zone": val_zone(gauges[0]["pct"]), "outcomes": outcomes, "dca": main, "hyp_in": hyp_in, "hyp_live": live}
 
-def compute_signals(data, price_map):
-    rows = signal_series(data, price_map); cal = signal_calibration(rows); now = rows[-1]; items = []
-    for side, sid, key, dr, label, fmt, near, fixed, window in SIGNAL_DEFS:
-        past = [(c["cycle"], c[key]) for c in cal[side] if finite(c.get(key))]; vals = [v for _, v in past]
-        rule = {"side": side, "id": sid, "key": key, "dir": dr, "label": label, "fmt": fmt, "near": near,
-                "fixed": fixed, "window": window, "past": past, "th": None, "range": None}
-        if window:
-            if len(vals) >= 2: rule["range"] = (min(vals), max(vals))
-        elif fixed is not None: rule["th"] = fixed
-        elif len(vals) >= 2: rule["th"] = max(vals) if dr < 0 else min(vals)
-        rule["ready"] = rule["range"] is not None if window else rule["th"] is not None
-        rule["value"] = now[key]; rule["status"] = signal_status(rule, now[key])
-        items.append(rule)
-    def side_sum(k):
-        s = [i for i in items if i["side"] == k]; u = [i for i in s if i["status"] != "na"]
-        return {"items": s, "total": len(u), "hit": sum(i["status"] == "hit" for i in u), "near": sum(i["status"] == "near" for i in u)}
-    return {"now": now, "cal": cal, "items": items, "buy": side_sum("buy"), "sell": side_sum("sell")}
+def fmt_signed(v, d=1):
+    return "—" if v is None else f"{v:+.{d}f}%"
 
-def signal_lean(S):
-    sc = lambda s: (s["hit"] + .5 * s["near"]) / s["total"] if s["total"] else 0
-    b, s = sc(S["buy"]), sc(S["sell"])
-    if b >= .5 and b > s: return "Many bottom-like conditions"
-    if s >= .5 and s > b: return "Many top-like conditions"
-    if b > s + .2: return "Leaning toward bottom-like"
-    if s > b + .2: return "Leaning toward top-like"
-    return "Mixed / mid-cycle"
-
-def signal_export_lines(S):
-    L = []
-    L.append(f"Buy-zone signals (like past bottoms): {S['buy']['hit']}/{S['buy']['total']} hit, {S['buy']['near']} near")
-    L.append(f"Sell-zone signals (like past tops): {S['sell']['hit']}/{S['sell']['total']} hit, {S['sell']['near']} near")
-    L.append(f"Reading: {signal_lean(S)}")
-    for side, title, pastword in (("buy", "BUY-ZONE", "Lowest in past bear markets"), ("sell", "SELL-ZONE", "Highest in past bull runs")):
-        L.append(""); L.append(f"  --- {title} ---")
-        for i in S[side]["items"]:
-            if i["window"]: rule = f"window {sig_fmt(i['fmt'], i['range'][0])} – {sig_fmt(i['fmt'], i['range'][1])}" if i["range"] else "needs 2+ completed cycles"
-            elif i["th"] is not None: rule = ("≤ " if i["dir"] < 0 else "≥ ") + sig_fmt(i["fmt"], i["th"]) + (" (fixed rule)" if i["fixed"] is not None else " (mildest past cycle)")
-            else: rule = "needs 2+ completed cycles"
-            past = " · ".join(f"C{c} {sig_fmt(i['fmt'], v)}" for c, v in i["past"]) or "—"
-            L.append(f"  [{SIG_BADGE[i['status']]}] {i['label']}: {sig_fmt(i['fmt'], i['value'])} · {rule}")
-            L.append(f"      {('At past ' + ('bottoms' if side == 'buy' else 'tops')) if i['window'] else pastword}: {past}")
-    L.append("  * Threshold = the mildest extreme across past cycles; few cycles exist, so treat as context. Descriptive only, not investment advice.")
+def valuation_export_lines(V):
+    L = []; g0 = V["gauges"][0]
+    L.append(f"Zone (MVRV vs its previous 4 years): {V['zone']}")
+    for gz in V["gauges"]:
+        L.append(f"  {gz['label']}: {('%.2f' % gz['value']) if finite(gz['value']) else '—'} · "
+                 + (f"cheaper than {100 - gz['pct']*100:.1f}% of the last 4 years ({val_zone(gz['pct'])})" if gz["pct"] is not None else "not enough history"))
+    L.append(""); L.append("  --- WHAT THE NEXT 12 MONTHS LOOKED LIKE (by MVRV zone, daily starts) ---")
+    for o in V["outcomes"]:
+        if not o["n"]: L.append(f"  {o['zone']}: no past days"); continue
+        L.append(f"  {o['zone']}: median {fmt_signed(o['median'],0)} · middle 80% {fmt_signed(o['p10'],0)} to {fmt_signed(o['p90'],0)} · "
+                 f"up {o['up']:.0f}% of {o['n']:,} days in {o['episodes']} separate episodes · cycles {', '.join(('C%d' % c) if c else 'pre-C1' for c in o['cycles'])}")
+    D = V["dca"]
+    L.append(""); L.append(f"  --- MVRV-SCALED BUYING vs PLAIN WEEKLY DCA ({D['windows']} rolling 4-year periods from {D['first']}) ---")
+    for k, lbl in VAL_SCHEMES:
+        x = D["summary"][k]
+        L.append(f"  {k} {lbl}: beat DCA in {x['beat']}/{x['n']} · median {fmt_signed(x['median'])} · worst {fmt_signed(x['worst'])} · best {fmt_signed(x['best'])}")
+    for c in D["cycles"]:
+        L.append(f"  C{c['cycle']} {c['from']} → {c['to']} (DCA ×{c['dca']:.2f}): " + " · ".join(f"{k} {fmt_signed(c[k])}" for k, _ in VAL_SCHEMES))
+    H = V["hyp_in"]; live = V["hyp_live"]
+    L.append(""); L.append(f"  --- TRACKED HYPOTHESIS (registered {VAL_HYPOTHESIS['registered']}) ---")
+    L.append(f"  {VAL_HYPOTHESIS['text']}")
+    L.append(f"  Before registration (in-sample, overlapping periods): beat DCA in {H['beat']}/{H['n']} · median {fmt_signed(H['median'])}")
+    L.append(f"  Since registration: {live['weeks']} weeks" + (f" · {fmt_signed(live['diff'])} vs DCA" if live["weeks"] else "") + " (read nothing until 52+ weeks)")
+    L.append("  * Days within one episode are not independent: judge the zone table by its episode count.")
+    L.append("  * Rolling periods overlap heavily; there are only ~4 independent cycles. Descriptive only, not investment advice.")
     return L
 
 # ── enrich rows (mirrors enrichData() in index.html) ──────────────────────────
@@ -759,8 +773,8 @@ def build_export(data, stats, price_map, all_results, completed_results):
                     lines.append(f"      {MODEL_NAMES[k]}: {fmt_price(p)} · {signed(err)}")
 
     if has:
-        hr(f"CYCLE SIGNALS — buy-zone (past bottoms) & sell-zone (past tops), as of {l['date']}")
-        lines.extend(signal_export_lines(compute_signals(data, price_map)))
+        hr(f"VALUATION ZONE — each measure vs its previous 4 years, as of {l['date']}")
+        lines.extend(valuation_export_lines(compute_valuation(data, price_map)))
 
     hr("HALVING DATES")
     now_dt = l["dt"]
