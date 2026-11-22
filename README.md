@@ -33,6 +33,15 @@ cycle analysis at you:
     since halving, calendar rules with a leave-one-cycle-out test, an MVRV
     entry/exit sensitivity grid, and a same-cycle-day comparison for the
     live cycle. Historical, descriptive, daily closes only — not advice.
+  - Cycle signals tab — a checklist of 7 buy-zone signals (conditions seen
+    at past bear-market bottoms) and 6 sell-zone signals (conditions seen at
+    past tops), built from MVRV and daily price only: MVRV, rolling MVRV z,
+    price / 200-week MA, Mayer multiple, drop from cycle top, and timing.
+    Each threshold is the mildest extreme seen across past cycles, so it
+    updates when a cycle completes. Summary gauges, per-signal cards, and a
+    hit-count history chart. Also in both text exports (CYCLE SIGNALS) —
+    generate_summary.py mirrors computeSignals() in index.html; change both
+    together. Descriptive only, not advice.
   - Price scenarios from several simple models, fitted on completed cycles only:
       - Halving Multiplier  (pre-halving close × power-law cycle multiplier)
       - ATH Multiplier      (previous cycle top × power-law ratio of tops)

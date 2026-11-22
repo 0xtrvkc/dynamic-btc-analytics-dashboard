@@ -219,6 +219,149 @@ def price_at_halving(price_map, halving_dt):
         if p: return p
     return None
 
+# ── cycle signals (mirrors computeSignals() in index.html, tab "Cycle signals") ──
+# Threshold = the mildest extreme seen across past cycles (lowest reading in each past bear market
+# for buy-zone signals, highest in each past bull run for sell-zone signals). MVRV < 1 is a fixed rule.
+SIG_TIME_NEAR_DAYS = 60
+SIGNAL_DEFS = [
+    # side, id, key, dir, label, fmt, near, fixed, window
+    ("buy",  "b_mvrv",  "mvrv",       -1, "MVRV below 1",                       "f2",  ("rel", .1), 1.0,  False),
+    ("buy",  "b_z",     "z",          -1, "Rolling MVRV z deeply negative",     "f2",  ("abs", .3), None, False),
+    ("buy",  "b_w200",  "w200",       -1, "Price vs 200-week average",          "x",   ("rel", .1), None, False),
+    ("buy",  "b_mayer", "mayer",      -1, "Mayer multiple",                     "x",   ("rel", .1), None, False),
+    ("buy",  "b_dd",    "dd",         -1, "Drop from cycle top",                "pct", ("abs", 10), None, False),
+    ("buy",  "b_ttop",  "daysTop",     0, "Days since cycle top",               "d",   None,        None, True),
+    ("buy",  "b_thalv", "daysHalv",    0, "Days since halving (bottom timing)", "d",   None,        None, True),
+    ("sell", "s_mvrv",  "mvrv",        1, "MVRV high",                          "f2",  ("rel", .1), None, False),
+    ("sell", "s_z",     "z",           1, "Rolling MVRV z high",                "f2",  ("abs", .3), None, False),
+    ("sell", "s_w200",  "w200",        1, "Price vs 200-week average",          "x",   ("rel", .1), None, False),
+    ("sell", "s_mayer", "mayer",       1, "Mayer multiple",                     "x",   ("rel", .1), None, False),
+    ("sell", "s_thalv", "daysHalv",    0, "Days since halving (top timing)",    "d",   None,        None, True),
+    ("sell", "s_tbot",  "daysBottom",  0, "Days since last bear low",           "d",   None,        None, True),
+]
+SIG_BADGE = {"hit": "HIT", "near": "NEAR", "no": "NOT YET", "passed": "WINDOW PASSED", "na": "NO DATA"}
+
+def sig_fmt(kind, v):
+    if not finite(v): return "—"
+    return {"f2": f"{v:.2f}", "x": f"{v:.2f}×", "pct": f"{v:.0f}%", "d": f"{round(v)} d"}[kind]
+
+def signal_series(data, price_map):
+    dates = sorted(price_map); px = [price_map[d] for d in dates]; pos = {d: i for i, d in enumerate(dates)}
+    def roll(w):
+        out = [None] * len(px); acc = 0.0; gap = 0
+        for i in range(len(px)):
+            acc += px[i]
+            if i >= w: acc -= px[i-w]
+            if i and parse_date(dates[i]) - parse_date(dates[i-1]) != DAY: gap = i
+            if i >= w-1 and gap <= i-w+1: out[i] = acc / w
+        return out
+    ma200, ma1400 = roll(200), roll(1400)
+    by_cycle = {}
+    for d in data: by_cycle.setdefault(d["cycle"], []).append(d)
+    lows = {}
+    def prev_low(c):
+        if c < 2: return None
+        if c-1 not in lows:
+            r = [d for d in by_cycle.get(c-1, []) if finite(d.get("price"))]
+            hl = cycle_high_low(r, "price") if r else None
+            lows[c-1] = hl[1] if hl else None
+        return lows[c-1]
+    out = []; cur = -1; hi = None
+    for d in data:
+        c = d["cycle"]; h = HALVING_DTS[c-1] if c >= 1 else None
+        p = d["price"] if finite(d.get("price")) else None; i = pos.get(d["date"])
+        if c != cur: cur = c; hi = None
+        if p and h and d["dt"] <= h + timedelta(days=CYCLE_TOP_WINDOW_DAYS) and (hi is None or p > hi[0]): hi = (p, d["dt"])
+        low = prev_low(c)
+        days = lambda t: round((d["dt"] - t).total_seconds() / 86400)
+        out.append({"dt": d["dt"], "date": d["date"], "cycle": c, "price": p, "mvrv": d["mvrv"],
+                    "z": d["zscore"] if d["zReady"] and finite(d.get("zscore")) else None,
+                    "mayer": p / ma200[i] if p and i is not None and ma200[i] else None,
+                    "w200": p / ma1400[i] if p and i is not None and ma1400[i] else None,
+                    "dd": (p / hi[0] - 1) * 100 if p and hi else None,
+                    "daysTop": days(hi[1]) if p and hi else None,
+                    "daysHalv": days(h) if h else None,
+                    "daysBottom": days(low["dt"]) if low else None})
+    return out
+
+def signal_calibration(rows):
+    last = rows[-1]["dt"]; out = {"sell": [], "buy": []}
+    def ext(a, k, f):
+        v = [r[k] for r in a if finite(r.get(k))]
+        return f(v) if v and len(v) >= .9 * len(a) else None   # skip a cycle when the measure covers <90% of the phase
+    for c in range(1, len(HALVING_DTS) + 1):
+        h = HALVING_DTS[c-1]
+        if not HALVING_EVENTS[c-1]["confirmed"]: continue
+        cr = [r for r in rows if r["cycle"] == c and r["price"]]
+        if len(cr) < 30: continue
+        hl = cycle_high_low(cr, "price")
+        if not hl: continue
+        top, bot = hl
+        end = h + timedelta(days=CYCLE_TOP_WINDOW_DAYS)
+        if last >= end:
+            w = [r for r in cr if r["dt"] <= end]
+            out["sell"].append({"cycle": c, "date": top["date"], "price": top["price"], "mvrv": ext(w, "mvrv", max), "z": ext(w, "z", max),
+                                "w200": ext(w, "w200", max), "mayer": ext(w, "mayer", max), "daysHalv": top["daysHalv"], "daysBottom": top["daysBottom"]})
+        if c < len(HALVING_DTS) and HALVING_EVENTS[c]["confirmed"] and last >= HALVING_DTS[c]:
+            w = [r for r in cr if r["dt"] >= top["dt"]]
+            out["buy"].append({"cycle": c, "date": bot["date"], "price": bot["price"], "mvrv": ext(w, "mvrv", min), "z": ext(w, "z", min),
+                               "w200": ext(w, "w200", min), "mayer": ext(w, "mayer", min), "dd": (bot["price"] / top["price"] - 1) * 100,
+                               "daysTop": round((bot["dt"] - top["dt"]).total_seconds() / 86400), "daysHalv": bot["daysHalv"]})
+    return out
+
+def signal_status(rule, v):
+    if not rule["ready"] or not finite(v): return "na"
+    if rule["window"]:
+        a, b = rule["range"]
+        return "hit" if a <= v <= b else "passed" if v > b else "near" if v >= a - SIG_TIME_NEAR_DAYS else "no"
+    if rule["dir"] * (v - rule["th"]) >= 0: return "hit"
+    kind, amt = rule["near"]; gap = abs(v - rule["th"])
+    return "near" if (gap <= amt if kind == "abs" else gap <= abs(rule["th"]) * amt) else "no"
+
+def compute_signals(data, price_map):
+    rows = signal_series(data, price_map); cal = signal_calibration(rows); now = rows[-1]; items = []
+    for side, sid, key, dr, label, fmt, near, fixed, window in SIGNAL_DEFS:
+        past = [(c["cycle"], c[key]) for c in cal[side] if finite(c.get(key))]; vals = [v for _, v in past]
+        rule = {"side": side, "id": sid, "key": key, "dir": dr, "label": label, "fmt": fmt, "near": near,
+                "fixed": fixed, "window": window, "past": past, "th": None, "range": None}
+        if window:
+            if len(vals) >= 2: rule["range"] = (min(vals), max(vals))
+        elif fixed is not None: rule["th"] = fixed
+        elif len(vals) >= 2: rule["th"] = max(vals) if dr < 0 else min(vals)
+        rule["ready"] = rule["range"] is not None if window else rule["th"] is not None
+        rule["value"] = now[key]; rule["status"] = signal_status(rule, now[key])
+        items.append(rule)
+    def side_sum(k):
+        s = [i for i in items if i["side"] == k]; u = [i for i in s if i["status"] != "na"]
+        return {"items": s, "total": len(u), "hit": sum(i["status"] == "hit" for i in u), "near": sum(i["status"] == "near" for i in u)}
+    return {"now": now, "cal": cal, "items": items, "buy": side_sum("buy"), "sell": side_sum("sell")}
+
+def signal_lean(S):
+    sc = lambda s: (s["hit"] + .5 * s["near"]) / s["total"] if s["total"] else 0
+    b, s = sc(S["buy"]), sc(S["sell"])
+    if b >= .5 and b > s: return "Many bottom-like conditions"
+    if s >= .5 and s > b: return "Many top-like conditions"
+    if b > s + .2: return "Leaning toward bottom-like"
+    if s > b + .2: return "Leaning toward top-like"
+    return "Mixed / mid-cycle"
+
+def signal_export_lines(S):
+    L = []
+    L.append(f"Buy-zone signals (like past bottoms): {S['buy']['hit']}/{S['buy']['total']} hit, {S['buy']['near']} near")
+    L.append(f"Sell-zone signals (like past tops): {S['sell']['hit']}/{S['sell']['total']} hit, {S['sell']['near']} near")
+    L.append(f"Reading: {signal_lean(S)}")
+    for side, title, pastword in (("buy", "BUY-ZONE", "Lowest in past bear markets"), ("sell", "SELL-ZONE", "Highest in past bull runs")):
+        L.append(""); L.append(f"  --- {title} ---")
+        for i in S[side]["items"]:
+            if i["window"]: rule = f"window {sig_fmt(i['fmt'], i['range'][0])} – {sig_fmt(i['fmt'], i['range'][1])}" if i["range"] else "needs 2+ completed cycles"
+            elif i["th"] is not None: rule = ("≤ " if i["dir"] < 0 else "≥ ") + sig_fmt(i["fmt"], i["th"]) + (" (fixed rule)" if i["fixed"] is not None else " (mildest past cycle)")
+            else: rule = "needs 2+ completed cycles"
+            past = " · ".join(f"C{c} {sig_fmt(i['fmt'], v)}" for c, v in i["past"]) or "—"
+            L.append(f"  [{SIG_BADGE[i['status']]}] {i['label']}: {sig_fmt(i['fmt'], i['value'])} · {rule}")
+            L.append(f"      {('At past ' + ('bottoms' if side == 'buy' else 'tops')) if i['window'] else pastword}: {past}")
+    L.append("  * Threshold = the mildest extreme across past cycles; few cycles exist, so treat as context. Descriptive only, not investment advice.")
+    return L
+
 # ── enrich rows (mirrors enrichData() in index.html) ──────────────────────────
 def build_data(raw_rows, price_map):
     data = []
@@ -614,6 +757,10 @@ def build_export(data, stats, price_map, all_results, completed_results):
                     if not p: lines.append(f"      {MODEL_NAMES[k]}: — (insufficient prior cycles)"); continue
                     err = (p / r[actual] - 1) * 100 if r[actual] else None
                     lines.append(f"      {MODEL_NAMES[k]}: {fmt_price(p)} · {signed(err)}")
+
+    if has:
+        hr(f"CYCLE SIGNALS — buy-zone (past bottoms) & sell-zone (past tops), as of {l['date']}")
+        lines.extend(signal_export_lines(compute_signals(data, price_map)))
 
     hr("HALVING DATES")
     now_dt = l["dt"]

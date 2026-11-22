@@ -2554,6 +2554,21 @@ function exportSummary(){
     lines.push("  * No future observations enter cycle-start forecasts. Scores exclude incomplete cycle coverage.");
     lines.push("  * Current cycle errors measured against ATH/low seen so far, not the final confirmed value.");
   }
+  if(hasPriceData){try{var SG=computeSignals();
+    hr("CYCLE SIGNALS — buy-zone (past bottoms) & sell-zone (past tops), as of "+SG.now.dateStr);
+    row("Buy-zone signals (like past bottoms)",SG.buy.hit+"/"+SG.buy.total+" hit, "+SG.buy.near+" near");
+    row("Sell-zone signals (like past tops)",SG.sell.hit+"/"+SG.sell.total+" hit, "+SG.sell.near+" near");
+    row("Reading",signalLean(SG).label);
+    [["buy","BUY-ZONE","Lowest in past bear markets"],["sell","SELL-ZONE","Highest in past bull runs"]].forEach(function(x){
+      lines.push("","  --- "+x[1]+" ---");
+      SG[x[0]].items.forEach(function(i){
+        var rule=i.window?"window "+i.fmt(i.window[0])+" – "+i.fmt(i.window[1]):Number.isFinite(i.th)?(i.dir<0?"≤ ":"≥ ")+i.fmt(i.th)+(i.fixed?" (fixed rule)":" (mildest past cycle)"):"needs 2+ completed cycles";
+        lines.push("  ["+SIG_BADGE[i.status].toUpperCase()+"] "+i.label+": "+(Number.isFinite(i.value)?i.fmt(i.value):"—")+" · "+rule);
+        lines.push("      "+(i.window?"At past "+(x[0]==="buy"?"bottoms":"tops"):x[2])+": "+(i.past.map(function(p){return "C"+p.cycle+" "+i.fmt(p.v);}).join(" · ")||"—"));
+      });
+    });
+    lines.push("  * Threshold = the mildest extreme across past cycles; few cycles exist, so treat as context. Descriptive only, not investment advice.");
+  }catch(e){console.warn(e);}}
   hr("HALVING DATES");
   var now=l.date;
   HALVINGS.forEach(function(h,i){
