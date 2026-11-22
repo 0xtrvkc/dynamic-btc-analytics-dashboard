@@ -2,181 +2,40 @@ name: Update MVRV Data
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # runs daily at 01:00 UTC
-  workflow_dispatch:        # allows manual trigger from Actions tab
+    - cron: '23 1 * * *'   # daily 01:23 UTC (off the busy top of the hour)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One group for every workflow that pushes data, so they never race each other.
+concurrency:
+  group: repo-data-push
+  cancel-in-progress: false
 
 jobs:
   update-mvrv:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
 
-      - name: Install Playwright + Chromium
+      - name: Install Playwright + Chromium (pinned)
         run: |
-          npm init -y
-          npm install playwright
+          npm install --no-save --no-audit --no-fund playwright@1.65.1
           npx playwright install chromium --with-deps
 
-      - name: Scrape and download mvrv.json
-        run: |
-          node << 'EOF'
-          const { chromium } = require('playwright');
-          const fs = require('fs');
-          const path = require('path');
-          const os = require('os');
-
-          (async () => {
-            const downloadDir = path.join(os.tmpdir(), 'bc_download');
-            fs.mkdirSync(downloadDir, { recursive: true });
-
-            const browser = await chromium.launch({ headless: true });
-            const context = await browser.newContext({ acceptDownloads: true });
-            const page = await context.newPage();
-
-            // --- Step 1: Intercept the all-time API call and rewrite timespan ---
-            // The page loads 1year by default; we intercept and upgrade to all+unsampled
-            // then capture the response so we can reformat it into your mvrv.json shape
-            let capturedAllTimeData = null;
-
-            await page.route('**/api.blockchain.info/charts/mvrv**', async (route) => {
-              const original = route.request().url();
-              const upgraded = original
-                .replace('timespan=1year', 'timespan=all')
-                .replace('sampled=true', 'sampled=false');
-              console.log('Upgrading request: ' + upgraded);
-              // Re-issue the request with upgraded params and capture result
-              const response = await page.request.fetch(upgraded);
-              const body = await response.text();
-              try {
-                const json = JSON.parse(body);
-                if (Array.isArray(json.values) && json.values.length > 100) {
-                  console.log('Captured all-time MVRV data. Points: ' + json.values.length);
-                  capturedAllTimeData = json;
-                }
-              } catch (e) {}
-              // Still fulfill the original request normally so page renders fine
-              await route.continue();
-            });
-
-            console.log('Navigating to MVRV chart page...');
-            await page.goto('https://www.blockchain.com/explorer/charts/mvrv', {
-              waitUntil: 'domcontentloaded',
-              timeout: 60000,
-            });
-
-            // Wait for the page's default 1year chart API call to fire
-            // (this triggers our route intercept above)
-            console.log('Waiting for initial chart API call...');
-            await page.waitForTimeout(15000);
-
-            // If we captured data via intercept, skip the browser click dance entirely
-            if (capturedAllTimeData) {
-              console.log('Got all-time data via intercept. Reformatting to match mvrv.json...');
-
-              // The api.blockchain.info endpoint returns seconds-based x values
-              // Your mvrv.json uses millisecond x values — convert
-              const msPoints = capturedAllTimeData.values.map(p => ({
-                x: p.x * 1000,  // seconds -> milliseconds
-                y: p.y,
-              }));
-
-              // The "unsampled/all" export returns 800k+ irregular intraday
-              // points (minutes apart). This is a daily dashboard, so shipping
-              // that raw resolution just makes every visitor download and
-              // parse a ~35MB file for no analytical benefit. Collapse to one
-              // (the last) sample per UTC day before writing the file.
-              const byDay = new Map();
-              for (const p of msPoints) {
-                const d = new Date(p.x);
-                const key = d.getUTCFullYear() + '-' + d.getUTCMonth() + '-' + d.getUTCDate();
-                byDay.set(key, p); // points are already chronological, so last write wins
-              }
-              const dailyPoints = Array.from(byDay.values()).sort((a, b) => a.x - b.x);
-              console.log('Downsampled ' + msPoints.length + ' intraday points to ' + dailyPoints.length + ' daily points.');
-
-              const reformatted = {
-                metric1: 'mvrv',
-                metric2: 'market-price',
-                mvrv: dailyPoints,
-              };
-
-              fs.writeFileSync('mvrv.json', JSON.stringify(reformatted));
-              console.log('Saved mvrv.json. Points: ' + reformatted.mvrv.length);
-              await browser.close();
-
-            } else {
-              // Fallback: click ALL then Download JSON
-              console.log('Intercept did not fire. Falling back to button clicks...');
-
-              // Wait for the ALL timeframe button — look by text content, not role
-              // since blockchain.com uses styled-components buttons without aria roles
-              console.log('Looking for ALL button...');
-              const allBtn = page.locator('button', { hasText: /^All$/i });
-              await allBtn.first().waitFor({ state: 'visible', timeout: 30000 });
-              await allBtn.first().click();
-              console.log('Clicked ALL. Waiting 35s for data...');
-              await page.waitForTimeout(35000);
-
-              // Click Download JSON
-              console.log('Clicking Download JSON...');
-              const dlBtn = page.locator('button', { hasText: /download json/i });
-              const [download] = await Promise.all([
-                page.waitForEvent('download', { timeout: 30000 }),
-                dlBtn.first().click(),
-              ]);
-              const downloadPath = path.join(downloadDir, 'mvrv.json');
-              await download.saveAs(downloadPath);
-              fs.copyFileSync(downloadPath, 'mvrv.json');
-              console.log('Saved via download button.');
-              await browser.close();
-            }
-
-            // --- Validate ---
-            const raw = fs.readFileSync('mvrv.json', 'utf8');
-            let data;
-            try {
-              data = JSON.parse(raw);
-            } catch (e) {
-              console.error('ERROR: File is not valid JSON');
-              process.exit(1);
-            }
-            if (data.metric1 !== 'mvrv') {
-              console.error('ERROR: metric1 is not mvrv: ' + data.metric1);
-              process.exit(1);
-            }
-            if (!Array.isArray(data.mvrv) || data.mvrv.length < 100) {
-              console.error('ERROR: mvrv array missing or too short: ' + (data.mvrv || []).length);
-              process.exit(1);
-            }
-            const sample = data.mvrv[0];
-            if (!('x' in sample) || !('y' in sample)) {
-              console.error('ERROR: bad data point shape: ' + JSON.stringify(sample));
-              process.exit(1);
-            }
-            const last = data.mvrv[data.mvrv.length - 1];
-            console.log('Validation passed. Points: ' + data.mvrv.length);
-            console.log('Latest: ' + new Date(last.x).toISOString().slice(0,10) + ' MVRV=' + last.y);
-          })();
-          EOF
+      - name: Scrape, validate against the current file, and save mvrv.json
+        run: node scripts/update_mvrv.js
 
       - name: Commit and push if data changed
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add mvrv.json
-          if git diff --cached --quiet; then
-            echo "No changes to mvrv.json — skipping commit."
-          else
-            LATEST_Y=$(node -e "const d=require('./mvrv.json'); const last=d.mvrv[d.mvrv.length-1]; console.log(last.y.toFixed(4));")
-            LATEST_DATE=$(node -e "const d=require('./mvrv.json'); const last=d.mvrv[d.mvrv.length-1]; console.log(new Date(last.x).toISOString().slice(0,10));")
-            git commit -m "chore: update mvrv.json — ${LATEST_DATE} (MVRV: ${LATEST_Y})"
-            git push
-          fi
+          LATEST=$(node -e "const d=require('./mvrv.json');const l=d.mvrv.at(-1);console.log(new Date(l.x).toISOString().slice(0,10)+' (MVRV: '+l.y.toFixed(4)+')')")
+          scripts/push_with_retry.sh "chore: update mvrv.json — ${LATEST}"

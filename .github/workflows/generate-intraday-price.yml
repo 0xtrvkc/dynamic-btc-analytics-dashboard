@@ -1,17 +1,17 @@
 name: Update Intraday Dashboard Data
 
+# Paused: index.html does not use btc_1h_price.json / btc_4h_price.json yet, and rebuilding
+# them twice a day added several MB to git history each time. Run it manually from the
+# Actions tab, or restore a schedule once the dashboard reads these files.
 on:
-  workflow_dispatch:  # Manual trigger: "Run workflow" button in GitHub Actions
-  schedule:
-    - cron: "37 23 * * *"  # 06:37 BKK (23:37 UTC the previous day)
-    - cron: "37 8 * * *"   # 15:37 BKK (08:37 UTC)
+  workflow_dispatch:
 
 permissions:
-  contents: write  # needed so the job can push the updated JSON files
+  contents: write
 
 concurrency:
-  group: update-intraday-data
-  cancel-in-progress: false  # avoid two runs pushing at the same time
+  group: repo-data-push
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -19,38 +19,29 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
 
-      - name: Install deps and download Kaggle CSV
+      # No secrets in this step: package install scripts never see the Kaggle key.
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements-ci.txt
+
+      - name: Download Kaggle CSV
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pandas six "kaggle==1.6.17"
-          python -c "import six; print('six', six.__version__)"
           kaggle datasets download -d mczielinski/bitcoin-historical-data --unzip
-          ls -lh
           test -f btcusd_1-min_data.csv || { echo "Expected CSV not found"; exit 1; }
-          ls -lh btcusd_1-min_data.csv
 
       - name: Generate intraday price JSON (1H/4H)
         run: python generate_intraday_price_json.py
 
       - name: Commit and push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add btc_1h_price.json btc_4h_price.json
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update intraday BTC price JSON [$(date -u +%Y-%m-%d)]"
-            git pull --rebase origin "${GITHUB_REF_NAME}"
-            git push
-          fi
+          scripts/push_with_retry.sh "chore: update intraday BTC price JSON [$(date -u +%Y-%m-%d)]"

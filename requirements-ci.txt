@@ -1,0 +1,4 @@
+# Pinned versions for the GitHub Actions price workflows (Python 3.11).
+pandas==2.2.3
+six==1.17.0
+kaggle==1.6.17
