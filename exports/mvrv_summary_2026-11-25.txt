@@ -1,33 +1,33 @@
 
 === CURRENT STATUS ===
-MVRV date: 2026-11-24
-Latest BTC price date: 2026-11-24
-MVRV: 1.152
-Rolling MVRV z (365d): -1.469
-Rolling z position: Below 1y mean
+MVRV date: 2026-11-25
+Latest BTC price date: 2026-11-25
+MVRV: 1.130
+Rolling MVRV z (365d): -1.600
+Rolling z position: Far below 1y mean
   Note: rolling z = (MVRV - trailing 365d mean) / population std of MVRV. This is NOT the
   conventional 'MVRV Z-Score' ((market cap - realized cap) / std of market cap).
-MA20: 1.272
-MA50: 1.413
-MA200: 1.350
+MA20: 1.254
+MA50: 1.403
+MA200: 1.348
 MA alignment: Mixed / equal averages
-MVRV ROC 30d: -22.6%
-MVRV ROC 90d: -22.3%
-BTC price on MVRV date: $60,375
+MVRV ROC 30d: -23.8%
+MVRV ROC 90d: -24.3%
+BTC price on MVRV date: $59,112
 Dataset MVRV peak: 8.046 on 2010-11-08
 Dataset MVRV low: 0.404 on 2011-10-21
 Dataset mean MVRV: 1.847
-Data range: 2010-10-09 to 2026-11-24
-Daily observations: 5,891
+Data range: 2010-10-09 to 2026-11-25
+Daily observations: 5,892
 Completed cycles used for fitting: C1, C2, C3
 
 === CURRENT CYCLE POSITION ===
 Current cycle: C4 (2024–2028 (est.))
-Cycle position: 66.0%
+Cycle position: 66.1%
 Cycle MVRV peak so far: 2.730 on 2024-11-22
-Current MVRV vs cycle peak: 42% of cycle peak
-Days in current cycle: 949
-Current drawdown from cycle MVRV peak: -57.8%
+Current MVRV vs cycle peak: 41% of cycle peak
+Days in current cycle: 950
+Current drawdown from cycle MVRV peak: -58.6%
 
 === CYCLE SUMMARY  (peak = highest MVRV within 2y of the halving; trough = lowest MVRV after that peak) ===
 
@@ -59,7 +59,7 @@ Cycle 4 (2024–2028 (est.)) — open, values provisional:
   Peak MVRV: 2.730 on 2024-11-22
   Trough MVRV: 1.108 on 2026-11-21
   Peak-to-trough range: 59% compression
-  Days of data: 949
+  Days of data: 950
   BTC price at MVRV peak: $99,013
   BTC price at MVRV trough: $60,078
 
@@ -202,7 +202,7 @@ Cycle 4:
   2026-05-31 Death cross: C4 · MVRV 1.367 · $73,568
   2026-07-20 Golden cross: C4 · MVRV 1.223 · $65,213
   2026-10-26 Death cross: C4 · MVRV 1.483 · $80,006
-Last crossover: Death cross on 2026-10-26 (29d before latest data)
+Last crossover: Death cross on 2026-10-26 (30d before latest data)
 Current MA20 vs MA50: MA20 below MA50
 
 === ZONE ANALYSIS — Days in each MVRV zone per cycle ===
@@ -245,15 +245,15 @@ Cycle 3:
 
 Cycle 4:
   Below 1.0: 0d (0%)
-  1.0-1.5: 260d (27%)
-  1.5-2.0: 261d (28%)
+  1.0-1.5: 261d (27%)
+  1.5-2.0: 261d (27%)
   2.0-3.0: 428d (45%)
   Above 3.0: 0d (0%)
-  Avg BTC price in 1.0-1.5: $70,296
+  Avg BTC price in 1.0-1.5: $70,251
   Avg BTC price in 1.5-2.0: $80,538
   Avg BTC price in 2.0-3.0: $93,370
 
-Current MVRV zone: 1.0-1.5 (MVRV 1.152)
+Current MVRV zone: 1.0-1.5 (MVRV 1.130)
 
 === PRICE PEAK DIVERGENCE — MVRV peak vs BTC price top (highest close within 2y of the halving) ===
 
@@ -323,7 +323,7 @@ Cycle 4 (open — provisional):
   MVRV at price low: 1.117
   MVRV own trough: 1.108 on 2026-11-21
   Price at MVRV trough: $60,078
-  Further downside after MVRV troughed: 0%
+  Further downside after MVRV troughed: -2%
   Lead/lag: Price bottomed 144d BEFORE MVRV
 
   Median lead/lag (completed cycles, n=3): -1d
@@ -344,22 +344,22 @@ Cycle 4 (open — provisional):
   C6 trough (log/linear): 0.925 / 1.138
   * '—' = the fit extrapolates to zero or below. Few data points: treat as illustration only.
 
-=== PRICE SCENARIOS — current cycle, as of 2026-11-24 ===
+=== PRICE SCENARIOS — current cycle, as of 2026-11-25 ===
 
   --- CEILING MODELS ---
   MVRV Upside: $125,927  [n=3 · conditional, not in ensemble]
   Halving Multiplier: $308,116  [n=3 · in ensemble]
   ATH Multiplier: $77,999  [n=2 · in ensemble]
-  MVRV x Realized Price: $177,263  [n=3 · in ensemble]
+  MVRV x Realized Price: $177,014  [n=3 · in ensemble]
 
-  Ceiling ensemble (median): $177,263
+  Ceiling ensemble (median): $177,014
   Ceiling model spread: $77,999 – $308,116  (not a probability interval)
 
   --- FLOOR MODELS ---
   MVRV Downside: $60,078  [n=3 · conditional, not in ensemble]
   Halving Floor Ratio: $74,090  [n=3 · in ensemble]
   Bottom Multiplier: $30,658  [n=2 · in ensemble]
-  MVRV Trough x Realized Price: $44,041  [n=3 · extra scenario, not in ensemble]
+  MVRV Trough x Realized Price: $43,979  [n=3 · extra scenario, not in ensemble]
 
   Floor ensemble (median): $52,374
   Floor model spread: $30,658 – $74,090  (not a probability interval)
@@ -422,16 +422,16 @@ Quality labels (good <20% · ok <40% · poor) are shown only when n >= 3.
       Bottom Multiplier: $30,658 · -47.6%
       Floor ensemble: $52,374 · -10.5%
 
-=== VALUATION ZONE — each measure vs its previous 4 years, as of 2026-11-24 ===
+=== VALUATION ZONE — each measure vs its previous 4 years, as of 2026-11-25 ===
 Zone (MVRV vs its previous 4 years): Cheap
-  MVRV: 1.15 · cheaper than 93.9% of the last 4 years (Cheap)
-  Price / 200-week average: 0.89 · cheaper than 95.3% of the last 4 years (Very cheap)
-  Mayer multiple (price / 200-day average): 0.84 · cheaper than 88.2% of the last 4 years (Cheap)
+  MVRV: 1.13 · cheaper than 94.9% of the last 4 years (Cheap)
+  Price / 200-week average: 0.87 · cheaper than 95.9% of the last 4 years (Very cheap)
+  Mayer multiple (price / 200-day average): 0.82 · cheaper than 90.5% of the last 4 years (Cheap)
 
   --- WHAT THE NEXT 12 MONTHS LOOKED LIKE (by MVRV zone, daily starts) ---
   Very cheap: median +127% · middle 80% +86% to +173% · up 100% of 69 days in 5 separate episodes · cycles C1, C2, C3
   Cheap: median +73% · middle 80% -7% to +174% · up 88% of 703 days in 6 separate episodes · cycles C1, C2, C3
-  Normal: median +86% · middle 80% -54% to +611% · up 68% of 3,194 days in 15 separate episodes · cycles pre-C1, C1, C2, C3, C4
+  Normal: median +86% · middle 80% -54% to +611% · up 68% of 3,195 days in 15 separate episodes · cycles pre-C1, C1, C2, C3, C4
   Overheated: median +16% · middle 80% -65% to +629% · up 58% of 671 days in 12 separate episodes · cycles C1, C2, C3, C4
   Very overheated: median -12% · middle 80% -76% to +226% · up 42% of 159 days in 6 separate episodes · cycles C1, C2, C3
 
@@ -442,7 +442,7 @@ Zone (MVRV vs its previous 4 years): Cheap
   C1 2012-11-28 → 2016-07-08 (DCA ×5.59): S1 -1.0% · S2 -14.6% · S3 -44.6%
   C2 2016-07-09 → 2020-05-10 (DCA ×3.67): S1 -5.0% · S2 -21.1% · S3 -51.4%
   C3 2020-05-11 → 2024-04-19 (DCA ×2.56): S1 +3.5% · S2 +7.4% · S3 -2.5%
-  C4 2024-04-20 → 2026-11-24 (DCA ×0.77): S1 +3.4% · S2 +8.1% · S3 +6.9%
+  C4 2024-04-20 → 2026-11-25 (DCA ×0.77): S1 +3.4% · S2 +8.1% · S3 +6.9%
 
   --- TRACKED HYPOTHESIS (registered 2026-11-22) ---
   Weekly buys scaled by price / 200-week average (2× in its cheapest 20% of the last 4 years, 0.5× in its dearest 20%, else 1×) beat plain weekly DCA.
@@ -460,9 +460,9 @@ Zone (MVRV vs its previous 4 years): Cheap
       source: https://mempool.space/block/630000 · https://blockstream.info/block-height/630000
   C4 halving: 2024-04-20 00:09:27 UTC · block 840,000 [latest observed cycle · 66% of estimated interval]
       source: https://mempool.space/block/840000 · https://blockstream.info/block-height/840000
-  C5 halving: ~2028-03-26 (estimate) · block 1,050,000 [estimated boundary — unconfirmed · 488d from latest data]
-  C6 halving: ~2032-02-15 (estimate) · block 1,260,000 [estimated boundary — unconfirmed · 1,909d from latest data]
-  C7 halving: ~2036-01-10 (estimate) · block 1,470,000 [estimated boundary — unconfirmed · 3,334d from latest data]
+  C5 halving: ~2028-03-26 (estimate) · block 1,050,000 [estimated boundary — unconfirmed · 487d from latest data]
+  C6 halving: ~2032-02-15 (estimate) · block 1,260,000 [estimated boundary — unconfirmed · 1,908d from latest data]
+  C7 halving: ~2036-01-10 (estimate) · block 1,470,000 [estimated boundary — unconfirmed · 3,333d from latest data]
   Sources: halving block timestamps from mempool.space and Blockstream (cross-checked).
   Future dates are estimates, not on-chain facts, until the block is mined and both explorers agree.
 
@@ -474,6 +474,6 @@ professional financial analysis.
 
 NOT FINANCIAL ADVICE. Do your own research.
 ============================================================
-Generated: 2026-11-24
+Generated: 2026-11-25
 Tip: paste this file into any AI assistant to ask questions
 about Bitcoin MVRV cycles and what the data might mean.
