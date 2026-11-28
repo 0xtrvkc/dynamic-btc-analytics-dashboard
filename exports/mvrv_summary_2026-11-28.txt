@@ -1,7 +1,7 @@
 
 === CURRENT STATUS ===
 MVRV date: 2026-11-27
-Latest BTC price date: 2026-11-27
+Latest BTC price date: 2026-11-28
 MVRV: 1.141
 Rolling MVRV z (365d): -1.513
 Rolling z position: Far below 1y mean
@@ -13,7 +13,7 @@ MA200: 1.345
 MA alignment: Mixed / equal averages
 MVRV ROC 30d: -23.7%
 MVRV ROC 90d: -22.4%
-BTC price on MVRV date: $61,681
+BTC price on MVRV date: $59,872
 Dataset MVRV peak: 8.046 on 2010-11-08
 Dataset MVRV low: 0.404 on 2011-10-21
 Dataset mean MVRV: 1.847
@@ -249,7 +249,7 @@ Cycle 4:
   1.5-2.0: 261d (27%)
   2.0-3.0: 428d (45%)
   Above 3.0: 0d (0%)
-  Avg BTC price in 1.0-1.5: $70,186
+  Avg BTC price in 1.0-1.5: $70,179
   Avg BTC price in 1.5-2.0: $80,538
   Avg BTC price in 2.0-3.0: $93,370
 
@@ -350,16 +350,16 @@ Cycle 4 (open — provisional):
   MVRV Upside: $125,927  [n=3 · conditional, not in ensemble]
   Halving Multiplier: $308,116  [n=3 · in ensemble]
   ATH Multiplier: $77,999  [n=2 · in ensemble]
-  MVRV x Realized Price: $182,952  [n=3 · in ensemble]
+  MVRV x Realized Price: $177,586  [n=3 · in ensemble]
 
-  Ceiling ensemble (median): $182,952
+  Ceiling ensemble (median): $177,586
   Ceiling model spread: $77,999 – $308,116  (not a probability interval)
 
   --- FLOOR MODELS ---
   MVRV Downside: $60,078  [n=3 · conditional, not in ensemble]
   Halving Floor Ratio: $74,090  [n=3 · in ensemble]
   Bottom Multiplier: $30,658  [n=2 · in ensemble]
-  MVRV Trough x Realized Price: $45,454  [n=3 · extra scenario, not in ensemble]
+  MVRV Trough x Realized Price: $44,121  [n=3 · extra scenario, not in ensemble]
 
   Floor ensemble (median): $52,374
   Floor model spread: $30,658 – $74,090  (not a probability interval)
@@ -425,13 +425,13 @@ Quality labels (good <20% · ok <40% · poor) are shown only when n >= 3.
 === VALUATION ZONE — each measure vs its previous 4 years, as of 2026-11-27 ===
 Zone (MVRV vs its previous 4 years): Cheap
   MVRV: 1.14 · cheaper than 94.3% of the last 4 years (Cheap)
-  Price / 200-week average: 0.90 · cheaper than 94.8% of the last 4 years (Cheap)
-  Mayer multiple (price / 200-day average): 0.86 · cheaper than 84.2% of the last 4 years (Cheap)
+  Price / 200-week average: 0.88 · cheaper than 95.8% of the last 4 years (Very cheap)
+  Mayer multiple (price / 200-day average): 0.83 · cheaper than 88.7% of the last 4 years (Cheap)
 
   --- WHAT THE NEXT 12 MONTHS LOOKED LIKE (by MVRV zone, daily starts) ---
   Very cheap: median +127% · middle 80% +86% to +173% · up 100% of 69 days in 5 separate episodes · cycles C1, C2, C3
   Cheap: median +73% · middle 80% -7% to +174% · up 88% of 703 days in 6 separate episodes · cycles C1, C2, C3
-  Normal: median +86% · middle 80% -54% to +611% · up 68% of 3,197 days in 15 separate episodes · cycles pre-C1, C1, C2, C3, C4
+  Normal: median +86% · middle 80% -54% to +611% · up 68% of 3,198 days in 15 separate episodes · cycles pre-C1, C1, C2, C3, C4
   Overheated: median +16% · middle 80% -65% to +629% · up 58% of 671 days in 12 separate episodes · cycles C1, C2, C3, C4
   Very overheated: median -12% · middle 80% -76% to +226% · up 42% of 159 days in 6 separate episodes · cycles C1, C2, C3
 
@@ -474,6 +474,6 @@ professional financial analysis.
 
 NOT FINANCIAL ADVICE. Do your own research.
 ============================================================
-Generated: 2026-11-27
+Generated: 2026-11-28
 Tip: paste this file into any AI assistant to ask questions
 about Bitcoin MVRV cycles and what the data might mean.
